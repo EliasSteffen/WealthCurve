@@ -112,18 +112,29 @@ describe('einzelne Serien', () => {
     expect(compound.at(-1)!).toBeGreaterThan(contributions.at(-1)!)
   })
 
-  it('wächst in der Ansparphase streng linear und steht danach still', () => {
+  it('wächst in der Ansparphase streng linear', () => {
     const values = valuesOf('contributions')
-    const lastAccumulationYear = DEFAULT_MODEL.accumulationYears
     const firstStep = values[1] - values[0]
-
-    for (let i = 2; i <= lastAccumulationYear; i += 1) {
+    for (let i = 2; i <= DEFAULT_MODEL.accumulationYears; i += 1) {
       expect(values[i] - values[i - 1], `Jahr ${i}`).toBeCloseTo(firstStep, 6)
     }
-    // In der Entnahmephase wird nichts mehr eingezahlt.
-    for (let i = lastAccumulationYear + 1; i < values.length; i += 1) {
-      expect(values[i] - values[i - 1], `Jahr ${i}`).toBeCloseTo(0, 6)
-    }
+  })
+
+  it('fällt in der Entnahmephase, statt stehen zu bleiben', () => {
+    // Die Serie ist das Szenario "nur sammeln, 0 % Rendite". Entnahmen fließen
+    // dort genauso ab - sonst verglichen wir einen Auszahlplan mit einem Konto,
+    // von dem nie etwas abgeht.
+    const values = valuesOf('contributions')
+    const start = DEFAULT_MODEL.accumulationYears
+    expect(values[start + 1]).toBeLessThan(values[start])
+    expect(values.at(-1)!).toBeLessThan(values[start])
+  })
+
+  it('ist ohne Rendite früher aufgebraucht als mit', () => {
+    const ohne = valuesOf('contributions')
+    const mit = valuesOf('compound')
+    expect(ohne.at(-1)!).toBeLessThan(mit.at(-1)!)
+    expect(ohne.every((v) => v >= 0)).toBe(true)
   })
 
   it('zinst die Kaufkraft mit (1 + i)^t ab', () => {

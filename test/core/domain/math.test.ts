@@ -13,6 +13,8 @@ interface Overrides {
   accumulationYears?: number
   withdrawalYears?: number
   withdrawalStrategyId?: string
+  amountsInflationAdjusted?: boolean
+  monthlyWithdrawalOverride?: number
 }
 
 const config = (o: Overrides = {}): SimulationConfig => ({
@@ -20,6 +22,7 @@ const config = (o: Overrides = {}): SimulationConfig => ({
   monthlyContribution: o.monthlyContribution ?? 500,
   initialCapital: o.initialCapital ?? 0,
   params: { ...DEFAULT_PARAMS, ...o.params },
+  monthlyWithdrawalOverride: o.monthlyWithdrawalOverride,
   model: {
     compounding: o.compounding ?? 'monthly-effective',
     timing: o.timing ?? 'end',
@@ -27,6 +30,7 @@ const config = (o: Overrides = {}): SimulationConfig => ({
     // Ohne Entnahmephase gelten die Anker der reinen Ansparrechnung unverändert.
     withdrawalYears: o.withdrawalYears ?? 0,
     withdrawalStrategyId: o.withdrawalStrategyId ?? 'fixedAmount',
+    amountsInflationAdjusted: o.amountsInflationAdjusted ?? false,
   },
 })
 
@@ -223,5 +227,94 @@ describe('Entnahmephase', () => {
     expect(r.years).toHaveLength(11)
     expect(r.depletedAtYear).toBeNull()
     expect(r.years.at(-1)!.withdrawals).toBe(0)
+  })
+})
+
+describe('Inflationsbereinigte Beträge', () => {
+  const real = (o: Overrides = {}) =>
+    simulate(
+      config({
+        accumulationYears: 30,
+        withdrawalYears: 25,
+        amountsInflationAdjusted: true,
+        params: { inflationRate: 2, monthlyWithdrawal: 2_000 },
+        ...o,
+      }),
+    )
+
+  it('ändert ohne den Schalter nichts an den bisherigen Ankern', () => {
+    // Rückwärtskompatibilität: der Standardweg muss unverändert rechnen.
+    expect(finalBalance(config({ compounding: 'monthly-nominal' }))).toBeCloseTo(86_542.4, 2)
+  })
+
+  it('zahlt nominal mehr ein als ohne Bereinigung', () => {
+    const ohne = simulate(config({ accumulationYears: 30 }))
+    const mit = simulate(config({ accumulationYears: 30, amountsInflationAdjusted: true }))
+    expect(mit.years.at(-1)!.contributions).toBeGreaterThan(
+      ohne.years.at(-1)!.contributions,
+    )
+  })
+
+  it('hält die Kaufkraft der Einzahlung konstant', () => {
+    // Genau das ist der Zweck: nominal steigend, real gleichbleibend.
+    const { years } = simulate(
+      config({
+        accumulationYears: 10,
+        monthlyContribution: 500,
+        amountsInflationAdjusted: true,
+        params: { inflationRate: 2 },
+      }),
+    )
+    const jahresrate = (jahr: number) => years[jahr].contributions - years[jahr - 1].contributions
+    const real = (jahr: number) => jahresrate(jahr) / Math.pow(1.02, jahr - 1)
+    for (let jahr = 2; jahr <= 10; jahr += 1) {
+      expect(real(jahr), `Jahr ${jahr}`).toBeCloseTo(real(1), 6)
+    }
+  })
+
+  it('lässt die Entnahme nominal mitwachsen', () => {
+    const r = real()
+    const jahr = (n: number) => r.years[n].withdrawals - r.years[n - 1].withdrawals
+    expect(jahr(32)).toBeGreaterThan(jahr(31))
+    // Ab heute gerechnet, nicht ab Rentenbeginn: im 31. Jahr liegt der nominale
+    // Betrag schon rund 1,02^30 über dem eingetragenen.
+    expect(jahr(31)).toBeCloseTo(2_000 * 12 * Math.pow(1.02, 30), 0)
+  })
+})
+
+describe('monthlyWithdrawalOverride', () => {
+  it('entnimmt den vorgegebenen Betrag statt des abgeleiteten', () => {
+    const abgeleitet = simulate(
+      config({ accumulationYears: 30, withdrawalYears: 25, withdrawalStrategyId: 'percentRule' }),
+    )
+    const erzwungen = simulate(
+      config({
+        accumulationYears: 30,
+        withdrawalYears: 25,
+        withdrawalStrategyId: 'percentRule',
+        monthlyWithdrawalOverride: 3_000,
+      }),
+    )
+    expect(abgeleitet.monthlyWithdrawal).not.toBeCloseTo(3_000, 0)
+    expect(erzwungen.monthlyWithdrawal).toBe(3_000)
+  })
+
+  it('lässt die 0-%-Vergleichsserie denselben Plan abbilden', () => {
+    // Der eigentliche Zweck: gleiche Auszahlung, andere Rendite.
+    const haupt = simulate(
+      config({ accumulationYears: 30, withdrawalYears: 25, withdrawalStrategyId: 'percentRule' }),
+    )
+    const ohneRendite = simulate(
+      config({
+        accumulationYears: 30,
+        withdrawalYears: 25,
+        annualRatePercent: 0,
+        withdrawalStrategyId: 'percentRule',
+        monthlyWithdrawalOverride: haupt.monthlyWithdrawal,
+      }),
+    )
+    expect(ohneRendite.monthlyWithdrawal).toBe(haupt.monthlyWithdrawal)
+    expect(ohneRendite.depletedAtYear).not.toBeNull()
+    expect(haupt.depletedAtYear).toBeNull()
   })
 })

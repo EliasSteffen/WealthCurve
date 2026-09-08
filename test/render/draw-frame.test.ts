@@ -151,3 +151,34 @@ describe('resolveText', () => {
     expect(resolveText('{{ rate }}', { rate: 'X' })).toBe('X')
   })
 })
+
+describe('Textumbruch', () => {
+  it('haelt langen Text innerhalb der Bildbreite', () => {
+    // Platzhalter wie {{szenarien}} werden mit mehreren Szenarien beliebig
+    // lang. Laeuft der Text aus dem Bild, ist das im fertigen Video verloren.
+    const format = resolveFormat('reel')
+    const lang =
+      'Basis: 1.647.345 € · Szenario 2: 6.934.890 € · Szenario 3: 178.088 € · Szenario 4: 1 €'
+
+    let maxRechts = 0
+    const ctx = {
+      save() {}, restore() {}, beginPath() {}, closePath() {},
+      moveTo() {}, lineTo() {}, stroke() {}, fill() {}, fillRect() {},
+      setLineDash() {},
+      // Grobe Breitenschaetzung genuegt: 0,5 em je Zeichen.
+      measureText: (t: string) => ({ width: t.length * 0.5 * 40 }),
+      fillText: (t: string, x: number) => {
+        maxRechts = Math.max(maxRechts, x + t.length * 0.5 * 40)
+      },
+      fillStyle: '', strokeStyle: '', lineWidth: 0, lineCap: '', lineJoin: '',
+      globalAlpha: 1, font: '40px sans', textAlign: 'left',
+    } as unknown as CanvasRenderingContext2D
+
+    drawFrame(ctx, {
+      frame: { ...frameAt(DEFAULT_SPEC, projection, 400), scene: { kind: 'punchline', text: lang, progress: 1 } },
+      projection, style: clean, format, theme, colors, title: 'Basis',
+      facts: {},
+    })
+    expect(maxRechts).toBeLessThanOrEqual(format.width)
+  })
+})

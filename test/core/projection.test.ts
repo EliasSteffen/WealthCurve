@@ -100,7 +100,7 @@ describe('CSV-Export', () => {
     const p = build()
     const zeilen = projectionToCsv(p).split('\n')
     expect(zeilen).toHaveLength(p.rows.length + 1)
-    expect(zeilen[0]).toBe('Jahr;Zinseszins;Eingezahlt')
+    expect(zeilen[0]).toBe('Jahr;Zinseszins;Ohne Rendite')
   })
 
   it('nutzt deutsche Zahlenkonvention', () => {
