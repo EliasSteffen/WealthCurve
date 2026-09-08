@@ -1,0 +1,227 @@
+import { describe, expect, it } from 'vitest'
+import { DEFAULT_PARAMS, type SimulationParams } from './parameters'
+import { DEFAULT_MODEL, simulate, toMonthlyRate } from './math'
+import type { Compounding, ContributionTiming, SimulationConfig } from './types'
+
+interface Overrides {
+  annualRatePercent?: number
+  monthlyContribution?: number
+  initialCapital?: number
+  params?: Partial<SimulationParams>
+  compounding?: Compounding
+  timing?: ContributionTiming
+  accumulationYears?: number
+  withdrawalYears?: number
+  withdrawalStrategyId?: string
+}
+
+const config = (o: Overrides = {}): SimulationConfig => ({
+  annualRatePercent: o.annualRatePercent ?? 7,
+  monthlyContribution: o.monthlyContribution ?? 500,
+  initialCapital: o.initialCapital ?? 0,
+  params: { ...DEFAULT_PARAMS, ...o.params },
+  model: {
+    compounding: o.compounding ?? 'monthly-effective',
+    timing: o.timing ?? 'end',
+    accumulationYears: o.accumulationYears ?? 10,
+    // Ohne Entnahmephase gelten die Anker der reinen Ansparrechnung unverändert.
+    withdrawalYears: o.withdrawalYears ?? 0,
+    withdrawalStrategyId: o.withdrawalStrategyId ?? 'fixedAmount',
+  },
+})
+
+const finalBalance = (c: SimulationConfig) => simulate(c).years.at(-1)!.balance
+
+/** Geschlossene Rentenformel - nur als unabhängiges Orakel bei normalen Zinsen. */
+const annuity = (payment: number, rate: number, periods: number) =>
+  rate === 0 ? payment * periods : payment * ((Math.pow(1 + rate, periods) - 1) / rate)
+
+describe('toMonthlyRate', () => {
+  it('liefert bei 0 % exakt 0', () => {
+    expect(toMonthlyRate(0, 'monthly-effective')).toBe(0)
+    expect(toMonthlyRate(0, 'monthly-nominal')).toBe(0)
+  })
+
+  it('trennt effektiv von nominal', () => {
+    expect(toMonthlyRate(7, 'monthly-nominal')).toBeCloseTo(0.07 / 12, 12)
+    expect(toMonthlyRate(7, 'monthly-effective')).toBeCloseTo(Math.pow(1.07, 1 / 12) - 1, 12)
+  })
+
+  it('bleibt bei -100 % und darunter endlich', () => {
+    expect(Number.isFinite(toMonthlyRate(-100, 'monthly-effective'))).toBe(true)
+    expect(Number.isFinite(toMonthlyRate(-250, 'monthly-effective'))).toBe(true)
+  })
+})
+
+describe('simulateMonthly', () => {
+  it('reproduziert ohne Sparrate exakt die jährliche Verzinsung', () => {
+    // Der Modus-Beweis: 12 effektive Monatsschritte MUESSEN 1,07 ergeben.
+    // Wäre hier nominal verdrahtet, kaeme 20.096,61 heraus statt 19.671,51.
+    const balance = finalBalance(
+      config({ initialCapital: 10_000, monthlyContribution: 0, annualRatePercent: 7, accumulationYears: 10 }),
+    )
+    expect(balance).toBeCloseTo(10_000 * Math.pow(1.07, 10), 6)
+    expect(balance).toBeCloseTo(19_671.51, 2)
+  })
+
+  it('stimmt bei nominaler Verzinsung mit der Rentenformel überein', () => {
+    const balance = finalBalance(config({ compounding: 'monthly-nominal' }))
+    expect(balance).toBeCloseTo(annuity(500, 0.07 / 12, 120), 6)
+    expect(balance).toBeCloseTo(86_542.4, 2)
+  })
+
+  it('stimmt bei effektiver Verzinsung mit der Rentenformel überein', () => {
+    const balance = finalBalance(config())
+    expect(balance).toBeCloseTo(annuity(500, Math.pow(1.07, 1 / 12) - 1, 120), 6)
+    expect(balance).toBeCloseTo(85_525.87, 2)
+  })
+
+  it('ordnet die drei Zinsmodi wie erwartet', () => {
+    const annual = finalBalance(config({ compounding: 'annual' }))
+    const effective = finalBalance(config({ compounding: 'monthly-effective' }))
+    const nominal = finalBalance(config({ compounding: 'monthly-nominal' }))
+    expect(annual).toBeLessThan(effective)
+    expect(effective).toBeLessThan(nominal)
+    expect(annual).toBeCloseTo(82_898.69, 2)
+  })
+
+  it('liefert bei 0 % exakt die Summe der Einzahlungen', () => {
+    const last = simulate(config({ annualRatePercent: 0 })).years.at(-1)!
+    expect(last.balance).toBeCloseTo(60_000, 10)
+    expect(last.interest).toBeCloseTo(0, 10)
+    expect(last.contributions).toBeCloseTo(60_000, 10)
+  })
+
+  it('bleibt bei winzigen Zinssaetzen stabil', () => {
+    // Regressionsschutz: die geschlossene Formel bricht hier zusammen (~48 EUR
+    // Fehler bei 1e-12), die Schleife nicht.
+    expect(finalBalance(config({ annualRatePercent: 1e-12 }))).toBeCloseTo(60_000, 3)
+  })
+
+  it('verarbeitet negative Renditen', () => {
+    const last = simulate(config({ annualRatePercent: -2 })).years.at(-1)!
+    expect(last.balance).toBeLessThan(60_000)
+    expect(last.interest).toBeLessThan(0)
+    expect(Number.isFinite(last.balance)).toBe(true)
+  })
+
+  it('verzinst vorschüssig um genau eine Periode mehr als nachschüssig', () => {
+    const start = finalBalance(config({ timing: 'start' }))
+    const end = finalBalance(config({ timing: 'end' }))
+    expect(start).toBeCloseTo(end * (1 + toMonthlyRate(7, 'monthly-effective')), 6)
+  })
+
+  it('liefert years + 1 Stützpunkte ab Jahr 0', () => {
+    const { years } = simulate(config({ initialCapital: 1_000, accumulationYears: 25 }))
+    expect(years).toHaveLength(26)
+    expect(years[0]).toEqual({
+      year: 0,
+      balance: 1_000,
+      contributions: 1_000,
+      withdrawals: 0,
+      interest: 0,
+      phase: 'accumulate',
+    })
+    expect(years.at(-1)!.year).toBe(25)
+  })
+
+  it('zaehlt Startkapital als Einzahlung, nicht als Zins', () => {
+    const { years } = simulate(
+      config({ initialCapital: 5_000, monthlyContribution: 0, annualRatePercent: 0, accumulationYears: 3 }),
+    )
+    expect(years.at(-1)!.contributions).toBe(5_000)
+    expect(years.at(-1)!.interest).toBeCloseTo(0, 10)
+  })
+
+  it('überlebt NaN-Eingaben', () => {
+    const { years, depletedAtYear } = simulate(
+      config({
+        annualRatePercent: NaN,
+        monthlyContribution: NaN,
+        initialCapital: NaN,
+        withdrawalYears: 5,
+        params: { monthlyWithdrawal: NaN },
+      }),
+    )
+    expect(years).toHaveLength(16)
+    expect(years.every((y) => Number.isFinite(y.balance))).toBe(true)
+    expect(depletedAtYear).toBeNull()
+  })
+
+  it('behält DEFAULT_MODEL als sinnvolle Voreinstellung', () => {
+    expect(DEFAULT_MODEL.accumulationYears).toBe(30)
+    expect(DEFAULT_MODEL.withdrawalYears).toBe(25)
+  })
+
+  it('liefert bei Laufzeit 0 nur den Startpunkt', () => {
+    expect(simulate(config({ accumulationYears: 0 })).years).toHaveLength(1)
+  })
+})
+
+describe('Entnahmephase', () => {
+  const retirement = (o: Overrides = {}) =>
+    simulate(config({ accumulationYears: 30, withdrawalYears: 25, ...o }))
+
+  it('spart erst an und entnimmt dann', () => {
+    const r = retirement({ params: { monthlyWithdrawal: 2_000 } })
+    expect(r.capitalAtRetirement).toBeCloseTo(584_726.3, 1)
+    expect(r.years).toHaveLength(56) // Jahr 0 + 30 + 25
+    expect(r.years[30].phase).toBe('accumulate')
+    expect(r.years[31].phase).toBe('withdraw')
+  })
+
+  it('hält die Identität balance = eingezahlt + Zinsen - entnommen', () => {
+    for (const y of retirement({ params: { monthlyWithdrawal: 3_000 } }).years) {
+      expect(y.balance).toBeCloseTo(y.contributions + y.interest - y.withdrawals, 6)
+    }
+  })
+
+  it('lässt das Depot niemals ins Minus laufen', () => {
+    const r = retirement({ params: { monthlyWithdrawal: 20_000 } })
+    expect(r.years.every((y) => y.balance >= 0)).toBe(true)
+  })
+
+  it('meldet das Jahr, in dem das Kapital aufgebraucht ist', () => {
+    // Nachgerechnet: 584.726 EUR Rentenkapital, 5.000 EUR/Monat, 7 % -> Jahr 46.
+    const r = retirement({ params: { monthlyWithdrawal: 5_000 } })
+    expect(r.depletedAtYear).toBe(46)
+    expect(r.years.at(-1)!.balance).toBeCloseTo(0, 6)
+  })
+
+  it('meldet null, solange das Kapital durchhält', () => {
+    const r = retirement({ params: { monthlyWithdrawal: 4_000 } })
+    expect(r.depletedAtYear).toBeNull()
+    expect(r.years.at(-1)!.balance).toBeGreaterThan(0)
+  })
+
+  it('leitet die Prozentregel aus dem Rentenkapital ab', () => {
+    const r = retirement({
+      withdrawalStrategyId: 'percentRule',
+      params: { withdrawalRate: 4 },
+    })
+    expect(r.monthlyWithdrawal).toBeCloseTo((r.capitalAtRetirement * 0.04) / 12, 6)
+    expect(r.monthlyWithdrawal).toBeCloseTo(1_949.09, 1)
+    expect(r.depletedAtYear).toBeNull()
+  })
+
+  it('lässt den festen Betrag unabhängig vom Rentenkapital', () => {
+    const klein = retirement({ monthlyContribution: 100, params: { monthlyWithdrawal: 1_000 } })
+    const gross = retirement({ monthlyContribution: 900, params: { monthlyWithdrawal: 1_000 } })
+    expect(klein.monthlyWithdrawal).toBe(1_000)
+    expect(gross.monthlyWithdrawal).toBe(1_000)
+    expect(klein.capitalAtRetirement).toBeLessThan(gross.capitalAtRetirement)
+  })
+
+  it('zählt Entnahmen kumuliert mit', () => {
+    const r = retirement({ params: { monthlyWithdrawal: 2_000 } })
+    expect(r.years[30].withdrawals).toBe(0)
+    expect(r.years.at(-1)!.withdrawals).toBeCloseTo(2_000 * 12 * 25, 6)
+  })
+
+  it('kommt ohne Entnahmephase aus', () => {
+    const r = simulate(config({ accumulationYears: 10, withdrawalYears: 0 }))
+    expect(r.years).toHaveLength(11)
+    expect(r.depletedAtYear).toBeNull()
+    expect(r.years.at(-1)!.withdrawals).toBe(0)
+  })
+})
