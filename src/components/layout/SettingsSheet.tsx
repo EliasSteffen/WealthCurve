@@ -8,6 +8,10 @@ import { SettingsPanel } from './SettingsPanel'
  * Nutzt das native <dialog> mit showModal(): Fokus-Falle, ESC zum Schließen,
  * Backdrop und Scroll-Sperre kommen damit vom Browser statt aus einer
  * Bibliothek. Die Animation liegt in index.css (@starting-style).
+ *
+ * Der Auslöser ist eine Leiste am unteren Rand der App-Shell, kein schwebender
+ * Knopf: als Flex-Geschwister der Inhaltsspalte kann er nichts überdecken.
+ * Ein schwebender Knopf liegt dagegen zwangsläufig über scrollendem Inhalt.
  */
 export function SettingsSheet() {
   const [open, setOpen] = useState(false)
@@ -22,15 +26,17 @@ export function SettingsSheet() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Einstellungen öffnen"
-        className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-[var(--chart-1)] px-4 py-3 text-sm font-semibold text-white shadow-lg transition-transform active:scale-95"
-      >
-        <SlidersHorizontal size={16} aria-hidden />
-        Einstellungen
-      </button>
+      <div className="shrink-0 border-t border-[var(--hairline)] bg-[var(--surface-1)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Einstellungen öffnen"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--chart-1)] px-4 py-3 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+        >
+          <SlidersHorizontal size={16} aria-hidden />
+          Einstellungen
+        </button>
+      </div>
 
       <dialog
         ref={dialogRef}
@@ -53,8 +59,8 @@ export function SettingsSheet() {
             <X size={16} aria-hidden />
           </button>
         </div>
-        <div className="overflow-y-auto overscroll-contain p-4">
-          <SettingsPanel />
+        <div className="overflow-y-auto overscroll-contain p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          {open ? <SettingsPanel /> : null}
         </div>
       </dialog>
     </>

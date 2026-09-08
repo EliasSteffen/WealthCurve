@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { projectionToCsv } from './csv'
-import { DEFAULT_MODEL } from './domain/math'
-import { DEFAULT_PARAMS } from './domain/parameters'
-import { buildProjection, type ProjectionInput, type ProjectionScenario } from './projection'
+import { projectionToCsv } from '@/core/csv'
+import { DEFAULT_MODEL } from '@/core/domain/math'
+import { DEFAULT_PARAMS } from '@/core/domain/parameters'
+import { buildProjection, type ProjectionInput, type ProjectionScenario } from '@/core/projection'
 
 const scenario = (id: string, over: Partial<ProjectionScenario> = {}): ProjectionScenario => ({
   id,

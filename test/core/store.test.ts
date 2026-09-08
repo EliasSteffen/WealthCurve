@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { selectProjection } from './derive'
-import { actions, createInitialState, reducer } from './state'
-import { createStore } from './store'
+import { selectProjection } from '@/core/derive'
+import { actions, createInitialState, reducer } from '@/core/state'
+import { createStore } from '@/core/store'
 
 const makeStore = () => createStore(reducer, createInitialState())
 

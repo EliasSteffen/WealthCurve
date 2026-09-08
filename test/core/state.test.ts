@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_SCENARIOS, actions, createInitialState, deserialize, reducer, serialize } from './state'
-import type { AppState } from './state'
+import { MAX_SCENARIOS, actions, createInitialState, deserialize, reducer, serialize } from '@/core/state'
+import type { AppState } from '@/core/state'
 
 const run = (state: AppState, ...list: ReturnType<typeof actions.addScenario>[]) =>
   list.reduce(reducer, state)

@@ -1,13 +1,40 @@
+import { CHART_STYLES } from '../core/chart-style'
 import { TIMELINE_FIELDS, TIMELINE_FIELD_IDS, sanitizeTimelineField } from '../core/domain/parameters'
 import type { ModelSettings as ModelSettingsValue } from '../core/domain/types'
 import { WITHDRAWAL_STRATEGIES } from '../core/domain/withdrawal'
 import { Card, CardTitle } from './ui/Card'
 import { SegmentedControl } from './ui/SegmentedControl'
+import { SelectField } from './ui/SelectField'
 import { SliderField } from './ui/SliderField'
 
 interface ModelSettingsProps {
   readonly value: ModelSettingsValue
   readonly onChange: (value: ModelSettingsValue) => void
+}
+
+/** Der Darstellungsstil - gilt für den Chart und später auch für das Video. */
+export function ChartStyleControl({
+  value,
+  onChange,
+}: {
+  readonly value: string
+  readonly onChange: (id: string) => void
+}) {
+  return (
+    <Card>
+      <CardTitle>Darstellung</CardTitle>
+      <SelectField
+        label="Stil"
+        value={value}
+        onChange={onChange}
+        options={CHART_STYLES.map((s) => ({
+          value: s.id,
+          label: s.label,
+          description: s.description,
+        }))}
+      />
+    </Card>
+  )
 }
 
 /**

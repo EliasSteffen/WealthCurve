@@ -4,12 +4,12 @@ import { useDispatch, useSelector } from '../../react/useSelector'
 import { SettingsPanel } from './SettingsPanel'
 
 /**
- * Desktop-Sidebar mit eigenem Scroll.
+ * Desktop-Seitenspalte mit eigenem Scroll.
  *
- * `sticky` + `h-[100dvh]` + `overflow-y-auto` geben ihr eine eigene
- * Scrollfläche; `overscroll-contain` verhindert, dass der Scroll am Ende der
- * Liste auf die Seite überspringt. Beides zusammen macht die Spalte unabhängig
- * von der rechten.
+ * Sie sitzt in einem Flex-Container fester Höhe; `overflow-y-auto` macht sie
+ * zur eigenen Scrollfläche und `overscroll-contain` verhindert, dass der Scroll
+ * am Listenende auf die Nachbarspalte überspringt. Beides zusammen macht die
+ * Spalte unabhängig von der rechten.
  */
 export function Sidebar() {
   const collapsed = useSelector((s) => s.sidebarCollapsed)
@@ -23,7 +23,7 @@ export function Sidebar() {
         aria-label="Einstellungen einblenden"
         aria-expanded={false}
         title="Einstellungen einblenden"
-        className="sticky top-6 flex h-24 w-7 items-center justify-center self-start rounded-lg border border-[var(--hairline)] bg-[var(--surface-1)] text-[var(--text-muted)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--text-primary)]"
+        className="my-4 ml-4 flex h-24 w-7 shrink-0 items-center justify-center self-start rounded-lg border border-[var(--hairline)] bg-[var(--surface-1)] text-[var(--text-muted)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--text-primary)]"
       >
         <PanelLeftOpen size={15} aria-hidden />
       </button>
@@ -31,7 +31,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="sticky top-0 max-h-[100dvh] self-start overflow-y-auto overscroll-contain py-6 pr-1">
+    <aside className="w-80 shrink-0 overflow-y-auto overscroll-contain border-r border-[var(--hairline)] p-4">
       <div className="mb-3 flex justify-end">
         <button
           type="button"

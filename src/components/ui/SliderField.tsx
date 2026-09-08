@@ -7,11 +7,9 @@ interface SliderFieldProps {
   readonly definition: ParamDefinition
   readonly value: number
   readonly onChange: (value: number) => void
-  /** Inaktive Regler werden gedimmt, bleiben aber bedienbar. */
-  readonly active?: boolean
 }
 
-export function SliderField({ definition, value, onChange, active = true }: SliderFieldProps) {
+export function SliderField({ definition, value, onChange }: SliderFieldProps) {
   const id = useId()
   // Während des Tippens gilt der Rohtext. Sonst würde "4," sofort zu "4"
   // normalisiert und das Komma wäre nicht eingebbar.
@@ -23,7 +21,7 @@ export function SliderField({ definition, value, onChange, active = true }: Slid
   }
 
   return (
-    <div className={cn('transition-opacity', active ? 'opacity-100' : 'opacity-45')}>
+    <div>
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
         <label htmlFor={id} className="text-xs font-medium text-[var(--text-secondary)]">
           {definition.label}

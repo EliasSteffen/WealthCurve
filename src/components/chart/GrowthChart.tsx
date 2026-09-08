@@ -1,22 +1,25 @@
 import {
+  Area,
   CartesianGrid,
+  ComposedChart,
   Label,
   LabelList,
-  Line,
-  LineChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
-import type { ProjectionRow, ProjectionLine } from '../../core/projection'
+import type { ChartStyle } from '../../core/chart-style'
+import type { ProjectionLine, ProjectionRow } from '../../core/projection'
 import { formatEur, formatEurCompact } from '../../lib/format'
+import { sketchCurve } from '../../render/sketchCurve'
 import { ChartTooltip } from './ChartTooltip'
 
 interface GrowthChartProps {
   readonly rows: readonly ProjectionRow[]
   readonly series: readonly ProjectionLine[]
+  readonly style: ChartStyle
   /** Diese eine Serie bekommt eine Direktbeschriftung am Kurvenende. */
   readonly primaryKey?: string
   /** Jahr des Phasenwechsels; 0 oder undefined blendet die Markierung aus. */
@@ -31,8 +34,18 @@ interface EndLabelProps {
   readonly value?: unknown
 }
 
-export function GrowthChart({ rows, series, primaryKey, retirementYear }: GrowthChartProps) {
+export function GrowthChart({
+  rows,
+  series,
+  style,
+  primaryKey,
+  retirementYear,
+}: GrowthChartProps) {
   const lastIndex = rows.length - 1
+
+  // Bei Amplitude 0 die eingebaute Kurve nehmen - der Skizzenpfad kostet sonst
+  // ohne Wirkung Rechenzeit.
+  const curve = style.line.jitter > 0 ? sketchCurve(style.line.jitter) : style.line.curve
 
   /*
    * Nur EINE Direktbeschriftung, am Ende der Hauptkurve. Ein Wert an jedem Punkt
@@ -49,37 +62,57 @@ export function GrowthChart({ rows, series, primaryKey, retirementYear }: Growth
         x={px - 6}
         y={py - 10}
         textAnchor="end"
-        className="fill-[var(--text-primary)] text-[11px] font-semibold"
+        fontSize={style.labels.fontSize}
+        className="fill-[var(--text-primary)] font-semibold"
       >
         {formatEur(value)}
       </text>
     )
   }
 
+  const tick = { fill: 'var(--text-muted)', fontSize: style.axis.fontSize }
+
   return (
     // ResponsiveContainer misst seinen Parent - der braucht eine definite Höhe,
-    // sonst kollabiert der Chart auf 0x0 und rendert stumm nichts.
-    <div className="h-[420px] w-full">
+    // sonst kollabiert der Chart auf 0x0 und rendert stumm nichts. Die Höhe
+    // kommt hier aus dem Flex-Container; min-h-0 erlaubt das Schrumpfen.
+    <div
+      className="min-h-0 w-full flex-1"
+      style={style.fontFamily ? { fontFamily: style.fontFamily } : undefined}
+    >
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={rows as ProjectionRow[]} margin={{ top: 16, right: 24, bottom: 24, left: 8 }}>
-          {/* Recharts' Default ist gestrichelt ("3 3") - Gitter sind durchgezogene
-              Haarlinien, sonst lesen sie sich als Schwelle statt als Raster. */}
-          <CartesianGrid stroke="var(--grid)" strokeDasharray="0" vertical={false} />
+        {/* ComposedChart statt LineChart, damit Stile mit Fläche unter der
+            Kurve dieselbe Komponente nutzen können - <Area> mit Deckkraft 0
+            sieht exakt aus wie eine Linie. */}
+        <ComposedChart
+          data={rows as ProjectionRow[]}
+          margin={{ top: 16, right: 24, bottom: style.axis.show ? 24 : 8, left: 8 }}
+        >
+          {/* Recharts' Default ist gestrichelt ("3 3") - ohne ausdrückliche
+              Angabe läse sich das Gitter als Schwelle statt als Raster. */}
+          {style.grid.show ? (
+            <CartesianGrid
+              stroke="var(--grid)"
+              strokeDasharray={style.grid.dash ?? '0'}
+              vertical={false}
+            />
+          ) : null}
 
           <XAxis
             dataKey="year"
-            tickLine={false}
+            hide={!style.axis.show}
+            tickLine={style.axis.tickLine}
             axisLine={{ stroke: 'var(--axis)' }}
-            tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+            tick={tick}
             minTickGap={24}
-            // Ohne das faellt Jahr 0 weg, obwohl die Daten dort beginnen.
+            // Ohne das fällt Jahr 0 weg, obwohl die Daten dort beginnen.
             interval="preserveStartEnd"
           >
             <Label
               value="Jahre"
               position="insideBottom"
               offset={-12}
-              style={{ fill: 'var(--text-muted)', fontSize: 11 }}
+              style={{ fill: 'var(--text-muted)', fontSize: style.axis.fontSize }}
             />
           </XAxis>
 
@@ -87,9 +120,10 @@ export function GrowthChart({ rows, series, primaryKey, retirementYear }: Growth
               Achse würde eine Korrelation suggerieren, die es nicht gibt. */}
           <YAxis
             width="auto"
-            tickLine={false}
+            hide={!style.axis.show}
+            tickLine={style.axis.tickLine}
             axisLine={false}
-            tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+            tick={tick}
             tickFormatter={formatEurCompact}
           />
 
@@ -103,7 +137,7 @@ export function GrowthChart({ rows, series, primaryKey, retirementYear }: Growth
                 value: 'Rentenbeginn',
                 position: 'insideTopLeft',
                 fill: 'var(--text-muted)',
-                fontSize: 11,
+                fontSize: style.axis.fontSize,
               }}
             />
           ) : null}
@@ -116,29 +150,33 @@ export function GrowthChart({ rows, series, primaryKey, retirementYear }: Growth
           {/* Zeichenreihenfolge umgekehrt: SVG kennt kein z-index, also muss die
               Hauptkurve zuletzt gemalt werden, damit sie obenauf liegt. */}
           {[...series].reverse().map((s) => (
-            <Line
+            <Area
               key={s.key}
               dataKey={s.key}
               name={s.label}
               stroke={s.colorVar}
-              strokeWidth={2}
-              strokeLinecap="round"
+              strokeWidth={style.line.width}
+              strokeLinecap={style.line.cap}
               strokeLinejoin="round"
               strokeDasharray={s.dash}
               strokeOpacity={s.opacity}
-              type="monotone"
+              fill={s.colorVar}
+              fillOpacity={style.area.opacity}
+              type={curve}
               dot={false}
               activeDot={{ r: 4, strokeWidth: 2, stroke: 'var(--surface-1)' }}
               // Ohne das startet die Einblend-Animation bei jedem Reglerpixel neu.
               isAnimationActive={false}
-              // Szenarien duerfen unterschiedlich lang laufen - keine erfundene
+              // Szenarien dürfen unterschiedlich lang laufen - keine erfundene
               // Verbindungslinie über die Lücke.
               connectNulls={false}
             >
-              {s.key === primaryKey ? <LabelList dataKey={s.key} content={EndLabel} /> : null}
-            </Line>
+              {s.key === primaryKey && style.labels.endLabels === 'primary' ? (
+                <LabelList dataKey={s.key} content={EndLabel} />
+              ) : null}
+            </Area>
           ))}
-        </LineChart>
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   )

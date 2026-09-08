@@ -18,7 +18,9 @@ export function Stat({ label, value, detail, accentVar }: StatProps) {
         ) : null}
         <span className="truncate text-xs text-[var(--text-muted)]">{label}</span>
       </div>
-      <div className="mt-0.5 truncate text-xl font-semibold text-[var(--text-primary)]">{value}</div>
+      <div className="mt-0.5 truncate text-lg font-semibold text-[var(--text-primary)] sm:text-xl">
+        {value}
+      </div>
       {detail ? (
         <div className="mt-0.5 truncate text-xs text-[var(--text-secondary)]">{detail}</div>
       ) : null}

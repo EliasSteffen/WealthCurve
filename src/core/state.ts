@@ -1,3 +1,4 @@
+import { DEFAULT_CHART_STYLE_ID } from './chart-style'
 import { DEFAULT_MODEL } from './domain/math'
 import {
   DEFAULT_PARAMS,
@@ -29,6 +30,7 @@ export interface AppState {
   readonly enabledSeriesIds: readonly string[]
   readonly model: ModelSettings
   readonly encoding: EncodingPreference
+  readonly chartStyleId: string
   readonly sidebarCollapsed: boolean
 }
 
@@ -69,6 +71,7 @@ export function createInitialState(): AppState {
     enabledSeriesIds: DEFAULT_ENABLED_SERIES,
     model: DEFAULT_MODEL,
     encoding: 'auto',
+    chartStyleId: DEFAULT_CHART_STYLE_ID,
     sidebarCollapsed: false,
   }
 }
@@ -89,6 +92,7 @@ export type Action =
   | { type: 'model/set'; model: ModelSettings }
   | { type: 'model/setTimeline'; field: TimelineFieldId; value: number }
   | { type: 'encoding/set'; encoding: EncodingPreference }
+  | { type: 'chartStyle/set'; id: string }
   | { type: 'sidebar/setCollapsed'; collapsed: boolean }
   | { type: 'state/replace'; state: AppState }
   | { type: 'state/reset' }
@@ -122,6 +126,7 @@ export const actions = {
     value,
   }),
   setEncoding: (encoding: EncodingPreference): Action => ({ type: 'encoding/set', encoding }),
+  setChartStyle: (id: string): Action => ({ type: 'chartStyle/set', id }),
   setSidebarCollapsed: (collapsed: boolean): Action => ({
     type: 'sidebar/setCollapsed',
     collapsed,
@@ -233,6 +238,9 @@ export function reducer(state: AppState, action: Action): AppState {
 
     case 'encoding/set':
       return { ...state, encoding: action.encoding }
+
+    case 'chartStyle/set':
+      return state.chartStyleId === action.id ? state : { ...state, chartStyleId: action.id }
 
     case 'sidebar/setCollapsed':
       return state.sidebarCollapsed === action.collapsed

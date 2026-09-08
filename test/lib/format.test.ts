@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatEur, formatEurCompact, formatPercent, parseGermanNumber } from './format'
+import { formatEur, formatEurCompact, formatPercent, parseGermanNumber } from '@/lib/format'
 
 /*
  * de-DE setzt ein GESCHUETZTES Leerzeichen (U+00A0) vor das Euro-Zeichen.

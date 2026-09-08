@@ -1,3 +1,4 @@
+import { resolveChartStyle } from './chart-style'
 import { SERIES } from './domain/series'
 import type { ParamId } from './domain/parameters'
 import { resolveWithdrawalStrategy } from './domain/withdrawal'
@@ -51,6 +52,11 @@ export const selectActiveParamIds = createSelector(
         ? resolveWithdrawalStrategy(model.withdrawalStrategyId).requiredParams
         : []),
     ]),
+)
+
+export const selectChartStyle = createSelector(
+  [(s: AppState) => s.chartStyleId],
+  resolveChartStyle,
 )
 
 export const selectActiveScenario = createSelector(

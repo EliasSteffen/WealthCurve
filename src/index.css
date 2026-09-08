@@ -89,12 +89,32 @@
   --color-axis: var(--axis);
 }
 
+/*
+ * App-Shell: die Seite ist genau fensterhoch und scrollt selbst nie.
+ * Gescrollt wird ausschließlich innerhalb der Bereiche, die es brauchen
+ * (Seitenspalte und Inhaltsspalte) - dadurch bleiben Kopfzeile und Diagramm
+ * stehen, statt aus dem Bild zu wandern.
+ *
+ * 100dvh statt 100vh: auf Mobilgeräten wächst und schrumpft die
+ * Browserleiste, und nur dvh folgt dieser Änderung.
+ */
+html {
+  height: 100%;
+}
+
 body {
+  height: 100dvh;
   margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: var(--surface-page);
   color: var(--text-primary);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  height: 100%;
 }
 
 /*
@@ -161,4 +181,43 @@ body {
   .settings-sheet::backdrop {
     transition-duration: 1ms;
   }
+}
+
+/* Video-Dialog: zentriert, mit derselben Ein-Ausblendung wie das Sheet. */
+.video-dialog {
+  /* Ohne margin:auto landet der Dialog in der oberen linken Ecke, sobald
+     display:flex gesetzt ist. */
+  margin: auto;
+  max-height: 88dvh;
+  max-width: min(56rem, 92vw);
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  background: var(--surface-page);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  opacity: 1;
+  scale: 1;
+  transition:
+    opacity 160ms ease,
+    scale 160ms ease,
+    overlay 160ms allow-discrete,
+    display 160ms allow-discrete;
+}
+
+.video-dialog:not([open]) {
+  opacity: 0;
+  scale: 0.97;
+}
+
+@starting-style {
+  .video-dialog[open] {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+
+.video-dialog::backdrop {
+  background: rgb(0 0 0 / 0.5);
 }

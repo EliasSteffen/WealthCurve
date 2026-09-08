@@ -133,6 +133,43 @@ erste Jahr, in dem eine Entnahme nicht mehr voll bedient werden kann, steht als
 `depletedAtYear` in der Zusammenfassung. Beispiel: 584.726 € Rentenkapital,
 5.000 €/Monat, 7 % Rendite → aufgebraucht in Jahr 46.
 
+## Darstellungsstile
+
+Wie das Diagramm aussieht, bestimmt ein Stil aus `src/core/chart-style/` — Standard, Gezeichnet,
+Minimal, Kräftig, Präsentation. Ein neuer Stil ist eine Datei plus eine Registry-Zeile.
+
+Ein Stil ist **reine Daten**, keine Recharts-Props. Das ist kein Zufall: derselbe Stil wird auch vom
+Canvas-Renderer für das Video gelesen. Wäre er an Recharts gebunden, müsste jeder Look zweimal
+gebaut und zweimal gepflegt werden.
+
+Der gezeichnete Stil kommt ohne rough.js aus — Recharts' `type`-Prop akzeptiert eine eigene
+d3-Curve-Factory (`src/render/sketchCurve.ts`). Wichtig dabei: der Versatz wird deterministisch aus
+den Koordinaten berechnet (`src/render/wobble.ts`). Mit `Math.random()` bekäme dieselbe Kurve bei
+jedem Render einen neuen Ausschlag und würde beim Ziehen eines Reglers sichtbar flimmern.
+
+## Video-Export
+
+Der Knopf „Video" in der Kopfzeile erzeugt ein Reel: die Kurve wächst über die Jahre, die Zahlen
+zählen mit, am Ende bleibt das Ergebnis stehen. Formate 9:16, 1:1 und 16:9.
+
+```
+src/core/animation/     Zeitachse, Easing, Interpolation - rein und testbar
+src/render/canvas/      zeichnet ein Einzelbild auf ein Canvas
+src/lib/recordCanvas.ts nimmt das Canvas über MediaRecorder auf
+```
+
+Warum ein zweiter Renderer: Recharts zeichnet DOM/SVG, `MediaRecorder` braucht ein Canvas. Beide
+lesen denselben `ChartStyle` und dieselbe `Projection`, sodass Video und App nicht auseinanderlaufen
+können.
+
+Zwei Eigenheiten, die bewusst so sind:
+
+- Die Aufnahme läuft **in Echtzeit** — ein 12-Sekunden-Video braucht 12 Sekunden. Die Zeitstempel
+  kommen von der Uhr; `captureStream(0)` plus `requestFrame()` sorgt dafür, dass jedes Bild genau
+  einmal im Video landet, egal wie schnell der Rechner zeichnet.
+- Das Containerformat hängt am Browser. Der Dialog zeigt an, ob MP4 oder WebM herauskam — WebM muss
+  für Instagram noch umgewandelt werden.
+
 ## Szenarien und Farben
 
 Beliebig viele Szenarien bis **acht**. Die Grenze ist gemessen, nicht geraten:
@@ -181,10 +218,15 @@ src/core/          reine Logik - kein React, kein DOM, kein Recharts
   store.ts         beobachtbarer Store (~40 Zeilen, ohne Bibliothek)
   derive.ts        memoisierte Selektoren
   index.ts         öffentliche API
+  animation/       Zeitachse fürs Video - kein Canvas, kein DOM
+  chart-style/     Darstellungsstile als reine Daten
+src/render/        Pixel: Canvas-Renderer und die Skizzen-Curve
 src/react/         Bindung an den Store über useSyncExternalStore
 src/lib/           Intl-Formatter (de-DE), deutscher Zahlenparser
 src/components/    UI; nur chart/ kennt Recharts
   layout/          ein SettingsPanel, drei Container (Sidebar / Sheet)
+  video/           Export-Dialog mit Vorschau
+test/              alle Tests, spiegelt src/ - Importe über den Alias @/
 ```
 
 Die Sidebar ist auf dem Desktop einklappbar und scrollt unabhängig von der

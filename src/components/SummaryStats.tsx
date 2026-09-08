@@ -29,7 +29,7 @@ export function SummaryStats({
 
   return (
     <div>
-      <div className="mb-3 flex items-baseline gap-2">
+      <div className="mb-2 flex flex-wrap items-baseline gap-x-2 sm:mb-3">
         <span className="text-sm font-semibold text-[var(--text-primary)]">{shown.label}</span>
         {summaries.length > 1 ? (
           <span className="text-xs text-[var(--text-muted)]">
@@ -38,7 +38,7 @@ export function SummaryStats({
         ) : null}
       </div>
 
-      <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:gap-x-6 sm:gap-y-4 lg:grid-cols-4">
         {hasWithdrawalPhase ? (
           <>
             <Stat

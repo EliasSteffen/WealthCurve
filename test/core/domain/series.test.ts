@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_MODEL, simulate } from '../math'
-import { DEFAULT_PARAMS, PARAM_IDS, type SimulationParams } from '../parameters'
-import { resolveWithdrawalStrategy } from '../withdrawal'
-import type { SeriesContext } from '../types'
-import { SERIES } from './index'
+import { DEFAULT_MODEL, simulate } from '@/core/domain/math'
+import { DEFAULT_PARAMS, PARAM_IDS, type SimulationParams } from '@/core/domain/parameters'
+import { resolveWithdrawalStrategy } from '@/core/domain/withdrawal'
+import type { SeriesContext } from '@/core/domain/types'
+import { SERIES } from '@/core/domain/series/index'
 
 const base = simulate({
   annualRatePercent: DEFAULT_PARAMS.annualRate,

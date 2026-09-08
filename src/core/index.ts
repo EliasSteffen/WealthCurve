@@ -49,7 +49,27 @@ export {
 } from './domain/withdrawal'
 export type { WithdrawalStrategy } from './domain/withdrawal'
 export { AUTO_ENCODING, ENCODINGS, defineEncoding, resolveEncoding } from './encoding'
+export {
+  CHART_STYLES,
+  DEFAULT_CHART_STYLE_ID,
+  defineChartStyle,
+  resolveChartStyle,
+} from './chart-style'
+export type { ChartStyle } from './chart-style'
 export type { CapacityReport, EncodingStrategy, LineIdentity, LineStyle } from './encoding'
+
+// Animation
+export {
+  DEFAULT_FORMAT_ID,
+  DEFAULT_SPEC,
+  VIDEO_FORMATS,
+  buildFrameCount,
+  easeInOutCubic,
+  frameAt,
+  frameCount,
+  resolveFormat,
+} from './animation'
+export type { AnimationSpec, FrameState, VideoFormat } from './animation'
 
 // Parameter
 export {
@@ -87,6 +107,7 @@ export { createSelectorFactory } from './selectors'
 export {
   selectActiveParamIds,
   selectActiveScenario,
+  selectChartStyle,
   selectProjection,
   selectVisibleScenarios,
 } from './derive'

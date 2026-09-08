@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { SLOT_COUNT, slotVar } from '../palette'
-import { AUTO_ENCODING, ENCODINGS, colorByScenario, colorBySeries, resolveEncoding } from './index'
-import { DASH_PATTERNS, reportCapacity, type LineIdentity } from './types'
+import { SLOT_COUNT, slotVar } from '@/core/palette'
+import { AUTO_ENCODING, ENCODINGS, colorByScenario, colorBySeries, resolveEncoding } from '@/core/encoding/index'
+import { DASH_PATTERNS, reportCapacity, type LineIdentity } from '@/core/encoding/types'
 
 const line = (over: Partial<LineIdentity> = {}): LineIdentity => ({
   scenarioId: 'a',

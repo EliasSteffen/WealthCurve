@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_PARAMS, type SimulationParams } from './parameters'
-import { DEFAULT_MODEL, simulate, toMonthlyRate } from './math'
-import type { Compounding, ContributionTiming, SimulationConfig } from './types'
+import { DEFAULT_PARAMS, type SimulationParams } from '@/core/domain/parameters'
+import { DEFAULT_MODEL, simulate, toMonthlyRate } from '@/core/domain/math'
+import type { Compounding, ContributionTiming, SimulationConfig } from '@/core/domain/types'
 
 interface Overrides {
   annualRatePercent?: number

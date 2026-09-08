@@ -1,7 +1,7 @@
 import { selectActiveParamIds, selectActiveScenario, selectProjection } from '../../core/derive'
 import { actions } from '../../core/state'
 import { useDispatch, useSelector } from '../../react/useSelector'
-import { ModelSettings, WithdrawalRuleControl } from '../ModelSettings'
+import { ChartStyleControl, ModelSettings, WithdrawalRuleControl } from '../ModelSettings'
 import { ParameterPanel } from '../ParameterPanel'
 import { ScenarioList } from '../ScenarioList'
 import { SeriesPanel } from '../SeriesPanel'
@@ -19,6 +19,7 @@ export function SettingsPanel() {
   const activeScenarioId = useSelector((s) => s.activeScenarioId)
   const enabledSeriesIds = useSelector((s) => s.enabledSeriesIds)
   const model = useSelector((s) => s.model)
+  const chartStyleId = useSelector((s) => s.chartStyleId)
   const activeScenario = useSelector(selectActiveScenario)
   const activeParamIds = useSelector(selectActiveParamIds)
   const capacity = useSelector(selectProjection).capacity
@@ -45,6 +46,11 @@ export function SettingsPanel() {
         enabledSeriesIds={enabledSeriesIds}
         onToggle={(id) => dispatch(actions.toggleSeries(id))}
         capacity={capacity}
+      />
+
+      <ChartStyleControl
+        value={chartStyleId}
+        onChange={(id) => dispatch(actions.setChartStyle(id))}
       />
 
       <ModelSettings value={model} onChange={(next) => dispatch(actions.setModel(next))} />
