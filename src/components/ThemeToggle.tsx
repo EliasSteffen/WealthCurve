@@ -1,6 +1,7 @@
 import { Monitor, Moon, Sun } from 'lucide-react'
 import type { ThemePreference } from '../hooks/useTheme'
 import { cn } from '../lib/cn'
+import { useT } from '../react/localeContext'
 
 const OPTIONS: readonly { value: ThemePreference; label: string; Icon: typeof Sun }[] = [
   { value: 'light', label: 'Hell', Icon: Sun },
@@ -15,10 +16,11 @@ export function ThemeToggle({
   readonly theme: ThemePreference
   readonly onChange: (value: ThemePreference) => void
 }) {
+  const t = useT()
   return (
     <div
       role="radiogroup"
-      aria-label="Farbschema"
+      aria-label={t('theme.label', 'Farbschema')}
       className="flex gap-0.5 rounded-lg border border-[var(--hairline)] p-0.5"
     >
       {OPTIONS.map(({ value, label, Icon }) => (
@@ -27,8 +29,8 @@ export function ThemeToggle({
           type="button"
           role="radio"
           aria-checked={theme === value}
-          aria-label={label}
-          title={label}
+          aria-label={t(`theme.${value}`, label)}
+          title={t(`theme.${value}`, label)}
           onClick={() => onChange(value)}
           className={cn(
             'rounded-md p-1.5 transition-colors',

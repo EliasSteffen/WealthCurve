@@ -1,48 +1,89 @@
 /*
  * Intl.NumberFormat ist teuer zu konstruieren. Diese Formatter laufen in
- * Achsen-Ticks und Tabellenzeilen - also einmal auf Modulebene bauen,
- * niemals pro Render.
+ * Achsen-Ticks und Tabellenzeilen - also einmal je Sprache bauen und
+ * zwischenspeichern, niemals pro Render.
+ *
+ * Die aktive Sprache liegt bewusst modulweit statt im React-Kontext: dadurch
+ * behalten formatEur & Co. ihre einfache Signatur und bleiben auch aus dem
+ * Canvas-Renderer und dem Kern heraus aufrufbar, die keinen Kontext haben.
+ * Der Preis ist ein globaler Zustand - vertretbar, weil immer genau eine
+ * Sprache aktiv ist und der Provider sie als Einziger setzt.
  */
 
-const EUR = new Intl.NumberFormat('de-DE', {
-  style: 'currency',
-  currency: 'EUR',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-})
+interface Formatter {
+  readonly eur: Intl.NumberFormat
+  readonly eurCents: Intl.NumberFormat
+  readonly compact: Intl.NumberFormat
+  readonly percent: Intl.NumberFormat
+}
 
-const EUR_CENTS = new Intl.NumberFormat('de-DE', {
-  style: 'currency',
-  currency: 'EUR',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-})
+const cache = new Map<string, Formatter>()
 
-/*
- * Deutsches Compact kuerzt Tausender NICHT ab: 609985 -> "609.985".
- * Erst ab Millionen greift es: 1234567 -> "1,2 Mio.". Das ist korrektes
- * Deutsch und auf einer Euro-Achse gut lesbar.
- */
-const COMPACT = new Intl.NumberFormat('de-DE', {
-  notation: 'compact',
-  compactDisplay: 'short',
-  maximumFractionDigits: 1,
-})
+function build(locale: string): Formatter {
+  const waehrung = locale.startsWith('de') ? 'EUR' : 'EUR'
+  return {
+    eur: new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: waehrung,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }),
+    eurCents: new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: waehrung,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }),
+    /*
+     * Deutsches Compact kuerzt Tausender NICHT ab: 609985 -> "609.985".
+     * Erst ab Millionen greift es: 1234567 -> "1,2 Mio.". Englisch kuerzt
+     * dagegen schon ab Tausendern ("610K") - beides ist korrekt fuer die
+     * jeweilige Sprache.
+     */
+    compact: new Intl.NumberFormat(locale, {
+      notation: 'compact',
+      compactDisplay: 'short',
+      maximumFractionDigits: 1,
+    }),
+    percent: new Intl.NumberFormat(locale, {
+      style: 'percent',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }),
+  }
+}
 
-const PERCENT = new Intl.NumberFormat('de-DE', {
-  style: 'percent',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-})
+let aktuell = 'de-DE'
 
-export const formatEur = (value: number) => EUR.format(value)
-export const formatEurCents = (value: number) => EUR_CENTS.format(value)
-export const formatEurCompact = (value: number) => `${COMPACT.format(value)} €`
+function f(): Formatter {
+  let vorhanden = cache.get(aktuell)
+  if (!vorhanden) {
+    vorhanden = build(aktuell)
+    cache.set(aktuell, vorhanden)
+  }
+  return vorhanden
+}
+
+/** Wird ausschliesslich vom LocaleProvider aufgerufen. */
+export function setFormatterLocale(locale: string): void {
+  aktuell = locale
+}
+
+export function currentFormatterLocale(): string {
+  return aktuell
+}
+
+export const formatEur = (value: number) => f().eur.format(value)
+export const formatEurCents = (value: number) => f().eurCents.format(value)
+export const formatEurCompact = (value: number) => `${f().compact.format(value)} €`
 
 /** Erwartet Prozentpunkte: 7.25 -> "7,25 %". */
-export const formatPercent = (percentPoints: number) => PERCENT.format(percentPoints / 100)
+export const formatPercent = (percentPoints: number) => f().percent.format(percentPoints / 100)
 
-export const formatYears = (years: number) => `${years} ${years === 1 ? 'Jahr' : 'Jahre'}`
+export const formatYears = (years: number) =>
+  aktuell.startsWith('de')
+    ? `${years} ${years === 1 ? 'Jahr' : 'Jahre'}`
+    : `${years} ${years === 1 ? 'year' : 'years'}`
 
 /** Nach Einheit aus dem Parameter-Registry formatieren. */
 export function formatParamValue(value: number, unit: 'currency' | 'percent' | 'years') {

@@ -1,5 +1,6 @@
 import type { ProjectionRow, ProjectionLine } from '../../core/projection'
 import { formatEur } from '../../lib/format'
+import { useSeriesLabel } from '../../react/useSeriesLabel'
 
 interface ChartLegendProps {
   readonly series: readonly ProjectionLine[]
@@ -19,6 +20,7 @@ interface ChartLegendProps {
  * Kontrast liegen.
  */
 export function ChartLegend({ series, rows, encodingDescription, showEncodingHint }: ChartLegendProps) {
+  const labelOf = useSeriesLabel()
   const finalValueOf = (key: string): number | null => {
     for (let i = rows.length - 1; i >= 0; i -= 1) {
       const value = rows[i][key]
@@ -45,7 +47,7 @@ export function ChartLegend({ series, rows, encodingDescription, showEncodingHin
                   opacity: s.opacity,
                 }}
               />
-              <span className="text-xs text-[var(--text-secondary)]">{s.label}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{labelOf(s)}</span>
               {value !== null ? (
                 <span className="text-xs font-semibold tabular-nums text-[var(--text-primary)]">
                   {formatEur(value)}

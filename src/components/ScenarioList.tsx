@@ -1,6 +1,7 @@
 import { Copy, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
 import { MAX_SCENARIOS, actions, type Scenario } from '../core/state'
 import { slotVar } from '../core/palette'
+import { useT } from '../react/localeContext'
 import { useDispatch } from '../react/useSelector'
 import { cn } from '../lib/cn'
 
@@ -11,6 +12,7 @@ interface ScenarioListProps {
 
 export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps) {
   const dispatch = useDispatch()
+  const t = useT()
   const atLimit = scenarios.length >= MAX_SCENARIOS
 
   return (
@@ -48,7 +50,11 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
 
               <div className="flex shrink-0 items-center gap-0.5">
                 <IconButton
-                  label={scenario.visible ? 'Ausblenden' : 'Einblenden'}
+                  label={
+                    scenario.visible
+                      ? t('scenario.hide', 'Ausblenden')
+                      : t('scenario.show', 'Einblenden')
+                  }
                   onClick={() =>
                     dispatch(actions.setScenarioVisible(scenario.id, !scenario.visible))
                   }
@@ -56,14 +62,14 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
                   {scenario.visible ? <Eye size={13} /> : <EyeOff size={13} />}
                 </IconButton>
                 <IconButton
-                  label="Duplizieren"
+                  label={t('scenario.duplicate', 'Duplizieren')}
                   disabled={atLimit}
                   onClick={() => dispatch(actions.duplicateScenario(scenario.id))}
                 >
                   <Copy size={13} />
                 </IconButton>
                 <IconButton
-                  label="Löschen"
+                  label={t('scenario.delete', 'Löschen')}
                   disabled={scenarios.length <= 1}
                   onClick={() => dispatch(actions.removeScenario(scenario.id))}
                 >
@@ -87,7 +93,7 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
         )}
       >
         <Plus size={13} aria-hidden />
-        Szenario hinzufügen
+        {t('scenario.add', 'Szenario hinzufügen')}
       </button>
 
       {atLimit ? (
@@ -95,8 +101,11 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
            Farbfehlsichtigkeit geprüfte Töne. Ein neunter wäre von einem
            vorhandenen nicht mehr zu unterscheiden. */
         <p className="mt-2 text-[11px] leading-snug text-[var(--text-muted)]">
-          {MAX_SCENARIOS} Szenarien sind das Maximum – so viele Farben lassen sich noch sicher
-          unterscheiden.
+          {t(
+            'scenario.limit',
+            `${MAX_SCENARIOS} Szenarien sind das Maximum – so viele Farben lassen sich noch sicher unterscheiden.`,
+            { max: MAX_SCENARIOS },
+          )}
         </p>
       ) : null}
     </div>

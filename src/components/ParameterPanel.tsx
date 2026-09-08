@@ -2,10 +2,12 @@ import type { ReactNode } from 'react'
 import {
   PARAMETERS,
   PARAM_IDS,
+  type ParamDefinition,
   type ParamGroup,
   type ParamId,
   type SimulationParams,
 } from '../core/domain/parameters'
+import { useT } from '../react/localeContext'
 import { SliderField } from './ui/SliderField'
 
 interface ParameterPanelProps {
@@ -45,6 +47,7 @@ export function ParameterPanel({
   groupExtras,
   matches = null,
 }: ParameterPanelProps) {
+  const t = useT()
   const sichtbar = (id: ParamId) =>
     activeParamIds.has(id) && (matches === null || matches.has(`param:${id}`))
 
@@ -61,17 +64,26 @@ export function ParameterPanel({
           <div key={group} className="space-y-4">
             {/* Untergruppe innerhalb der Kategorie - nur wenn es mehr als eine gibt. */}
             <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-              {GROUP_LABELS[group]}
+              {t(`param.group.${group}`, GROUP_LABELS[group])}
             </div>
             {extraZeigen ? extra : null}
-            {ids.map((id) => (
+            {ids.map((id) => {
+              // as const satisfies verengt die Registry-Typen so, dass
+              // optionale Felder je Eintrag verschwinden.
+              const def: ParamDefinition = PARAMETERS[id]
+              return (
               <SliderField
                 key={id}
-                definition={PARAMETERS[id]}
+                definition={{
+                  ...def,
+                  label: t(`param.${id}.label`, def.label),
+                  hint: def.hint ? t(`param.${id}.hint`, def.hint) : undefined,
+                }}
                 value={params[id]}
                 onChange={(value) => onChange(id, value)}
               />
-            ))}
+              )
+            })}
           </div>
         )
       })}

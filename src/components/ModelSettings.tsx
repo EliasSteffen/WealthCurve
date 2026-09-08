@@ -7,6 +7,7 @@ import {
 } from '../core/domain/parameters'
 import type { ModelSettings as ModelSettingsValue } from '../core/domain/types'
 import { WITHDRAWAL_STRATEGIES } from '../core/domain/withdrawal'
+import { useT } from '../react/localeContext'
 import { SegmentedControl } from './ui/SegmentedControl'
 import { SelectField } from './ui/SelectField'
 import { SliderField } from './ui/SliderField'
@@ -23,15 +24,16 @@ const zeigt = (matches: ReadonlySet<string> | null | undefined, id: string) =>
 
 /** Die Entnahmeregel steht im ParameterPanel direkt über den Entnahme-Reglern. */
 export function WithdrawalRuleControl({ value, onChange }: ModelProps) {
+  const t = useT()
   return (
     <SegmentedControl
-      label="Regel"
+      label={t('withdrawal.rule', 'Regel')}
       value={value.withdrawalStrategyId}
       onChange={(withdrawalStrategyId) => onChange({ ...value, withdrawalStrategyId })}
       options={WITHDRAWAL_STRATEGIES.map((s) => ({
         value: s.id,
-        label: s.label,
-        hint: s.description,
+        label: t(`withdrawal.${s.id}.label`, s.label),
+        hint: t(`withdrawal.${s.id}.description`, s.description),
       }))}
     />
   )
@@ -42,6 +44,7 @@ export function WithdrawalRuleControl({ value, onChange }: ModelProps) {
  * unterschiedlichen X-Achsen und der Vergleich wäre wertlos.
  */
 export function TimelineControls({ value, onChange, matches = null }: ModelProps) {
+  const t = useT()
   const ids = TIMELINE_FIELD_IDS.filter((id) => zeigt(matches, `timeline:${id}`))
   if (ids.length === 0) return null
 
@@ -50,14 +53,18 @@ export function TimelineControls({ value, onChange, matches = null }: ModelProps
       {ids.map((id: TimelineFieldId) => (
         <SliderField
           key={id}
-          definition={TIMELINE_FIELDS[id]}
+          definition={{
+            ...TIMELINE_FIELDS[id],
+            label: t(`timeline.${id}.label`, TIMELINE_FIELDS[id].label),
+            hint: t(`timeline.${id}.hint`, TIMELINE_FIELDS[id].hint),
+          }}
           value={value[id]}
           onChange={(next) => onChange({ ...value, [id]: sanitizeTimelineField(id, next) })}
         />
       ))}
       {matches === null ? (
         <p className="text-[11px] leading-snug text-[var(--text-muted)]">
-          Gilt für alle Szenarien gemeinsam.
+          {t('timeline.shared', 'Gilt für alle Szenarien gemeinsam.')}
         </p>
       ) : null}
     </div>
@@ -66,6 +73,7 @@ export function TimelineControls({ value, onChange, matches = null }: ModelProps
 
 /** Rechenkonventionen - sie ändern die Zahlen, nicht das Szenario. */
 export function CalculationControls({ value, onChange, matches = null }: ModelProps) {
+  const t = useT()
   const zinsmodus = zeigt(matches, 'model:compounding')
   const timing = zeigt(matches, 'model:timing')
   const inflation = zeigt(matches, 'model:amountsInflationAdjusted')
@@ -75,23 +83,23 @@ export function CalculationControls({ value, onChange, matches = null }: ModelPr
     <div className="space-y-4">
       {zinsmodus ? (
         <SegmentedControl
-          label="Zinsmodus"
+          label={t('model.compounding', 'Zinsmodus')}
           value={value.compounding}
           onChange={(compounding) => onChange({ ...value, compounding })}
           options={[
             {
               value: 'monthly-effective',
-              label: 'Effektiv',
+              label: t('model.compounding.monthly-effective', 'Effektiv'),
               hint: 'Zwölf Monatsschritte ergeben exakt den Jahreszins (ETF-Konvention).',
             },
             {
               value: 'monthly-nominal',
-              label: 'Nominal',
+              label: t('model.compounding.monthly-nominal', 'Nominal'),
               hint: 'Zins/12 – Bankkonvention. Ergibt mehr als den eingegebenen Jahreszins.',
             },
             {
               value: 'annual',
-              label: 'Jährlich',
+              label: t('model.compounding.annual', 'Jährlich'),
               hint: 'Einmal pro Jahr verzinst, Raten sammeln sich unverzinst.',
             },
           ]}
@@ -99,29 +107,37 @@ export function CalculationControls({ value, onChange, matches = null }: ModelPr
       ) : null}
       {timing ? (
         <SegmentedControl
-          label="Sparrate"
+          label={t('model.timing', 'Sparrate')}
           value={value.timing}
           onChange={(timing) => onChange({ ...value, timing })}
           options={[
-            { value: 'end', label: 'Nachschüssig', hint: 'Einzahlung am Monatsende.' },
-            { value: 'start', label: 'Vorschüssig', hint: 'Einzahlung am Monatsanfang.' },
+            {
+              value: 'end',
+              label: t('model.timing.end', 'Nachschüssig'),
+              hint: 'Einzahlung am Monatsende.',
+            },
+            {
+              value: 'start',
+              label: t('model.timing.start', 'Vorschüssig'),
+              hint: 'Einzahlung am Monatsanfang.',
+            },
           ]}
         />
       ) : null}
       {inflation ? (
         <SegmentedControl
-          label="Beträge"
+          label={t('model.amounts', 'Beträge')}
           value={value.amountsInflationAdjusted ? 'real' : 'nominal'}
           onChange={(v) => onChange({ ...value, amountsInflationAdjusted: v === 'real' })}
           options={[
             {
               value: 'nominal',
-              label: 'Nominal',
+              label: t('model.amounts.nominal', 'Nominal'),
               hint: 'Spar- und Auszahlbetrag bleiben über die Jahre unverändert.',
             },
             {
               value: 'real',
-              label: 'Inflationsbereinigt',
+              label: t('model.amounts.real', 'Inflationsbereinigt'),
               hint:
                 'Der eingetragene Betrag gilt als heutige Kaufkraft; nominal steigt er ' +
                 'jährlich mit der Inflation, damit sein realer Wert konstant bleibt.',
@@ -143,16 +159,17 @@ export function ChartStyleControl({
   readonly onChange: (id: string) => void
   readonly matches?: ReadonlySet<string> | null
 }) {
+  const t = useT()
   if (!zeigt(matches, 'style')) return null
   return (
     <SelectField
-      label="Stil"
+      label={t('style.label', 'Stil')}
       value={value}
       onChange={onChange}
       options={CHART_STYLES.map((s) => ({
         value: s.id,
-        label: s.label,
-        description: s.description,
+        label: t(`style.${s.id}.label`, s.label),
+        description: t(`style.${s.id}.description`, s.description),
       }))}
     />
   )

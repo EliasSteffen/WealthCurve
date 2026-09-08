@@ -1,10 +1,13 @@
 import { Dashboard } from './components/Dashboard'
+import { LocaleProvider } from './react/LocaleProvider'
 import { StoreProvider } from './react/StoreProvider'
 
 export default function App() {
   return (
-    <StoreProvider>
-      <Dashboard />
-    </StoreProvider>
+    <LocaleProvider>
+      <StoreProvider>
+        <Dashboard />
+      </StoreProvider>
+    </LocaleProvider>
   )
 }

@@ -1,5 +1,6 @@
 import type { ProjectionLine } from '../../core/projection'
 import { formatEur } from '../../lib/format'
+import { useSeriesLabel } from '../../react/useSeriesLabel'
 
 interface TooltipPayloadEntry {
   readonly dataKey?: string | number
@@ -19,6 +20,7 @@ interface ChartTooltipProps {
  * die Serie schon und will die Zahl.
  */
 export function ChartTooltip({ active, label, payload, series }: ChartTooltipProps) {
+  const labelOf = useSeriesLabel()
   if (!active || !payload?.length) return null
 
   const byKey = new Map(payload.map((entry) => [String(entry.dataKey), entry.value]))
@@ -44,7 +46,7 @@ export function ChartTooltip({ active, label, payload, series }: ChartTooltipPro
               className="h-0.5 w-3.5 shrink-0 rounded-full"
               style={{ background: s.colorVar, opacity: s.opacity }}
             />
-            <span className="text-[var(--text-secondary)]">{s.label}</span>
+            <span className="text-[var(--text-secondary)]">{labelOf(s)}</span>
             <span className="ml-auto font-semibold tabular-nums text-[var(--text-primary)]">
               {formatEur(value)}
             </span>

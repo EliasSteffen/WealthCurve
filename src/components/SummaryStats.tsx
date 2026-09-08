@@ -1,5 +1,6 @@
 import type { ProjectionSummary } from '../core/projection'
 import { formatEur, formatPercent } from '../lib/format'
+import { useT } from '../react/localeContext'
 import { Stat } from './ui/Stat'
 
 interface SummaryStatsProps {
@@ -20,12 +21,16 @@ export function SummaryStats({
   activeScenarioId,
   hasWithdrawalPhase,
 }: SummaryStatsProps) {
+  const t = useT()
   const shown = summaries.find((s) => s.scenarioId === activeScenarioId) ?? summaries[0]
   if (!shown) return null
 
   const { balance, contributions, interest } = shown.final
   const interestShare = balance !== 0 ? (interest / balance) * 100 : 0
-  const lasts = shown.depletedAtYear === null ? 'reicht durch' : `bis Jahr ${shown.depletedAtYear}`
+  const lasts =
+    shown.depletedAtYear === null
+      ? t('stat.lasts.through', 'reicht durch')
+      : t('stat.lasts.until', `bis Jahr ${shown.depletedAtYear}`, { year: shown.depletedAtYear })
 
   return (
     <div>
@@ -33,7 +38,9 @@ export function SummaryStats({
         <span className="text-sm font-semibold text-[var(--text-primary)]">{shown.label}</span>
         {summaries.length > 1 ? (
           <span className="text-xs text-[var(--text-muted)]">
-            von {summaries.length} sichtbaren · Vergleich in Legende und Tabelle
+            {t('stat.ofVisible', `von ${summaries.length} sichtbaren · Vergleich in Legende und Tabelle`, {
+              count: summaries.length,
+            })}
           </span>
         ) : null}
       </div>
@@ -42,33 +49,48 @@ export function SummaryStats({
         {hasWithdrawalPhase ? (
           <>
             <Stat
-              label="Bei Rentenbeginn"
+              label={t('stat.atRetirement', 'Bei Rentenbeginn')}
               value={formatEur(shown.capitalAtRetirement)}
               accentVar="var(--chart-1)"
             />
             <Stat
-              label="Monatliche Entnahme"
+              label={t('stat.monthlyWithdrawal', 'Monatliche Entnahme')}
               value={formatEur(shown.monthlyWithdrawal)}
               detail={
                 // Nur zeigen, wenn er abweicht - sonst wäre es eine Dopplung.
                 Math.abs(shown.monthlyWithdrawalAtStart - shown.monthlyWithdrawal) > 1
-                  ? `nominal zu Beginn ${formatEur(shown.monthlyWithdrawalAtStart)}`
+                  ? t(
+                      'stat.nominalAtStart',
+                      `nominal zu Beginn ${formatEur(shown.monthlyWithdrawalAtStart)}`,
+                      { value: formatEur(shown.monthlyWithdrawalAtStart) },
+                    )
                   : undefined
               }
             />
             <Stat
-              label="Kapital reicht"
+              label={t('stat.lasts', 'Kapital reicht')}
               value={lasts}
               accentVar={shown.depletedAtYear === null ? undefined : 'var(--chart-8)'}
             />
-            <Stat label="Restkapital" value={formatEur(balance)} />
+            <Stat label={t('stat.remaining', 'Restkapital')} value={formatEur(balance)} />
           </>
         ) : (
           <>
-            <Stat label="Endkapital" value={formatEur(balance)} accentVar="var(--chart-1)" />
-            <Stat label="Eingezahlt" value={formatEur(contributions)} accentVar="var(--chart-2)" />
-            <Stat label="Zinsertrag" value={formatEur(interest)} />
-            <Stat label="Anteil Zinsertrag" value={formatPercent(interestShare)} />
+            <Stat
+              label={t('stat.final', 'Endkapital')}
+              value={formatEur(balance)}
+              accentVar="var(--chart-1)"
+            />
+            <Stat
+              label={t('stat.contributed', 'Eingezahlt')}
+              value={formatEur(contributions)}
+              accentVar="var(--chart-2)"
+            />
+            <Stat label={t('stat.interest', 'Zinsertrag')} value={formatEur(interest)} />
+            <Stat
+              label={t('stat.interestShare', 'Anteil Zinsertrag')}
+              value={formatPercent(interestShare)}
+            />
           </>
         )}
       </div>

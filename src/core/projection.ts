@@ -41,7 +41,15 @@ export interface ProjectionLine {
   readonly key: string
   readonly scenarioId: string
   readonly seriesId: string
+  /**
+   * Fertige deutsche Beschriftung.
+   *
+   * Zum Übersetzen setzen Anzeige-Komponenten sie aus `seriesId` und
+   * `scenarioLabel` neu zusammen - der Kern kennt keine Sprachen und soll
+   * auch keine kennen.
+   */
   readonly label: string
+  readonly scenarioLabel: string | null
   readonly colorVar: string
   /** SVG stroke-dasharray; undefined = durchgezogen. */
   readonly dash?: string
@@ -130,6 +138,7 @@ export function buildProjection(input: ProjectionInput): Projection {
         scenarioId: scenario.id,
         seriesId: series.id,
         label: comparing ? `${series.label} · ${scenario.label}` : series.label,
+        scenarioLabel: comparing ? scenario.label : null,
         colorVar: style.colorVar,
         dash: style.dash,
         opacity: style.opacity,

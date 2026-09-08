@@ -10,6 +10,7 @@ import {
 } from '../../core/settings'
 import { actions } from '../../core/state'
 import { cn } from '../../lib/cn'
+import { useT } from '../../react/localeContext'
 import { useDispatch, useSelector } from '../../react/useSelector'
 import {
   CalculationControls,
@@ -44,6 +45,7 @@ export function SettingsPanel() {
   const activeParamIds = useSelector(selectActiveParamIds)
   const capacity = useSelector(selectProjection).capacity
 
+  const t = useT()
   const [query, setQuery] = useState('')
   const [zu, setZu] = useState<ReadonlySet<SettingsCategoryId>>(new Set())
 
@@ -106,15 +108,15 @@ export function SettingsPanel() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Einstellung suchen …"
-          aria-label="Einstellungen durchsuchen"
+          placeholder={t('settings.search', 'Einstellung suchen …')}
+          aria-label={t('settings.search', 'Einstellung suchen …')}
           className="w-full rounded-lg border border-[var(--hairline)] bg-[var(--surface-1)] py-2 pl-8 pr-8 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--chart-1)] focus:outline-none"
         />
         {query ? (
           <button
             type="button"
             onClick={() => setQuery('')}
-            aria-label="Suche leeren"
+            aria-label={t('settings.clearSearch', 'Suche leeren')}
             className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
           >
             <X size={13} aria-hidden />
@@ -124,7 +126,7 @@ export function SettingsPanel() {
 
       {leer ? (
         <p className="px-1 py-6 text-center text-xs text-[var(--text-muted)]">
-          Nichts gefunden für „{query}“.
+          {t('settings.empty', `Nichts gefunden für „${query}“.`, { query })}
         </p>
       ) : null}
 
@@ -153,11 +155,11 @@ export function SettingsPanel() {
             >
               <span>
                 <span className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                  {kategorie.label}
+                  {t(`category.${kategorie.id}.label`, kategorie.label)}
                 </span>
                 {!offen ? (
                   <span className="mt-0.5 block text-[11px] text-[var(--text-muted)]">
-                    {kategorie.hint}
+                    {t(`category.${kategorie.id}.hint`, kategorie.hint)}
                   </span>
                 ) : null}
               </span>

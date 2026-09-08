@@ -2,12 +2,14 @@ import { selectChartStyle, selectProjection } from '../core/derive'
 import { actions } from '../core/state'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTheme } from '../hooks/useTheme'
+import { useT } from '../react/localeContext'
 import { useDispatch, useSelector } from '../react/useSelector'
 import { ChartLegend } from './chart/ChartLegend'
 import { GrowthChart } from './chart/GrowthChart'
 import { DataTable } from './DataTable'
 import { SettingsSheet } from './layout/SettingsSheet'
 import { Sidebar } from './layout/Sidebar'
+import { LocaleToggle } from './LocaleToggle'
 import { SummaryStats } from './SummaryStats'
 import { VideoDialog } from './video/VideoDialog'
 import { ThemeToggle } from './ThemeToggle'
@@ -29,6 +31,7 @@ export function Dashboard() {
   const { theme, setTheme } = useTheme()
   const dispatch = useDispatch()
   const isDesktop = useMediaQuery(DESKTOP)
+  const t = useT()
 
   const activeScenarioId = useSelector((s) => s.activeScenarioId)
   const enabledSeriesIds = useSelector((s) => s.enabledSeriesIds)
@@ -44,10 +47,10 @@ export function Dashboard() {
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[var(--hairline)] px-4 py-3 lg:px-6">
         <div className="min-w-0">
           <h1 className="truncate text-base font-semibold text-[var(--text-primary)] lg:text-lg">
-            Zinseszins
+            {t('app.title', 'Zinseszins')}
           </h1>
           <p className="hidden text-xs text-[var(--text-secondary)] sm:block">
-            Wie sich Sparrate, Rendite und Zeit auf das Vermögen auswirken.
+            {t('app.subtitle', 'Wie sich Sparrate, Rendite und Zeit auf das Vermögen auswirken.')}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -56,9 +59,10 @@ export function Dashboard() {
             onClick={() => dispatch(actions.reset())}
             className="rounded-lg border border-[var(--hairline)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--grid)]"
           >
-            Zurücksetzen
+            {t('app.reset', 'Zurücksetzen')}
           </button>
           <VideoDialog />
+          <LocaleToggle />
           <ThemeToggle theme={theme} onChange={setTheme} />
         </div>
       </header>
@@ -100,8 +104,8 @@ export function Dashboard() {
             ) : (
               <p className="m-auto text-center text-sm text-[var(--text-muted)]">
                 {visibleCount === 0
-                  ? 'Kein Szenario sichtbar – blende mindestens eines ein.'
-                  : 'Keine Serie aktiv – wähle mindestens eine aus.'}
+                  ? t('chart.noScenario', 'Kein Szenario sichtbar – blende mindestens eines ein.')
+                  : t('chart.noSeries', 'Keine Serie aktiv – wähle mindestens eine aus.')}
               </p>
             )}
           </Card>

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { MarketSeries } from '../core/domain/types'
 import { actions } from '../core/state'
 import { cn } from '../lib/cn'
+import { useT } from '../react/localeContext'
 import { useDispatch, useSelector } from '../react/useSelector'
 
 /** Ein paar geläufige Ticker als Startpunkt - Yahoo-Schreibweise. */
@@ -27,6 +28,7 @@ interface MarketPanelProps {
  */
 export function MarketPanel({ matches = null }: MarketPanelProps) {
   const dispatch = useDispatch()
+  const t = useT()
   const market = useSelector((s) => s.market)
   const [symbol, setSymbol] = useState('')
   const [laedt, setLaedt] = useState(false)
@@ -50,7 +52,7 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
        */
       const typ = antwort.headers.get('content-type') ?? ''
       if (!typ.includes('application/json')) {
-        throw new Error('Die Kurs-Schnittstelle antwortet nicht.')
+        throw new Error(t('market.unavailable', 'Die Kurs-Schnittstelle antwortet nicht.'))
       }
 
       const daten = (await antwort.json()) as MarketSeries & { error?: string }
@@ -72,7 +74,7 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
           htmlFor="market-symbol"
           className="mb-1.5 block text-xs font-medium text-[var(--text-secondary)]"
         >
-          Wertpapier
+          {t('market.label', 'Wertpapier')}
         </label>
         <div className="flex gap-1.5">
           <input
@@ -82,14 +84,14 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
             onKeyDown={(e) => {
               if (e.key === 'Enter') void laden(symbol)
             }}
-            placeholder="z. B. AAPL"
+            placeholder={t('market.placeholder', 'z. B. AAPL')}
             className="min-w-0 flex-1 rounded-lg border border-[var(--hairline)] bg-[var(--surface-1)] px-2.5 py-2 text-sm uppercase text-[var(--text-primary)] placeholder:normal-case placeholder:text-[var(--text-muted)] focus:border-[var(--chart-1)] focus:outline-none"
           />
           <button
             type="button"
             onClick={() => void laden(symbol)}
             disabled={laedt || !symbol.trim()}
-            aria-label="Kurse laden"
+            aria-label={t('market.load', 'Kurse laden')}
             className="rounded-lg border border-[var(--hairline)] px-2.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--grid)] disabled:opacity-40"
           >
             {laedt ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
@@ -124,7 +126,10 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
         <p className={cn('text-[11px] leading-snug', 'text-[var(--chart-8)]')}>
           {fehler}
           <span className="block text-[var(--text-muted)]">
-            Kursdaten brauchen die Serverfunktion – lokal per `vercel dev`, sonst im Deploy.
+            {t(
+              'market.needsServer',
+              'Kursdaten brauchen die Serverfunktion – lokal per `vercel dev`, sonst im Deploy.',
+            )}
           </span>
         </p>
       ) : null}

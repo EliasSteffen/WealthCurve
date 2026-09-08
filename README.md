@@ -9,6 +9,7 @@ npm run dev        # http://localhost:5173
 npm test           # Finanzmathematik, Registries, Store, Architektur-Wächter
 npm run demo       # Headless-Beweis: läuft in Node ohne React und ohne DOM
 npm run mcp        # MCP-Server über stdio
+vercel dev         # mit Serverfunktion, für die Kursdaten
 npm run build      # Typecheck + Produktions-Build
 ```
 
@@ -113,6 +114,38 @@ compute: ({ params, model }) =>
 ```
 
 `base.years[i]` liefert pro Jahr `balance`, `contributions` und `interest`.
+
+## Sprachen
+
+Deutsch und Englisch, umschaltbar in der Kopfzeile; die Erkennung folgt
+`navigator.language`. Deutsch ist die Ausgangssprache und steht direkt im Code —
+`src/i18n/en.ts` enthält nur die Abweichungen.
+
+Fehlt ein Schlüssel, bleibt der deutsche Text stehen statt eines rohen
+Schlüssels. Das ist Absicht: eine neue Serie funktioniert dadurch sofort in
+beiden Sprachen, sie ist nur noch nicht übersetzt. Ein Test prüft, dass alle
+Serien, Parameter, Regeln und Stile im Katalog vorkommen.
+
+Zahlen und Währung folgen der Sprache. Die Formatter halten die Sprache
+modulweit statt im React-Kontext, damit sie auch aus dem Canvas-Renderer und dem
+Kern heraus aufrufbar bleiben, die keinen Kontext haben.
+
+## Kursdaten
+
+Die Serie „Kursverlauf" rechnet mit den echten Monatsrenditen eines Wertpapiers
+statt mit einem festen Zins — sie zeigt, was die Glättung auf „8 % pro Jahr"
+verschweigt.
+
+Der Abruf läuft über `api/quotes.ts` als Serverless-Funktion, weil Yahoo weder
+CORS-Header sendet noch direkte Browser-Aufrufe zulässt (HTTP 429). Der
+Edge-Cache (`s-maxage=86400`) ist die eigentliche Antwort auf die Drosselung —
+ein Proxy allein würde sie nur weiterreichen. Lokal braucht das `vercel dev`;
+mit `npm run dev` meldet die App das ausdrücklich, statt eine leere Kurve zu
+zeigen.
+
+Reicht die Historie nicht über die Laufzeit, endet die Kurve dort, statt
+fortgeschrieben zu werden — Serien dürfen dafür `null` liefern, was der Chart als
+Lücke zeichnet.
 
 ## Entnahmeplan
 

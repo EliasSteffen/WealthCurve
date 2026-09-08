@@ -13,6 +13,7 @@ import {
 import type { ChartStyle } from '../../core/chart-style'
 import type { ProjectionLine, ProjectionRow } from '../../core/projection'
 import { formatEur, formatEurCompact } from '../../lib/format'
+import { useT } from '../../react/localeContext'
 import { sketchCurve } from '../../render/sketchCurve'
 import { ChartTooltip } from './ChartTooltip'
 
@@ -41,6 +42,7 @@ export function GrowthChart({
   primaryKey,
   retirementYear,
 }: GrowthChartProps) {
+  const t = useT()
   const lastIndex = rows.length - 1
 
   // Bei Amplitude 0 die eingebaute Kurve nehmen - der Skizzenpfad kostet sonst
@@ -109,7 +111,7 @@ export function GrowthChart({
             interval="preserveStartEnd"
           >
             <Label
-              value="Jahre"
+              value={t('chart.years', 'Jahre')}
               position="insideBottom"
               offset={-12}
               style={{ fill: 'var(--text-muted)', fontSize: style.axis.fontSize }}
@@ -134,7 +136,7 @@ export function GrowthChart({
               stroke="var(--axis)"
               strokeWidth={1}
               label={{
-                value: 'Rentenbeginn',
+                value: t('chart.retirement', 'Rentenbeginn'),
                 position: 'insideTopLeft',
                 fill: 'var(--text-muted)',
                 fontSize: style.axis.fontSize,
