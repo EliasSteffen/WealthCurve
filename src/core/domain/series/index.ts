@@ -1,6 +1,7 @@
 import type { SeriesDefinition } from '../types'
 import { compoundSeries } from './compound'
 import { contributionsSeries } from './contributions'
+import { marketReturnSeries } from './marketReturn'
 import { purchasingPowerSeries } from './purchasingPower'
 import { savingsAccountSeries } from './savingsAccount'
 import { withdrawnSeries } from './withdrawn'
@@ -18,6 +19,7 @@ export const SERIES: readonly SeriesDefinition[] = [
   purchasingPowerSeries,
   savingsAccountSeries,
   withdrawnSeries,
+  marketReturnSeries,
 ]
 
 export type SeriesId = (typeof SERIES)[number]['id']

@@ -25,5 +25,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "test", "mcp"]
+  "include": ["src", "test", "mcp", "api"]
 }

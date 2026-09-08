@@ -2,7 +2,13 @@ import { AUTO_ENCODING, resolveEncoding, type CapacityReport } from './encoding'
 import { simulate } from './domain/math'
 import type { SimulationParams } from './domain/parameters'
 import { SERIES } from './domain/series'
-import type { ModelSettings, SeriesContext, SimulationResult, YearSnapshot } from './domain/types'
+import type {
+  MarketSeries,
+  ModelSettings,
+  SeriesContext,
+  SimulationResult,
+  YearSnapshot,
+} from './domain/types'
 
 /**
  * Die reine Rechenschicht zwischen Domäne und UI.
@@ -26,6 +32,8 @@ export interface ProjectionInput {
   readonly model: ModelSettings
   /** Kodierung; 'auto' wählt nach Anzahl der Szenarien. */
   readonly encoding?: string
+  /** Geladener Kursverlauf; ohne ihn zeichnet die Kursserie nichts. */
+  readonly market?: MarketSeries | null
 }
 
 /** Eine Linie im Chart: Serie × Szenario. */
@@ -96,13 +104,14 @@ export function buildProjection(input: ProjectionInput): Projection {
   )
 
   const lines: ProjectionLine[] = []
-  const columns = new Map<string, readonly number[]>()
+  const columns = new Map<string, readonly (number | null)[]>()
 
   for (const scenario of scenarios) {
     const ctx: SeriesContext = {
       base: simulations.get(scenario.id)!,
       params: scenario.params,
       model,
+      market: input.market ?? null,
     }
     for (const [seriesIndex, series] of activeSeries.entries()) {
       const key = `${scenario.id}:${series.id}`

@@ -40,18 +40,30 @@ describe('Series-Registry', () => {
     }
   })
 
-  it('liefert ausschließlich endliche Zahlen', () => {
+  it('liefert endliche Zahlen oder null, aber nie NaN', () => {
+    // null heisst "kein Wert fuer dieses Jahr" und wird als Luecke gezeichnet.
+    // NaN dagegen wuerde stillschweigend die Achsenskalierung zerstoeren.
     for (const series of SERIES) {
-      expect(series.compute(ctx).every(Number.isFinite)).toBe(true)
+      const werte = series.compute(ctx)
+      expect(
+        werte.every((v) => v === null || Number.isFinite(v)),
+        series.id,
+      ).toBe(true)
     }
   })
 
-  it('beginnt jede Serie im Jahr 0', () => {
+  it('liefert ohne Kursdaten durchgehend null statt erfundener Werte', () => {
+    const kurs = SERIES.find((s) => s.id === 'marketReturn')!
+    expect(kurs.compute({ ...ctx, market: null }).every((v) => v === null)).toBe(true)
+  })
+
+  it('beginnt jede Serie im Jahr 0 mit einem Wert oder bewusst ohne', () => {
     // Bewusst KEINE Aussage ueber den Startwert: eine Serie darf auch bei 0
     // beginnen (etwa "nur Zinsertrag"). Allgemeingültig ist nur, dass jede
     // Serie einen Wert für Jahr 0 liefert - sonst fängt die Kurve zu spät an.
     for (const series of SERIES) {
-      expect(typeof series.compute(ctx)[0]).toBe('number')
+      const erster = series.compute(ctx)[0]
+      expect(erster === null || typeof erster === 'number', series.id).toBe(true)
     }
   })
 
@@ -84,7 +96,7 @@ describe('Series-Registry', () => {
 })
 
 describe('einzelne Serien', () => {
-  const valuesOf = (id: string) => SERIES.find((s) => s.id === id)!.compute(ctx)
+  const valuesOf = (id: string) => SERIES.find((s) => s.id === id)!.compute(ctx) as number[]
 
   it('startet jede Bestandsserie beim Startkapital', () => {
     // Gilt für Serien, die einen Kontostand zeigen - nicht für abgeleitete

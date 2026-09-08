@@ -45,6 +45,12 @@ const STATISCH: readonly SettingsEntry[] = [
     keywords: ['szenario', 'vergleich', 'variante', 'duplizieren', 'farbe'],
   },
   {
+    id: 'market',
+    category: 'kurven',
+    label: 'Wertpapier',
+    keywords: ['aktie', 'etf', 'kurs', 'yahoo', 'symbol', 'ticker', 'index', 'historie'],
+  },
+  {
     id: 'style',
     category: 'kurven',
     label: 'Darstellung',

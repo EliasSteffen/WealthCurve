@@ -15,6 +15,7 @@ interface Overrides {
   withdrawalStrategyId?: string
   amountsInflationAdjusted?: boolean
   monthlyWithdrawalOverride?: number
+  rateAt?: (i: number) => number
 }
 
 const config = (o: Overrides = {}): SimulationConfig => ({
@@ -23,6 +24,7 @@ const config = (o: Overrides = {}): SimulationConfig => ({
   initialCapital: o.initialCapital ?? 0,
   params: { ...DEFAULT_PARAMS, ...o.params },
   monthlyWithdrawalOverride: o.monthlyWithdrawalOverride,
+  rateAt: o.rateAt,
   model: {
     compounding: o.compounding ?? 'monthly-effective',
     timing: o.timing ?? 'end',
@@ -316,5 +318,52 @@ describe('monthlyWithdrawalOverride', () => {
     expect(ohneRendite.monthlyWithdrawal).toBe(haupt.monthlyWithdrawal)
     expect(ohneRendite.depletedAtYear).not.toBeNull()
     expect(haupt.depletedAtYear).toBeNull()
+  })
+})
+
+describe('rateAt (variable Renditen)', () => {
+  it('ergibt mit konstanter Funktion exakt dasselbe wie der feste Zins', () => {
+    // Regressionsschutz für den Umbau: der bisherige Weg darf sich nicht
+    // um einen Cent verschieben, nur weil es jetzt einen zweiten gibt.
+    const fest = simulate(config({ annualRatePercent: 7, accumulationYears: 20 }))
+    const monatszins = toMonthlyRate(7, 'monthly-effective')
+    const variabel = simulate(
+      config({ annualRatePercent: 7, accumulationYears: 20, rateAt: () => monatszins }),
+    )
+    expect(variabel.years.at(-1)!.balance).toBeCloseTo(fest.years.at(-1)!.balance, 8)
+  })
+
+  it('nimmt die Rendite je Periode aus der Funktion', () => {
+    // 12 Monate zu je 1 % ergeben 1,01^12.
+    const r = simulate(
+      config({
+        annualRatePercent: 0,
+        monthlyContribution: 0,
+        initialCapital: 1_000,
+        accumulationYears: 1,
+        rateAt: () => 0.01,
+      }),
+    )
+    expect(r.years.at(-1)!.balance).toBeCloseTo(1_000 * Math.pow(1.01, 12), 6)
+  })
+
+  it('zählt die Perioden über beide Phasen durchgehend', () => {
+    // Ein Kursverlauf darf in der Entnahmephase nicht wieder bei Monat 0
+    // anfangen - sonst wiederholte sich die Historie.
+    const gesehen: number[] = []
+    simulate(
+      config({
+        accumulationYears: 1,
+        withdrawalYears: 1,
+        params: { monthlyWithdrawal: 10 },
+        rateAt: (i) => {
+          gesehen.push(i)
+          return 0
+        },
+      }),
+    )
+    expect(gesehen[0]).toBe(0)
+    expect(gesehen.at(-1)).toBe(23)
+    expect(new Set(gesehen).size).toBe(24)
   })
 })

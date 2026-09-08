@@ -84,6 +84,7 @@ function runPhase(
   phase: Phase,
   state: RunState,
   model: ModelSettings,
+  /** Feste Wachstumsrate; wird von `rateAt` überstimmt, wenn vorhanden. */
   growth: number,
   startYear: number,
   out: YearSnapshot[],
@@ -93,6 +94,7 @@ function runPhase(
    * der eingetragene Betrag durchgehend heutiger Kaufkraft.
    */
   amountGrowth = 1,
+  rateAt?: (periodIndex: number) => number,
 ): number {
   const yearly = model.compounding === 'annual'
   const stepsPerYear = yearly ? 1 : MONTHS_PER_YEAR
@@ -103,13 +105,17 @@ function runPhase(
     const year = startYear + i
     const amount = amountGrowth === 1 ? basis : basis * Math.pow(amountGrowth, year - 1)
     for (let step = 0; step < stepsPerYear; step += 1) {
+      // Perioden fortlaufend ab Simulationsbeginn zählen, damit ein
+      // Kursverlauf über beide Phasen hinweg richtig einsortiert wird.
+      const periode = (year - 1) * stepsPerYear + step
+      const faktor = rateAt ? 1 + rateAt(periode) : growth
       if (phase.kind === 'accumulate') {
         if (model.timing === 'start') state.balance += amount
-        state.balance *= growth
+        state.balance *= faktor
         if (model.timing === 'end') state.balance += amount
         state.contributions += amount
       } else {
-        state.balance *= growth
+        state.balance *= faktor
         // Niemals mehr entnehmen als da ist - das Depot darf nicht ins Minus.
         const taken = Math.min(amount, Math.max(0, state.balance))
         state.balance -= taken
@@ -180,7 +186,7 @@ export function simulate(config: SimulationConfig): SimulationResult {
   const [accumulation] = buildPhases(model, config.monthlyContribution, 0)
   let year = 0
   if (accumulation?.kind === 'accumulate') {
-    year = runPhase(accumulation, state, model, growth, year, years, amountGrowth)
+    year = runPhase(accumulation, state, model, growth, year, years, amountGrowth, config.rateAt)
   }
   const capitalAtRetirement = state.balance
 
@@ -200,7 +206,7 @@ export function simulate(config: SimulationConfig): SimulationResult {
 
   const withdrawal = buildPhases(model, 0, monthlyWithdrawal).find((p) => p.kind === 'withdraw')
   if (withdrawal) {
-    runPhase(withdrawal, state, model, growth, year, years, amountGrowth)
+    runPhase(withdrawal, state, model, growth, year, years, amountGrowth, config.rateAt)
   }
 
   return {

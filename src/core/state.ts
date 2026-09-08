@@ -9,7 +9,7 @@ import {
   type TimelineFieldId,
 } from './domain/parameters'
 import { DEFAULT_ENABLED_SERIES, SERIES } from './domain/series'
-import type { ModelSettings } from './domain/types'
+import type { MarketSeries, ModelSettings } from './domain/types'
 import { SLOT_COUNT, allocateSlot, type ColorSlot } from './palette'
 
 export interface Scenario {
@@ -32,6 +32,8 @@ export interface AppState {
   readonly encoding: EncodingPreference
   readonly chartStyleId: string
   readonly sidebarCollapsed: boolean
+  /** Geladener Kursverlauf fuer die Serie "Kursverlauf". */
+  readonly market: MarketSeries | null
 }
 
 let counter = 0
@@ -73,6 +75,7 @@ export function createInitialState(): AppState {
     encoding: 'auto',
     chartStyleId: DEFAULT_CHART_STYLE_ID,
     sidebarCollapsed: false,
+    market: null,
   }
 }
 
@@ -93,6 +96,7 @@ export type Action =
   | { type: 'model/setTimeline'; field: TimelineFieldId; value: number }
   | { type: 'encoding/set'; encoding: EncodingPreference }
   | { type: 'chartStyle/set'; id: string }
+  | { type: 'market/set'; market: MarketSeries | null }
   | { type: 'sidebar/setCollapsed'; collapsed: boolean }
   | { type: 'state/replace'; state: AppState }
   | { type: 'state/reset' }
@@ -127,6 +131,7 @@ export const actions = {
   }),
   setEncoding: (encoding: EncodingPreference): Action => ({ type: 'encoding/set', encoding }),
   setChartStyle: (id: string): Action => ({ type: 'chartStyle/set', id }),
+  setMarket: (market: MarketSeries | null): Action => ({ type: 'market/set', market }),
   setSidebarCollapsed: (collapsed: boolean): Action => ({
     type: 'sidebar/setCollapsed',
     collapsed,
@@ -241,6 +246,9 @@ export function reducer(state: AppState, action: Action): AppState {
 
     case 'chartStyle/set':
       return state.chartStyleId === action.id ? state : { ...state, chartStyleId: action.id }
+
+    case 'market/set':
+      return { ...state, market: action.market }
 
     case 'sidebar/setCollapsed':
       return state.sidebarCollapsed === action.collapsed

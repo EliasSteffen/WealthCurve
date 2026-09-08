@@ -48,6 +48,12 @@ export interface SimulationConfig {
    * Nötig für Vergleichsserien, die denselben Auszahlplan abbilden sollen.
    */
   readonly monthlyWithdrawalOverride?: number
+  /**
+   * Rendite je Periode, wenn sie nicht konstant ist - für echte Kursverläufe.
+   * Der Index zählt Perioden ab Simulationsbeginn. Fehlt die Funktion, gilt
+   * der feste Zins aus `annualRatePercent`.
+   */
+  readonly rateAt?: (periodIndex: number) => number
 }
 
 export interface YearSnapshot {
@@ -80,10 +86,22 @@ export interface SimulationResult {
  * nicht - dadurch sind Abhängigkeiten zwischen Serien strukturell unmöglich
  * und es kann keine Zyklen geben.
  */
+/** Ein echter Kursverlauf, auf Monatsrenditen normalisiert. */
+export interface MarketSeries {
+  readonly symbol: string
+  readonly name: string
+  readonly currency: string
+  readonly start: string
+  /** 0.012 bedeutet +1,2 % in diesem Monat. */
+  readonly monthlyReturns: readonly number[]
+}
+
 export interface SeriesContext {
   readonly base: SimulationResult
   readonly params: SimulationParams
   readonly model: ModelSettings
+  /** Geladener Kursverlauf, falls einer gewählt wurde. */
+  readonly market?: MarketSeries | null
 }
 
 export interface SeriesDefinition {
@@ -101,8 +119,15 @@ export interface SeriesDefinition {
   readonly defaultEnabled: boolean
   /** Steuert, welche Regler als aktiv hervorgehoben werden. */
   readonly requiredParams: readonly ParamId[]
-  /** Muss exakt `base.years.length` Werte liefern, index-aligned. */
-  readonly compute: (ctx: SeriesContext) => readonly number[]
+  /**
+   * Muss exakt `base.years.length` Werte liefern, index-aligned.
+   *
+   * `null` heisst "fuer dieses Jahr gibt es keinen Wert" - etwa wenn ein
+   * Kursverlauf frueher endet als die Simulation. Das ist etwas anderes als
+   * der Wert 0 und wird im Chart als Luecke gezeichnet, nicht als Absturz
+   * auf die Nulllinie.
+   */
+  readonly compute: (ctx: SeriesContext) => readonly (number | null)[]
 }
 
 /** Bewahrt die String-Literale, ohne dass jede Serien-Datei `as const` braucht. */

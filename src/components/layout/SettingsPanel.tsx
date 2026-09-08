@@ -17,6 +17,7 @@ import {
   TimelineControls,
   WithdrawalRuleControl,
 } from '../ModelSettings'
+import { MarketPanel } from '../MarketPanel'
 import { ParameterPanel } from '../ParameterPanel'
 import { ScenarioList } from '../ScenarioList'
 import { SeriesPanel } from '../SeriesPanel'
@@ -80,6 +81,7 @@ export function SettingsPanel() {
           capacity={capacity}
           matches={matches}
         />
+        <MarketPanel matches={matches} />
         <ChartStyleControl
           value={chartStyleId}
           onChange={(id) => dispatch(actions.setChartStyle(id))}
