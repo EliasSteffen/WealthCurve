@@ -31,6 +31,33 @@ export interface DrawInput {
   /** Linien-Key -> fertige Farbe. Canvas kennt keine CSS-Variablen. */
   readonly colors: Readonly<Record<string, string>>
   readonly title: string
+  /**
+   * Fertig formatierte Werte für die Platzhalter im Szenentext.
+   *
+   * Der Renderer löst nur ein, er rechnet und formatiert nicht - dadurch bleibt
+   * er frei von Domänenwissen und die Oberfläche bestimmt, welche Platzhalter
+   * es gibt.
+   */
+  readonly facts: Readonly<Record<string, string>>
+}
+
+const PLATZHALTER = /\{\{\s*(\w+)\s*\}\}/g
+
+export function resolveText(template: string, facts: Readonly<Record<string, string>>): string {
+  return template.replace(PLATZHALTER, (_, key: string) => facts[key] ?? '')
+}
+
+/** Zeichnet mehrzeiligen Text und gibt die Gesamthöhe zurück. */
+function drawLines(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  lineHeight: number,
+): number {
+  const zeilen = text.split('\n').filter((z) => z.trim().length > 0)
+  zeilen.forEach((zeile, i) => ctx.fillText(zeile, x, y + i * lineHeight))
+  return zeilen.length * lineHeight
 }
 
 const scale = (d0: number, d1: number, r0: number, r1: number) => (value: number) =>
@@ -98,6 +125,21 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
   const x = scale(0, lastYear, plot.left, plot.right)
   const y = scale(0, obergrenze, plot.bottom, plot.top)
 
+  /* ------------------------------------------------------- Aufhänger allein */
+  // Der Aufhänger zeigt nur Text. Ein halb gezeichnetes Diagramm darunter würde
+  // die Aufmerksamkeit teilen, bevor die Aussage überhaupt gelesen ist.
+  if (frame.scene.kind === 'hook') {
+    const text = resolveText(frame.scene.text, input.facts)
+    ctx.textAlign = 'center'
+    ctx.fillStyle = theme.text
+    const groesse = Math.round(width * 0.082)
+    ctx.font = font(style, groesse, '600')
+    const zeilen = text.split('\n').filter((z) => z.trim()).length
+    drawLines(ctx, text, width / 2, height / 2 - ((zeilen - 1) * groesse * 1.25) / 2, groesse * 1.25)
+    ctx.restore()
+    return
+  }
+
   /* ------------------------------------------------------------- Kopfbereich */
   const primary = projection.lines[0]
   const primaryValue = primary ? frame.values[primary.key] : null
@@ -105,11 +147,19 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
   ctx.textAlign = 'left'
   ctx.fillStyle = theme.textMuted
   ctx.font = font(style, Math.round(width * 0.032))
-  ctx.fillText(input.title, pad, Math.round(headerH * 0.42))
+  ctx.fillText(input.title, pad, Math.round(headerH * 0.38))
 
   ctx.fillStyle = theme.text
   ctx.font = font(style, Math.round(width * 0.085), '600')
-  ctx.fillText(formatEur(primaryValue ?? 0), pad, Math.round(headerH * 0.75))
+  ctx.fillText(formatEur(primaryValue ?? 0), pad, Math.round(headerH * 0.66))
+
+  // Untertitel des laufenden Abschnitts.
+  const untertitel = resolveText(frame.scene.text, input.facts)
+  if (frame.scene.kind === 'build' && untertitel) {
+    ctx.fillStyle = theme.textMuted
+    ctx.font = font(style, Math.round(width * 0.03))
+    drawLines(ctx, untertitel, pad, Math.round(headerH * 0.86), Math.round(width * 0.038))
+  }
 
   /* ------------------------------------------------------------------ Gitter */
   if (style.grid.show) {
@@ -183,6 +233,25 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
 
     ctx.globalAlpha = 1
     ctx.setLineDash([])
+  }
+
+  /* --------------------------------------------------------------- Pointe */
+  if (frame.scene.kind === 'punchline' && untertitel) {
+    const groesse = Math.round(width * 0.058)
+    const zeilen = untertitel.split('\n').filter((z) => z.trim()).length
+    const blockH = zeilen * groesse * 1.25 + groesse
+    const blockY = plot.bottom - blockH - groesse * 0.5
+
+    // Leicht abgedunkelter Grund, damit der Text auch über der Kurve trägt.
+    ctx.globalAlpha = 0.88
+    ctx.fillStyle = theme.surface
+    ctx.fillRect(pad - groesse * 0.4, blockY, width - pad * 2 + groesse * 0.8, blockH)
+    ctx.globalAlpha = 1
+
+    ctx.textAlign = 'left'
+    ctx.fillStyle = theme.text
+    ctx.font = font(style, groesse, '600')
+    drawLines(ctx, untertitel, pad, blockY + groesse * 1.1, groesse * 1.25)
   }
 
   /* ------------------------------------------------------------------- Fußzeile */

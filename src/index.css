@@ -188,8 +188,12 @@ body {
   /* Ohne margin:auto landet der Dialog in der oberen linken Ecke, sobald
      display:flex gesetzt ist. */
   margin: auto;
-  max-height: 88dvh;
-  max-width: min(56rem, 92vw);
+  /* Feste Größe statt nur max-*: ohne width schrumpft der Dialog auf
+     Inhaltsbreite, und die Vorschau wird unbrauchbar klein. */
+  width: min(64rem, 94vw);
+  height: min(46rem, 92dvh);
+  max-width: 94vw;
+  max-height: 92dvh;
   padding: 0;
   border: 1px solid var(--hairline);
   border-radius: 16px;

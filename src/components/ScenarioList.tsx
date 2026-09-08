@@ -3,7 +3,6 @@ import { MAX_SCENARIOS, actions, type Scenario } from '../core/state'
 import { slotVar } from '../core/palette'
 import { useDispatch } from '../react/useSelector'
 import { cn } from '../lib/cn'
-import { Card, CardTitle } from './ui/Card'
 
 interface ScenarioListProps {
   readonly scenarios: readonly Scenario[]
@@ -15,9 +14,7 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
   const atLimit = scenarios.length >= MAX_SCENARIOS
 
   return (
-    <Card>
-      <CardTitle>Szenarien</CardTitle>
-
+    <div>
       <ul className="space-y-1">
         {scenarios.map((scenario) => {
           const active = scenario.id === activeScenarioId
@@ -102,7 +99,7 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
           unterscheiden.
         </p>
       ) : null}
-    </Card>
+    </div>
   )
 }
 

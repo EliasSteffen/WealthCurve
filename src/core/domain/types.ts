@@ -28,6 +28,11 @@ export interface ModelSettings {
   readonly accumulationYears: number
   readonly withdrawalYears: number
   readonly withdrawalStrategyId: string
+  /**
+   * Gelten die eingetragenen Spar- und Auszahlbeträge als heutige Kaufkraft?
+   * Wenn ja, wachsen sie nominal jährlich mit der Inflationsrate mit.
+   */
+  readonly amountsInflationAdjusted: boolean
 }
 
 export interface SimulationConfig {
@@ -38,6 +43,11 @@ export interface SimulationConfig {
   /** Die Entnahmestrategie liest ihre Parameter hieraus. */
   readonly params: SimulationParams
   readonly model: ModelSettings
+  /**
+   * Erzwingt einen Entnahmebetrag, statt ihn aus der Strategie abzuleiten.
+   * Nötig für Vergleichsserien, die denselben Auszahlplan abbilden sollen.
+   */
+  readonly monthlyWithdrawalOverride?: number
 }
 
 export interface YearSnapshot {

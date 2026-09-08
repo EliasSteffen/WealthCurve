@@ -17,16 +17,24 @@
     reinem JSON rein und raus, ohne Store. `npm run demo` führt genau diesen Weg
     in Node vor. Es fehlt nur noch der stdio-Server, der die Funktion als Tool
     anbietet.
-- [ ] zukünftige Ausbaustufe: video animationen ermöglichen (wie die instagram
-      reels, die zeigen, wie viel der zinses-zins effekt bringt)
-  - Architektur hält das offen: `buildProjection` ist rein und pro Frame
-    aufrufbar, `rows` ist ein schlichtes Array und bis Jahr n schneidbar.
-    Voraussetzung bleibt, dass Recharts die einzige Chart-Datei ist — das sichert
-    der Wächtertest `src/core/no-react.test.ts` mit ab.
-
+- [ ] video pop up ist super klein. unbedienbar!
+- [ ] einstellungen in kategorien aufteilen und suchbar machen und generell besser organisieren
+- [ ] Videos konfigurierbar machen mit aufhänger -> aufbau -> pointe
+- [ ] WebM → MP4 im Browser umwandeln (ffmpeg.wasm), für Browser ohne MP4-Aufnahme
+a
 ## Ideen
 
 - [ ] Szenarien speichern / per Link teilen — `serialize()` und `deserialize()`
       sind vorhanden und getestet, es fehlt nur die Anbindung
 - [ ] Steuern (Abgeltungsteuer, Vorabpauschale) als weitere Serie
 - [ ] Sparraten-Dynamik (jährliche Erhöhung der Rate)
+
+- [ ] Invests in eine aktie mit anzeigen. daten von yahoo finance (vermutlich die beste daten quelle).
+  - [ ] Wie hätte sich das geld nicht bei festen 8% pa entwickelt sondern bei monatlichen invests in eine bestimmte aktie/etf/...
+- [ ] in dem video aufhänger ... müssen auch alle szenarien dargestellt werden können.
+- [ ] mehrsprachigkeit
+- [ ] License
+- [ ] git history fixen
+- [ ] github pages deploy step einfügen
+- [ ] auch inflation mit einberechnen
+- [ ] entnahme muss auch auf das eingezahlte geld einberechnet werden.

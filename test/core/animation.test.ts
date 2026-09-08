@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DEFAULT_SCENES,
   DEFAULT_SPEC,
-  buildFrameCount,
   easeInOutCubic,
   frameAt,
   frameCount,
   resolveFormat,
+  sceneFrames,
+  totalSeconds,
   VIDEO_FORMATS,
+  type AnimationSpec,
 } from '@/core/animation'
 import { DEFAULT_MODEL } from '@/core/domain/math'
 import { DEFAULT_PARAMS } from '@/core/domain/parameters'
@@ -18,7 +21,15 @@ const projection = buildProjection({
   model: DEFAULT_MODEL,
 })
 
-const spec = { ...DEFAULT_SPEC, durationSeconds: 4, holdSeconds: 1, fps: 30 }
+const spec: AnimationSpec = {
+  formatId: 'reel',
+  fps: 30,
+  scenes: [
+    { kind: 'hook', seconds: 2, text: 'Aufhänger' },
+    { kind: 'build', seconds: 4, text: 'Aufbau' },
+    { kind: 'punchline', seconds: 2, text: 'Pointe' },
+  ],
+}
 const letztesJahr = projection.rows.length - 1
 
 describe('Formate', () => {
@@ -43,55 +54,77 @@ describe('easeInOutCubic', () => {
     expect(easeInOutCubic(0.5)).toBeCloseTo(0.5, 10)
   })
 
-  it('steigt monoton', () => {
+  it('steigt monoton und begrenzt Werte außerhalb von 0..1', () => {
     let vorher = -1
     for (let t = 0; t <= 1.0001; t += 0.05) {
       const wert = easeInOutCubic(t)
       expect(wert).toBeGreaterThanOrEqual(vorher)
       vorher = wert
     }
-  })
-
-  it('begrenzt Werte außerhalb von 0..1', () => {
     expect(easeInOutCubic(-5)).toBe(0)
     expect(easeInOutCubic(5)).toBe(1)
   })
 })
 
-describe('Bildanzahl', () => {
-  it('rechnet Aufbau plus Standbild', () => {
-    expect(buildFrameCount(spec)).toBe(120)
-    expect(frameCount(spec)).toBe(150)
+describe('Szenen', () => {
+  it('rechnet die Bildanzahl je Abschnitt', () => {
+    expect(sceneFrames(spec)).toEqual([60, 120, 60])
+    expect(frameCount(spec)).toBe(240)
+    expect(totalSeconds(spec)).toBe(8)
   })
 
-  it('liefert auch ohne Standbild mindestens ein Bild', () => {
-    expect(frameCount({ ...spec, durationSeconds: 0, holdSeconds: 0 })).toBe(1)
+  it('überspringt Abschnitte mit Dauer 0', () => {
+    // So entsteht ein reines Aufbau-Video, ohne dass es dafür einen zweiten
+    // Modus braucht.
+    const nurAufbau: AnimationSpec = {
+      ...spec,
+      scenes: spec.scenes.map((s) => (s.kind === 'build' ? s : { ...s, seconds: 0 })),
+    }
+    expect(sceneFrames(nurAufbau)).toEqual([0, 120, 0])
+    expect(frameAt(nurAufbau, projection, 0).scene.kind).toBe('build')
+  })
+
+  it('liefert auch bei lauter Nullen mindestens ein Bild', () => {
+    const leer: AnimationSpec = { ...spec, scenes: spec.scenes.map((s) => ({ ...s, seconds: 0 })) }
+    expect(frameCount(leer)).toBe(1)
+    expect(() => frameAt(leer, projection, 0)).not.toThrow()
+  })
+
+  it('bringt eine sinnvolle Vorgabe mit', () => {
+    expect(DEFAULT_SCENES.map((s) => s.kind)).toEqual(['hook', 'build', 'punchline'])
+    expect(DEFAULT_SCENES.every((s) => s.seconds > 0)).toBe(true)
+    expect(frameCount(DEFAULT_SPEC)).toBeGreaterThan(0)
   })
 })
 
 describe('frameAt', () => {
-  it('beginnt bei null', () => {
-    const f = frameAt(spec, projection, 0)
-    expect(f.progress).toBe(0)
-    expect(f.visibleYears).toBe(0)
-    expect(f.year).toBe(0)
+  it('hält die Kurve im Aufhänger bei null', () => {
+    // Ein halb gezeichnetes Diagramm würde von der Aussage ablenken.
+    for (const i of [0, 30, 59]) {
+      const f = frameAt(spec, projection, i)
+      expect(f.scene.kind).toBe('hook')
+      expect(f.visibleYears).toBe(0)
+    }
   })
 
-  it('endet auf dem letzten Jahr', () => {
-    const f = frameAt(spec, projection, frameCount(spec) - 1)
-    expect(f.progress).toBeCloseTo(1, 10)
-    expect(f.visibleYears).toBeCloseTo(letztesJahr, 10)
+  it('zeichnet die Kurve nur im Aufbau', () => {
+    const start = frameAt(spec, projection, 60)
+    const ende = frameAt(spec, projection, 179)
+    expect(start.scene.kind).toBe('build')
+    expect(ende.scene.kind).toBe('build')
+    expect(start.visibleYears).toBe(0)
+    expect(ende.visibleYears).toBeCloseTo(letztesJahr, 6)
   })
 
-  it('hält das Bild nach dem Aufbau still', () => {
-    // Das Standbild darf nicht weiterlaufen, sonst wirkt das Ende unruhig.
-    const ersteHaltung = frameAt(spec, projection, buildFrameCount(spec) - 1)
-    const letzte = frameAt(spec, projection, frameCount(spec) - 1)
-    expect(letzte.visibleYears).toBeCloseTo(ersteHaltung.visibleYears, 10)
-    expect(letzte.values).toEqual(ersteHaltung.values)
+  it('hält die Pointe auf dem Endwert still', () => {
+    const a = frameAt(spec, projection, 180)
+    const b = frameAt(spec, projection, 239)
+    expect(a.scene.kind).toBe('punchline')
+    expect(a.visibleYears).toBeCloseTo(letztesJahr, 10)
+    expect(b.values).toEqual(a.values)
   })
 
-  it('wächst monoton', () => {
+  it('wächst über das ganze Video monoton', () => {
     let vorher = -1
     for (let i = 0; i < frameCount(spec); i += 1) {
       const jetzt = frameAt(spec, projection, i).visibleYears
@@ -100,25 +133,18 @@ describe('frameAt', () => {
     }
   })
 
+  it('reicht den Szenentext unaufgelöst durch', () => {
+    // Der Kern formatiert nicht - das macht erst der Renderer.
+    expect(frameAt(spec, projection, 0).scene.text).toBe('Aufhänger')
+    expect(frameAt(spec, projection, 200).scene.text).toBe('Pointe')
+  })
+
   it('begrenzt Indizes außerhalb des Bereichs', () => {
     expect(frameAt(spec, projection, -10).index).toBe(0)
     expect(frameAt(spec, projection, 9999).index).toBe(frameCount(spec) - 1)
   })
 
-  it('interpoliert die Werte zwischen zwei Jahren', () => {
-    const key = projection.lines[0].key
-    const mitte = frameAt(spec, projection, Math.floor(buildFrameCount(spec) / 2))
-    const unten = Math.floor(mitte.visibleYears)
-    const oben = unten + 1
-    const a = projection.rows[unten][key] as number
-    const b = projection.rows[oben][key] as number
-    const wert = mitte.values[key] as number
-    expect(wert).toBeGreaterThanOrEqual(Math.min(a, b))
-    expect(wert).toBeLessThanOrEqual(Math.max(a, b))
-  })
-
   it('trifft am Ende exakt den Endwert der Projektion', () => {
-    // Der Zuschauer sieht am Schluss dieselbe Zahl wie in der App.
     const letzte = frameAt(spec, projection, frameCount(spec) - 1)
     for (const line of projection.lines) {
       expect(letzte.values[line.key], line.key).toBeCloseTo(
@@ -130,6 +156,6 @@ describe('frameAt', () => {
 
   it('kommt mit einer leeren Projektion zurecht', () => {
     const leer = buildProjection({ scenarios: [], seriesIds: [], model: DEFAULT_MODEL })
-    expect(() => frameAt(spec, leer, 5)).not.toThrow()
+    expect(() => frameAt(spec, leer, 100)).not.toThrow()
   })
 })

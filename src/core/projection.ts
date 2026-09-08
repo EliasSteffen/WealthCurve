@@ -48,7 +48,15 @@ export interface ProjectionSummary {
   readonly final: YearSnapshot
   /** Depotwert am Ende der Ansparphase. */
   readonly capitalAtRetirement: number
+  /** Basisbetrag - bei inflationsbereinigter Eingabe in heutiger Kaufkraft. */
   readonly monthlyWithdrawal: number
+  /**
+   * Nominal ausgezahlter Betrag im ersten Entnahmejahr.
+   *
+   * Weicht nur bei inflationsbereinigter Eingabe vom Basisbetrag ab - dann aber
+   * deutlich (2 % über 30 Jahre sind rund +81 %), weshalb er ausgewiesen wird.
+   */
+  readonly monthlyWithdrawalAtStart: number
   /** Erstes Jahr mit leerem Depot, sonst null. */
   readonly depletedAtYear: number | null
 }
@@ -142,6 +150,11 @@ export function buildProjection(input: ProjectionInput): Projection {
       final: result.years.at(-1)!,
       capitalAtRetirement: result.capitalAtRetirement,
       monthlyWithdrawal: result.monthlyWithdrawal,
+      monthlyWithdrawalAtStart:
+        result.monthlyWithdrawal *
+        (model.amountsInflationAdjusted
+          ? Math.pow(1 + scenario.params.inflationRate / 100, model.accumulationYears)
+          : 1),
       depletedAtYear: result.depletedAtYear,
     }
   })

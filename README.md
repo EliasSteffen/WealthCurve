@@ -8,6 +8,7 @@ npm install
 npm run dev        # http://localhost:5173
 npm test           # Finanzmathematik, Registries, Store, Architektur-Wächter
 npm run demo       # Headless-Beweis: läuft in Node ohne React und ohne DOM
+npm run mcp        # MCP-Server über stdio
 npm run build      # Typecheck + Produktions-Build
 ```
 
@@ -133,6 +134,38 @@ erste Jahr, in dem eine Entnahme nicht mehr voll bedient werden kann, steht als
 `depletedAtYear` in der Zusammenfassung. Beispiel: 584.726 € Rentenkapital,
 5.000 €/Monat, 7 % Rendite → aufgebraucht in Jahr 46.
 
+## MCP-Server
+
+```bash
+npm run mcp
+```
+
+Drei Tools über stdio: `berechne` (Szenarien rechnen und vergleichen),
+`jahrestabelle` (derselbe Lauf als CSV) und `moeglichkeiten` (verfügbare Kurven,
+Entnahmeregeln und Wertebereiche). Der Server setzt direkt auf `buildProjection`
+auf — er prüft Eingaben und reicht Ergebnisse durch, mehr nicht.
+
+Eintrag für eine MCP-Konfiguration:
+
+```json
+{
+  "mcpServers": {
+    "zinseszins": { "command": "npm", "args": ["run", "--silent", "mcp"], "cwd": "/pfad/zum/projekt" }
+  }
+}
+```
+
+## Einstellungen
+
+Die Seitenspalte ist in Kategorien gegliedert (Szenarien, Werte, Zeitraum, Kurven,
+Berechnung) und über ein Suchfeld durchsuchbar. Der Suchindex wird in
+`src/core/settings/` **aus den Registries abgeleitet** — eine neue Serie oder ein
+neuer Parameter ist damit sofort auffindbar, ohne dass jemand daran denken muss.
+
+Gezeigt werden nur Regler, die gerade etwas bewirken: Parameter, die keine
+aktive Serie und keine gewählte Entnahmeregel liest, verschwinden samt ihrer
+Kategorie.
+
 ## Darstellungsstile
 
 Wie das Diagramm aussieht, bestimmt ein Stil aus `src/core/chart-style/` — Standard, Gezeichnet,
@@ -162,13 +195,22 @@ Warum ein zweiter Renderer: Recharts zeichnet DOM/SVG, `MediaRecorder` braucht e
 lesen denselben `ChartStyle` und dieselbe `Projection`, sodass Video und App nicht auseinanderlaufen
 können.
 
+Das Reel ist in drei Abschnitte gegliedert — **Aufhänger → Aufbau → Pointe** —,
+deren Text und Dauer im Dialog einstellbar sind. Nur der Aufbau bewegt die Kurve;
+davor steht sie bei null, danach am Ende, damit die Aussage lesbar bleibt. Im Text
+stehen Platzhalter wie `{{rate}}` oder `{{zinsertrag}}` zur Verfügung. Eine Dauer
+von 0 überspringt einen Abschnitt — damit entsteht ein reines Aufbau-Video, ohne
+dass es dafür einen zweiten Modus bräuchte.
+
 Zwei Eigenheiten, die bewusst so sind:
 
 - Die Aufnahme läuft **in Echtzeit** — ein 12-Sekunden-Video braucht 12 Sekunden. Die Zeitstempel
   kommen von der Uhr; `captureStream(0)` plus `requestFrame()` sorgt dafür, dass jedes Bild genau
   einmal im Video landet, egal wie schnell der Rechner zeichnet.
-- Das Containerformat hängt am Browser. Der Dialog zeigt an, ob MP4 oder WebM herauskam — WebM muss
-  für Instagram noch umgewandelt werden.
+- Das Containerformat hängt am Browser. Der Dialog zeigt an, ob MP4 oder WebM herauskam. Kam WebM
+  heraus, wandelt ein Knopf die Datei per ffmpeg.wasm in MP4 um. Die rund 30 MB dafür werden **erst
+  bei diesem Klick** geladen (dynamischer Import plus Core von der CDN) — wer direkt MP4 aufnimmt,
+  lädt nichts davon.
 
 ## Szenarien und Farben
 

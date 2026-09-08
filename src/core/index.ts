@@ -61,15 +61,17 @@ export type { CapacityReport, EncodingStrategy, LineIdentity, LineStyle } from '
 // Animation
 export {
   DEFAULT_FORMAT_ID,
+  DEFAULT_SCENES,
   DEFAULT_SPEC,
   VIDEO_FORMATS,
-  buildFrameCount,
   easeInOutCubic,
   frameAt,
   frameCount,
   resolveFormat,
+  sceneFrames,
+  totalSeconds,
 } from './animation'
-export type { AnimationSpec, FrameState, VideoFormat } from './animation'
+export type { AnimationSpec, FrameState, Scene, SceneKind, VideoFormat } from './animation'
 
 // Parameter
 export {

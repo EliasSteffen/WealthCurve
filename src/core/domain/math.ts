@@ -16,6 +16,7 @@ export const DEFAULT_MODEL: ModelSettings = {
   accumulationYears: 30,
   withdrawalYears: 25,
   withdrawalStrategyId: DEFAULT_WITHDRAWAL_STRATEGY_ID,
+  amountsInflationAdjusted: false,
 }
 
 const finite = (value: number, fallback = 0): number => (Number.isFinite(value) ? value : fallback)
@@ -86,14 +87,21 @@ function runPhase(
   growth: number,
   startYear: number,
   out: YearSnapshot[],
+  /**
+   * Jährlicher Steigerungsfaktor der Zahlung, z. B. 1.02 bei 2 % Inflation.
+   * Der Exponent zählt ab Jahr 0 und nicht ab Phasenbeginn - nur so entspricht
+   * der eingetragene Betrag durchgehend heutiger Kaufkraft.
+   */
+  amountGrowth = 1,
 ): number {
   const yearly = model.compounding === 'annual'
   const stepsPerYear = yearly ? 1 : MONTHS_PER_YEAR
-  const amount = phase.monthlyAmount * (yearly ? MONTHS_PER_YEAR : 1)
+  const basis = phase.monthlyAmount * (yearly ? MONTHS_PER_YEAR : 1)
   const years = Math.round(phase.months / MONTHS_PER_YEAR)
 
   for (let i = 1; i <= years; i += 1) {
     const year = startYear + i
+    const amount = amountGrowth === 1 ? basis : basis * Math.pow(amountGrowth, year - 1)
     for (let step = 0; step < stepsPerYear; step += 1) {
       if (phase.kind === 'accumulate') {
         if (model.timing === 'start') state.balance += amount
@@ -141,6 +149,15 @@ export function simulate(config: SimulationConfig): SimulationResult {
   const { model } = config
   const growth = 1 + toMonthlyRate(config.annualRatePercent, model.compounding)
 
+  /*
+   * Sind die Beträge inflationsbereinigt eingetragen, gelten sie als heutige
+   * Kaufkraft: nominal müssen sie jährlich mit der Inflation wachsen, damit ihr
+   * realer Wert konstant bleibt.
+   */
+  const amountGrowth = model.amountsInflationAdjusted
+    ? 1 + finite(config.params.inflationRate) / 100
+    : 1
+
   const state: RunState = {
     balance: finite(config.initialCapital),
     contributions: finite(config.initialCapital),
@@ -163,19 +180,27 @@ export function simulate(config: SimulationConfig): SimulationResult {
   const [accumulation] = buildPhases(model, config.monthlyContribution, 0)
   let year = 0
   if (accumulation?.kind === 'accumulate') {
-    year = runPhase(accumulation, state, model, growth, year, years)
+    year = runPhase(accumulation, state, model, growth, year, years, amountGrowth)
   }
   const capitalAtRetirement = state.balance
 
-  // Durchgang 2: Betrag aus der Strategie holen, dann entnehmen.
+  /*
+   * Durchgang 2: Entnahmebetrag bestimmen, dann entnehmen.
+   *
+   * `monthlyWithdrawalOverride` ist kein Beiwerk: Vergleichsserien wie "Ohne
+   * Rendite" müssen denselben Betrag entnehmen wie das Hauptszenario. Würden
+   * sie ihn selbst aus ihrem (viel kleineren) Kapital ableiten, verglichen wir
+   * zwei verschiedene Auszahlpläne statt zweier Renditen.
+   */
   const strategy = resolveWithdrawalStrategy(model.withdrawalStrategyId)
-  const monthlyWithdrawal = Math.max(
-    0,
-    finite(strategy.monthlyAmount({ params: config.params, capitalAtRetirement })),
-  )
+  const monthlyWithdrawal =
+    config.monthlyWithdrawalOverride !== undefined
+      ? Math.max(0, finite(config.monthlyWithdrawalOverride))
+      : Math.max(0, finite(strategy.monthlyAmount({ params: config.params, capitalAtRetirement })))
+
   const withdrawal = buildPhases(model, 0, monthlyWithdrawal).find((p) => p.kind === 'withdraw')
   if (withdrawal) {
-    runPhase(withdrawal, state, model, growth, year, years)
+    runPhase(withdrawal, state, model, growth, year, years, amountGrowth)
   }
 
   return {
