@@ -47,15 +47,46 @@ export function resolveText(template: string, facts: Readonly<Record<string, str
   return template.replace(PLATZHALTER, (_, key: string) => facts[key] ?? '')
 }
 
-/** Zeichnet mehrzeiligen Text und gibt die Gesamthöhe zurück. */
+/**
+ * Bricht Text auf die verfügbare Breite um.
+ *
+ * Notwendig, weil Platzhalter beliebig lang werden können - {{szenarien}} mit
+ * drei Szenarien sprengt jede feste Zeile. Text, der aus dem Bild läuft, wäre
+ * im fertigen Video nicht mehr zu retten.
+ */
+function wrapLines(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+): readonly string[] {
+  const ergebnis: string[] = []
+  for (const absatz of text.split('\n')) {
+    if (!absatz.trim()) continue
+    let zeile = ''
+    for (const wort of absatz.split(/\s+/)) {
+      const versuch = zeile ? `${zeile} ${wort}` : wort
+      if (zeile && ctx.measureText(versuch).width > maxWidth) {
+        ergebnis.push(zeile)
+        zeile = wort
+      } else {
+        zeile = versuch
+      }
+    }
+    if (zeile) ergebnis.push(zeile)
+  }
+  return ergebnis
+}
+
+/** Zeichnet mehrzeiligen, umgebrochenen Text und gibt die Gesamthöhe zurück. */
 function drawLines(
   ctx: CanvasRenderingContext2D,
   text: string,
   x: number,
   y: number,
   lineHeight: number,
+  maxWidth = Infinity,
 ): number {
-  const zeilen = text.split('\n').filter((z) => z.trim().length > 0)
+  const zeilen = wrapLines(ctx, text, maxWidth)
   zeilen.forEach((zeile, i) => ctx.fillText(zeile, x, y + i * lineHeight))
   return zeilen.length * lineHeight
 }
@@ -134,31 +165,84 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
     ctx.fillStyle = theme.text
     const groesse = Math.round(width * 0.082)
     ctx.font = font(style, groesse, '600')
-    const zeilen = text.split('\n').filter((z) => z.trim()).length
-    drawLines(ctx, text, width / 2, height / 2 - ((zeilen - 1) * groesse * 1.25) / 2, groesse * 1.25)
+    const nutzbar = width - pad * 2
+    const zeilen = wrapLines(ctx, text, nutzbar).length
+    drawLines(
+      ctx,
+      text,
+      width / 2,
+      height / 2 - ((zeilen - 1) * groesse * 1.25) / 2,
+      groesse * 1.25,
+      nutzbar,
+    )
     ctx.restore()
     return
   }
 
   /* ------------------------------------------------------------- Kopfbereich */
-  const primary = projection.lines[0]
-  const primaryValue = primary ? frame.values[primary.key] : null
+  /*
+   * Eine Zeile je Szenario statt einer einzigen grossen Zahl.
+   *
+   * Die Kurven zeigten schon immer alle Szenarien - der Kopf nannte aber nur
+   * das erste, und damit war ein Vergleichsvideo im Grunde falsch beschriftet.
+   */
+  const proSzenario = new Map<string, { label: string; value: number | null; color: string }>()
+  for (const line of projection.lines) {
+    if (proSzenario.has(line.scenarioId)) continue
+    const summary = projection.summaries.find((s) => s.scenarioId === line.scenarioId)
+    proSzenario.set(line.scenarioId, {
+      label: summary?.label ?? input.title,
+      value: frame.values[line.key],
+      color: colors[line.key] ?? theme.text,
+    })
+  }
+  const kopfzeilen = [...proSzenario.values()]
+  const MAX_ZEILEN = 3
+  const gezeigt = kopfzeilen.slice(0, MAX_ZEILEN)
 
   ctx.textAlign = 'left'
-  ctx.fillStyle = theme.textMuted
-  ctx.font = font(style, Math.round(width * 0.032))
-  ctx.fillText(input.title, pad, Math.round(headerH * 0.38))
+  if (gezeigt.length <= 1) {
+    ctx.fillStyle = theme.textMuted
+    ctx.font = font(style, Math.round(width * 0.032))
+    ctx.fillText(gezeigt[0]?.label ?? input.title, pad, Math.round(headerH * 0.38))
 
-  ctx.fillStyle = theme.text
-  ctx.font = font(style, Math.round(width * 0.085), '600')
-  ctx.fillText(formatEur(primaryValue ?? 0), pad, Math.round(headerH * 0.66))
+    ctx.fillStyle = theme.text
+    ctx.font = font(style, Math.round(width * 0.085), '600')
+    ctx.fillText(formatEur(gezeigt[0]?.value ?? 0), pad, Math.round(headerH * 0.66))
+  } else {
+    // Kleinere Schrift, dafuer jede Zeile in der Farbe ihrer Kurve.
+    const zeilenH = Math.round(headerH * 0.2)
+    const wertGroesse = Math.round(width * 0.052)
+    let y = Math.round(headerH * 0.3)
+    for (const eintrag of gezeigt) {
+      ctx.fillStyle = eintrag.color
+      ctx.font = font(style, Math.round(width * 0.026))
+      ctx.fillText(eintrag.label, pad, y - wertGroesse * 0.72)
+      ctx.fillStyle = theme.text
+      ctx.font = font(style, wertGroesse, '600')
+      ctx.fillText(formatEur(eintrag.value ?? 0), pad, y)
+      y += zeilenH
+    }
+    if (kopfzeilen.length > MAX_ZEILEN) {
+      ctx.fillStyle = theme.textMuted
+      ctx.font = font(style, Math.round(width * 0.024))
+      ctx.fillText(`+ ${kopfzeilen.length - MAX_ZEILEN} weitere`, pad, y - wertGroesse * 0.7)
+    }
+  }
 
   // Untertitel des laufenden Abschnitts.
   const untertitel = resolveText(frame.scene.text, input.facts)
   if (frame.scene.kind === 'build' && untertitel) {
     ctx.fillStyle = theme.textMuted
     ctx.font = font(style, Math.round(width * 0.03))
-    drawLines(ctx, untertitel, pad, Math.round(headerH * 0.86), Math.round(width * 0.038))
+    drawLines(
+      ctx,
+      untertitel,
+      pad,
+      Math.round(headerH * 0.86),
+      Math.round(width * 0.038),
+      width - pad * 2,
+    )
   }
 
   /* ------------------------------------------------------------------ Gitter */
@@ -238,7 +322,9 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
   /* --------------------------------------------------------------- Pointe */
   if (frame.scene.kind === 'punchline' && untertitel) {
     const groesse = Math.round(width * 0.058)
-    const zeilen = untertitel.split('\n').filter((z) => z.trim()).length
+    ctx.font = font(style, groesse, '600')
+    const nutzbar = width - pad * 2
+    const zeilen = wrapLines(ctx, untertitel, nutzbar).length
     const blockH = zeilen * groesse * 1.25 + groesse
     const blockY = plot.bottom - blockH - groesse * 0.5
 
@@ -250,8 +336,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
 
     ctx.textAlign = 'left'
     ctx.fillStyle = theme.text
-    ctx.font = font(style, groesse, '600')
-    drawLines(ctx, untertitel, pad, blockY + groesse * 1.1, groesse * 1.25)
+    drawLines(ctx, untertitel, pad, blockY + groesse * 1.1, groesse * 1.25, nutzbar)
   }
 
   /* ------------------------------------------------------------------- Fußzeile */
