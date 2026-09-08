@@ -46,7 +46,16 @@ export function SummaryStats({
               value={formatEur(shown.capitalAtRetirement)}
               accentVar="var(--chart-1)"
             />
-            <Stat label="Monatliche Entnahme" value={formatEur(shown.monthlyWithdrawal)} />
+            <Stat
+              label="Monatliche Entnahme"
+              value={formatEur(shown.monthlyWithdrawal)}
+              detail={
+                // Nur zeigen, wenn er abweicht - sonst wäre es eine Dopplung.
+                Math.abs(shown.monthlyWithdrawalAtStart - shown.monthlyWithdrawal) > 1
+                  ? `nominal zu Beginn ${formatEur(shown.monthlyWithdrawalAtStart)}`
+                  : undefined
+              }
+            />
             <Stat
               label="Kapital reicht"
               value={lasts}

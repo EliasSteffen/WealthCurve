@@ -63,6 +63,12 @@ const STATISCH: readonly SettingsEntry[] = [
     keywords: ['vorschüssig', 'nachschüssig', 'monatsanfang', 'monatsende', 'timing'],
   },
   {
+    id: 'model:amountsInflationAdjusted',
+    category: 'berechnung',
+    label: 'Beträge inflationsbereinigt',
+    keywords: ['inflation', 'kaufkraft', 'real', 'nominal', 'teuerung', 'betrag'],
+  },
+  {
     id: 'model:withdrawalRule',
     category: 'berechnung',
     label: 'Entnahmeregel',

@@ -68,7 +68,8 @@ export function TimelineControls({ value, onChange, matches = null }: ModelProps
 export function CalculationControls({ value, onChange, matches = null }: ModelProps) {
   const zinsmodus = zeigt(matches, 'model:compounding')
   const timing = zeigt(matches, 'model:timing')
-  if (!zinsmodus && !timing) return null
+  const inflation = zeigt(matches, 'model:amountsInflationAdjusted')
+  if (!zinsmodus && !timing && !inflation) return null
 
   return (
     <div className="space-y-4">
@@ -104,6 +105,27 @@ export function CalculationControls({ value, onChange, matches = null }: ModelPr
           options={[
             { value: 'end', label: 'Nachschüssig', hint: 'Einzahlung am Monatsende.' },
             { value: 'start', label: 'Vorschüssig', hint: 'Einzahlung am Monatsanfang.' },
+          ]}
+        />
+      ) : null}
+      {inflation ? (
+        <SegmentedControl
+          label="Beträge"
+          value={value.amountsInflationAdjusted ? 'real' : 'nominal'}
+          onChange={(v) => onChange({ ...value, amountsInflationAdjusted: v === 'real' })}
+          options={[
+            {
+              value: 'nominal',
+              label: 'Nominal',
+              hint: 'Spar- und Auszahlbetrag bleiben über die Jahre unverändert.',
+            },
+            {
+              value: 'real',
+              label: 'Inflationsbereinigt',
+              hint:
+                'Der eingetragene Betrag gilt als heutige Kaufkraft; nominal steigt er ' +
+                'jährlich mit der Inflation, damit sein realer Wert konstant bleibt.',
+            },
           ]}
         />
       ) : null}

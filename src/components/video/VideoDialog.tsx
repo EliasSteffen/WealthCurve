@@ -104,6 +104,10 @@ function VideoDialogInhalt({ onClose }: { readonly onClose: () => void }) {
       jahre: formatYears(letzte?.year ?? 0),
       reicht:
         summary?.depletedAtYear == null ? 'reicht durch' : `bis Jahr ${summary.depletedAtYear}`,
+      // Alle sichtbaren Szenarien auf einmal - fuer Vergleichsvideos.
+      szenarien: projection.summaries
+        .map((s) => `${s.label}: ${formatEur(s.final.balance)}`)
+        .join(' · '),
     } as Record<string, string>
   }, [projection, aktiv, model.accumulationYears])
 
