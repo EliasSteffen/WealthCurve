@@ -92,3 +92,37 @@ describe('SettingsPanel: Bereiche', () => {
     expect(screen.queryByRole('heading', { name: /Basis/ })).toBeNull()
   })
 })
+
+describe('SettingsPanel: Entnahmephase', () => {
+  const schalter = () => screen.getByLabelText(/Mit Entnahmephase/)
+
+  it('schaltet die Entnahme ab, ohne einen Regler bis zum Anschlag zu ziehen', async () => {
+    const user = userEvent.setup()
+    zeige()
+    expect(schalter()).toBeChecked()
+    await user.click(schalter())
+
+    // Regel und Dauer verschwinden - beide sagen ohne Entnahmephase nichts aus.
+    expect(screen.queryByRole('slider', { name: 'Entnahmephase' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Prozentregel' })).toBeNull()
+  })
+
+  it('erklärt die leer gewordene Karte, statt sie verschwinden zu lassen', async () => {
+    // Eine Überschrift über nichts ist der häufigste Weg, jemanden glauben zu
+    // lassen, die Anwendung sei kaputt.
+    const user = userEvent.setup()
+    zeige()
+    await user.click(schalter())
+    expect(within(bereich(/Basis/)).getByText(/Ohne Entnahmephase/)).toBeInTheDocument()
+  })
+
+  it('holt beim Wiedereinschalten den zuletzt eingestellten Wert zurück', async () => {
+    const user = userEvent.setup()
+    const state = createInitialState()
+    zeige({ model: { ...state.model, withdrawalYears: 40 } })
+
+    await user.click(schalter())
+    await user.click(schalter())
+    expect(screen.getByRole('slider', { name: 'Entnahmephase' })).toHaveValue('40')
+  })
+})

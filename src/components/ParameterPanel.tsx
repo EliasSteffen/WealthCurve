@@ -26,6 +26,14 @@ interface ParameterPanelProps {
   readonly groupExtras?: Partial<Record<ParamGroup, ReactNode>>
   /** IDs aus der Suche; null = keine Suche aktiv. */
   readonly matches?: ReadonlySet<string> | null
+  /**
+   * Was statt der Regler steht, wenn gerade keiner von ihnen etwas bewirkt.
+   *
+   * Nur für diesen Fall - nicht dafür, dass die Kategorie durch Suche oder
+   * kompakte Ansicht herausgefiltert wurde. Dann gehört die Karte gar nicht
+   * erst auf den Schirm.
+   */
+  readonly emptyHint?: ReactNode
 }
 
 const GROUP_LABELS: Record<ParamGroup, string> = {
@@ -50,21 +58,27 @@ export function ParameterPanel({
   onChange,
   groupExtras,
   matches = null,
+  emptyHint,
 }: ParameterPanelProps) {
   const t = useT()
-  const sichtbar = (id: ParamId) =>
-    PARAMETERS[id].category === category &&
-    activeParamIds.has(id) &&
-    (matches === null || matches.has(`param:${id}`))
+  /* Zwei Stufen, weil die Gründe für „leer" verschieden sind: gefiltert heißt
+     „gehört hier nicht hin", wirkungslos heißt „gehört hierher, tut aber
+     gerade nichts". Nur das zweite ist erklärenswert. */
+  const imFilter = (id: ParamId) =>
+    PARAMETERS[id].category === category && (matches === null || matches.has(`param:${id}`))
+  const sichtbar = (id: ParamId) => imFilter(id) && activeParamIds.has(id)
 
   const gruppen = GROUPS.map((group) => ({
     group,
     ids: PARAM_IDS.filter((id) => PARAMETERS[id].group === group && sichtbar(id)),
   })).filter((g) => g.ids.length > 0)
 
-  // Nichts zu zeigen: null statt einer leeren Hülle, sonst stünde in der Karte
-  // ein Abstand ohne Inhalt.
-  if (gruppen.length === 0) return null
+  if (gruppen.length === 0) {
+    // Nichts zu zeigen: null statt einer leeren Hülle, sonst stünde in der
+    // Karte ein Abstand ohne Inhalt.
+    if (!emptyHint || !PARAM_IDS.some(imFilter)) return null
+    return <p className="text-[11px] leading-snug text-[var(--text-muted)]">{emptyHint}</p>
+  }
 
   return (
     <div className="space-y-5">

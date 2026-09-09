@@ -43,7 +43,17 @@ export const selectProjection = createSelector(
     }),
 )
 
-/** Nur für die visuelle Hervorhebung der Regler - steuert kein Mounting. */
+/**
+ * Welche Parameter gerade überhaupt etwas bewirken.
+ *
+ * Entscheidet, ob ein Regler gezeigt wird, nicht nur wie er aussieht: das
+ * ParameterPanel blendet alles aus, was hier fehlt. Ein Regler, der nichts
+ * ändert, ist irreführender als ein fehlender - man dreht daran und wartet
+ * vergeblich auf eine Wirkung.
+ *
+ * Wird eine Karte dadurch leer, erklärt die Karte das (siehe `emptyHint`),
+ * statt spurlos zu verschwinden.
+ */
 export const selectActiveParamIds = createSelector(
   [(s: AppState) => s.enabledSeriesIds, (s: AppState) => s.model],
   (enabledSeriesIds, model) =>

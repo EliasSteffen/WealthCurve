@@ -24,6 +24,7 @@ import {
   TimeAxisControls,
   TimelineControls,
   TimingControl,
+  WithdrawalPhaseToggle,
   WithdrawalRuleControl,
 } from '../ModelSettings'
 import { MarketPanel } from '../MarketPanel'
@@ -78,15 +79,18 @@ export function SettingsPanel() {
 
   const setModel = (next: typeof model) => dispatch(actions.setModel(next))
 
-  const regler = (category: SettingsCategoryId) => (
+  const regler = (category: SettingsCategoryId, emptyHint?: string) => (
     <ParameterPanel
       category={category}
       params={activeScenario.params}
       activeParamIds={activeParamIds}
       matches={matches}
+      emptyHint={emptyHint}
       onChange={(id, value) => dispatch(actions.setParam(activeScenario.id, id, value))}
     />
   )
+
+  const mitEntnahme = model.withdrawalYears > 0
 
   /*
    * Der Inhalt je Karte, aufgeteilt nach Bereich.
@@ -98,8 +102,31 @@ export function SettingsPanel() {
   const inhalte: Partial<Record<SettingsCardId, ReactNode>> = {
     'scenario:kapital': regler('kapital'),
     'scenario:einzahlung': regler('einzahlung'),
-    'scenario:auszahlung': regler('auszahlung'),
-    'scenario:annahmen': regler('annahmen'),
+    /*
+     * Eine Karte, die durch einen Schalter leer geworden ist, sagt das.
+     *
+     * Ohne den Satz stünde hier eine Überschrift über nichts - der haeufigste
+     * Weg, jemanden glauben zu lassen, die Anwendung sei kaputt.
+     */
+    'scenario:auszahlung': regler(
+      'auszahlung',
+      mitEntnahme
+        ? t(
+            'settings.empty.auszahlung.rule',
+            'Die gewählte Entnahmeregel liest den anderen Wert – umschalten unter „Für alle Szenarien“.',
+          )
+        : t(
+            'settings.empty.auszahlung',
+            'Ohne Entnahmephase gibt es hier nichts einzustellen. Der Schalter dafür steht unter „Für alle Szenarien“.',
+          ),
+    ),
+    'scenario:annahmen': regler(
+      'annahmen',
+      t(
+        'settings.empty.annahmen',
+        'Diese Werte liest gerade keine eingeschaltete Kurve – unter „Kurven“ etwa Kaufkraft oder Tagesgeld dazunehmen.',
+      ),
+    ),
 
     'global:einzahlung': (
       <div className="space-y-5">
@@ -114,15 +141,22 @@ export function SettingsPanel() {
     ),
     'global:auszahlung': (
       <div className="space-y-5">
-        {matches === null || matches.has('model:withdrawalRule') ? (
-          <WithdrawalRuleControl value={model} onChange={setModel} />
+        <WithdrawalPhaseToggle value={model} onChange={setModel} matches={matches} />
+        {/* Regel und Dauer haben ohne Entnahmephase keine Bedeutung - sie
+            stehen erst da, wenn der Schalter an ist. */}
+        {mitEntnahme ? (
+          <>
+            {matches === null || matches.has('model:withdrawalRule') ? (
+              <WithdrawalRuleControl value={model} onChange={setModel} />
+            ) : null}
+            <TimelineControls
+              category="auszahlung"
+              value={model}
+              onChange={setModel}
+              matches={matches}
+            />
+          </>
         ) : null}
-        <TimelineControls
-          category="auszahlung"
-          value={model}
-          onChange={setModel}
-          matches={matches}
-        />
       </div>
     ),
     'global:annahmen': (

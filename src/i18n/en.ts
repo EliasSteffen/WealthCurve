@@ -50,6 +50,16 @@ export const en: Catalog = {
   'scope.global.hint':
     'Applies to every curve in the chart. Without a shared axis there would be nothing to compare.',
 
+  // Karten, die durch einen Schalter leer geworden sind.
+  'settings.empty.auszahlung':
+    'Nothing to set here without a withdrawal phase. The switch for it is under “All scenarios”.',
+  'settings.empty.auszahlung.rule':
+    'The selected withdrawal rule reads the other value – switch it under “All scenarios”.',
+  'settings.empty.annahmen':
+    'No enabled curve reads these values – add purchasing power or the savings account under “Curves”.',
+  'model.withdrawalPhase': 'With withdrawal phase',
+  'model.withdrawalPhase.hint': 'Off: only saving, and the capital keeps working afterwards.',
+
   // Szenarien
   'scenario.add': 'Add scenario',
   'scenario.duplicate': 'Duplicate',

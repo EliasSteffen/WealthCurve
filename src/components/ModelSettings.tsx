@@ -14,7 +14,9 @@ import {
   MIN_START_AGE,
   MIN_START_YEAR,
 } from '../core/timeAxis'
+import { useState } from 'react'
 import { useT } from '../react/localeContext'
+import { Checkbox } from './ui/Checkbox'
 import { NumberField } from './ui/NumberField'
 import { SegmentedControl } from './ui/SegmentedControl'
 import { SelectField } from './ui/SelectField'
@@ -83,6 +85,47 @@ export function TimelineControls({
         </p>
       ) : null}
     </div>
+  )
+}
+
+/**
+ * Ob es überhaupt eine Entnahmephase gibt.
+ *
+ * `withdrawalYears === 0` bedeutet im Modell längst „keine Entnahme" - der
+ * Regler musste dafür nur bis zum Anschlag nach links, was niemand als Absicht
+ * lesen kann. Der Schalter macht dieselbe Aussage sichtbar, ohne ein zweites
+ * Feld einzuführen, das mit dem ersten in Widerspruch geraten könnte.
+ *
+ * Der zuletzt eingestellte Wert wird für das Wiedereinschalten gemerkt, aber
+ * bewusst nur im Bauteil: das ist eine Bequemlichkeit, kein Zustand, der eine
+ * Speicherung verdient. Nach einem Neuaufbau greift die Vorgabe.
+ */
+export function WithdrawalPhaseToggle({ value, onChange, matches = null }: ModelProps) {
+  const t = useT()
+  const [gemerkt, setGemerkt] = useState<number | null>(null)
+  if (!zeigt(matches, 'timeline:withdrawalYears')) return null
+
+  const an = value.withdrawalYears > 0
+  return (
+    <Checkbox
+      checked={an}
+      onChange={(naechster) => {
+        if (naechster) {
+          onChange({
+            ...value,
+            withdrawalYears: gemerkt ?? TIMELINE_FIELDS.withdrawalYears.defaultValue,
+          })
+          return
+        }
+        setGemerkt(value.withdrawalYears)
+        onChange({ ...value, withdrawalYears: 0 })
+      }}
+      label={t('model.withdrawalPhase', 'Mit Entnahmephase')}
+      description={t(
+        'model.withdrawalPhase.hint',
+        'Aus: es wird nur angespart, und das Kapital arbeitet danach weiter.',
+      )}
+    />
   )
 }
 
