@@ -114,6 +114,14 @@ export interface Projection {
   readonly retirementYear: number
   /** Was Farbe und Strich bedeuten - Text für die Legende. */
   readonly encodingDescription: string
+  /**
+   * Welche Kodierung tatsächlich gegriffen hat.
+   *
+   * Nicht dasselbe wie die Einstellung: „auto" wird hier aufgelöst. Die
+   * Oberfläche braucht das, um zu sagen, ob die Farbe eines Szenarios gerade
+   * auch dessen Kurve trägt - bei einer einzelnen Kurve tut sie es nicht.
+   */
+  readonly encodingId: string
   readonly capacity: CapacityReport
 }
 
@@ -289,6 +297,7 @@ export function buildProjection(input: ProjectionInput): Projection {
     summaries,
     retirementYear: model.accumulationYears,
     encodingDescription: encoding.describe(encodingInput),
+    encodingId: encoding.id,
     capacity: encoding.capacity(encodingInput),
   }
 }

@@ -216,3 +216,53 @@ describe('Serialisierung', () => {
     expect(Number.isFinite(repaired!.scenarios[0].params.annualRate)).toBe(true)
   })
 })
+
+describe('Farbe eines Szenarios', () => {
+  const mitZwei = () => reducer(createInitialState(), actions.addScenario('Zweites'))
+
+  it('lässt sich auf einen freien Slot setzen', () => {
+    const state = createInitialState()
+    const id = state.scenarios[0].id
+    expect(reducer(state, actions.setScenarioColor(id, 5)).scenarios[0].colorSlot).toBe(5)
+  })
+
+  it('lehnt eine Farbe ab, die ein anderes Szenario trägt', () => {
+    // Zwei gleichfarbige Kurven sind im Diagramm nicht zu trennen - damit wäre
+    // der Vergleich wertlos.
+    const state = mitZwei()
+    const [erstes, zweites] = state.scenarios
+    expect(reducer(state, actions.setScenarioColor(erstes.id, zweites.colorSlot))).toBe(state)
+  })
+
+  it('lehnt alles außerhalb der acht geprüften Farben ab', () => {
+    // Die Grenze ist keine Willkür: ein neunter Ton wäre unter
+    // Farbfehlsichtigkeit von einem vorhandenen nicht mehr zu trennen.
+    const state = createInitialState()
+    const id = state.scenarios[0].id
+    expect(reducer(state, actions.setScenarioColor(id, 0))).toBe(state)
+    expect(reducer(state, actions.setScenarioColor(id, 9))).toBe(state)
+    expect(reducer(state, actions.setScenarioColor(id, 2.5))).toBe(state)
+  })
+
+  it('gibt bei unveränderter Farbe denselben State zurück', () => {
+    const state = createInitialState()
+    const s0 = state.scenarios[0]
+    expect(reducer(state, actions.setScenarioColor(s0.id, s0.colorSlot))).toBe(state)
+  })
+
+  it('überlebt die Serialisierung', () => {
+    const state = createInitialState()
+    const geaendert = reducer(state, actions.setScenarioColor(state.scenarios[0].id, 7))
+    expect(deserialize(serialize(geaendert))!.scenarios[0].colorSlot).toBe(7)
+  })
+
+  it('gibt die freigewordene Farbe wieder frei', () => {
+    // Nach dem Umfärben muss der alte Slot für ein neues Szenario zu haben
+    // sein - sonst schrumpfte die Palette bei jedem Wechsel.
+    const state = mitZwei()
+    const [erstes] = state.scenarios
+    const alt = erstes.colorSlot
+    const um = reducer(state, actions.setScenarioColor(erstes.id, 6))
+    expect(reducer(um, actions.setScenarioColor(um.scenarios[1].id, alt)).scenarios[1].colorSlot).toBe(alt)
+  })
+})

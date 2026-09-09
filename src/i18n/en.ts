@@ -61,6 +61,9 @@ export const en: Catalog = {
   'model.withdrawalPhase.hint': 'Off: only saving, and the capital keeps working afterwards.',
   'video.showYear': 'Show the year',
   'video.showYear.hint': 'Runs along under the axis. Off if the video should work without a time reference.',
+  'scenario.color': 'Change the colour of {name}',
+  'scenario.color.slot': 'Colour {slot}',
+  'scenario.color.taken': 'Taken by another scenario',
 
   // Szenarien
   'scenario.add': 'Add scenario',

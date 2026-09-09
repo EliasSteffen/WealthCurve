@@ -134,6 +134,7 @@ export type Action =
   | { type: 'scenario/remove'; id: string }
   | { type: 'scenario/rename'; id: string; label: string }
   | { type: 'scenario/setVisible'; id: string; visible: boolean }
+  | { type: 'scenario/setColor'; id: string; slot: ColorSlot }
   | { type: 'scenario/select'; id: string }
   | { type: 'scenario/setParam'; id: string; paramId: ParamId; value: number }
   | { type: 'series/toggle'; id: string }
@@ -162,6 +163,11 @@ export const actions = {
     type: 'scenario/setVisible',
     id,
     visible,
+  }),
+  setScenarioColor: (id: string, slot: ColorSlot): Action => ({
+    type: 'scenario/setColor',
+    id,
+    slot,
   }),
   selectScenario: (id: string): Action => ({ type: 'scenario/select', id }),
   setParam: (id: string, paramId: ParamId, value: number): Action => ({
@@ -263,6 +269,26 @@ export function reducer(state: AppState, action: Action): AppState {
 
     case 'scenario/setVisible':
       return mapScenario(state, action.id, (s) => ({ ...s, visible: action.visible }))
+
+    case 'scenario/setColor': {
+      /*
+       * Nur eine der acht geprüften Farben, und keine zweimal.
+       *
+       * Die Palette ist auf Farbfehlsichtigkeit geprüft (siehe palette.ts) -
+       * eine frei gewählte Farbe könnte diese Zusage nicht halten. Und zwei
+       * Szenarien in derselben Farbe wären im Diagramm nicht zu trennen, was
+       * den ganzen Vergleich wertlos machte.
+       */
+      if (!Number.isInteger(action.slot) || action.slot < 1 || action.slot > SLOT_COUNT) {
+        return state
+      }
+      if (state.scenarios.some((s) => s.id !== action.id && s.colorSlot === action.slot)) {
+        return state
+      }
+      return mapScenario(state, action.id, (s) =>
+        s.colorSlot === action.slot ? s : { ...s, colorSlot: action.slot },
+      )
+    }
 
     case 'scenario/select':
       return state.scenarios.some((s) => s.id === action.id)

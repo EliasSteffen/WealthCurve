@@ -1,8 +1,11 @@
 import { Copy, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 import { MAX_SCENARIOS, actions, type Scenario } from '../core/state'
-import { slotVar } from '../core/palette'
+import { SLOT_COUNT, slotVar, type ColorSlot } from '../core/palette'
+import { selectProjection } from '../core/derive'
+import { colorByScenario } from '../core/encoding'
 import { useT } from '../react/localeContext'
-import { useDispatch } from '../react/useSelector'
+import { useDispatch, useSelector } from '../react/useSelector'
 import { cn } from '../lib/cn'
 
 interface ScenarioListProps {
@@ -14,6 +17,18 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
   const dispatch = useDispatch()
   const t = useT()
   const atLimit = scenarios.length >= MAX_SCENARIOS
+  // Höchstens eine Palette offen - zwei nebeneinander schöben die Liste
+  // auseinander, ohne dass mehr zu sehen wäre.
+  const [farbwahl, setFarbwahl] = useState<string | null>(null)
+  /*
+   * Ob die gewählte Farbe gerade auch die Kurve trägt.
+   *
+   * Bei einem einzelnen Szenario steht die Farbe für die Serie - sonst wäre
+   * alles gleichfarbig. Die Wahl wirkt dann nur hier in der Liste, und das
+   * gehört dazugesagt: ein Regler, dessen Wirkung man vergeblich sucht, ist
+   * schlimmer als keiner.
+   */
+  const faerbtSzenarien = useSelector(selectProjection).encodingId === colorByScenario.id
 
   return (
     <div>
@@ -24,16 +39,34 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
             <li
               key={scenario.id}
               className={cn(
-                'group flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors',
+                'group rounded-lg px-2 py-1.5 transition-colors',
                 active ? 'bg-[var(--grid)]' : 'hover:bg-[var(--grid)]/60',
               )}
             >
-              <span
-                aria-hidden
-                className={cn('size-2.5 shrink-0 rounded-full transition-opacity',
-                  scenario.visible ? 'opacity-100' : 'opacity-30')}
-                style={{ background: slotVar(scenario.colorSlot) }}
-              />
+            <div className="flex items-center gap-2">
+              {/*
+                Der Farbpunkt ist der Knopf zur Farbwahl.
+                
+                Er trägt die Farbe ohnehin und steht an genau der Stelle, an der
+                man sie ändern will - ein zusätzliches Symbol daneben wäre eine
+                zweite Erklärung für dieselbe Sache.
+              */}
+              <button
+                type="button"
+                onClick={() => setFarbwahl((v) => (v === scenario.id ? null : scenario.id))}
+                aria-label={t('scenario.color', `Farbe von ${scenario.label} ändern`, {
+                  name: scenario.label,
+                })}
+                aria-expanded={farbwahl === scenario.id}
+                className="flex size-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-[var(--surface-1)]"
+              >
+                <span
+                  aria-hidden
+                  className={cn('size-2.5 rounded-full transition-opacity',
+                    scenario.visible ? 'opacity-100' : 'opacity-30')}
+                  style={{ background: slotVar(scenario.colorSlot) }}
+                />
+              </button>
 
               {/* Direkt im Feld umbenennbar - kein Dialog für einen Namen. */}
               <input
@@ -85,6 +118,19 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
                   <Trash2 size={15} />
                 </IconButton>
               </div>
+            </div>
+
+            {farbwahl === scenario.id ? (
+              <Farbwahl
+                aktuell={scenario.colorSlot}
+                belegt={scenarios.filter((s) => s.id !== scenario.id).map((s) => s.colorSlot)}
+                traegtKurve={faerbtSzenarien}
+                onChange={(slot) => {
+                  dispatch(actions.setScenarioColor(scenario.id, slot))
+                  setFarbwahl(null)
+                }}
+              />
+            ) : null}
             </li>
           )
         })}
@@ -159,5 +205,73 @@ function IconButton({
     >
       {children}
     </button>
+  )
+}
+
+/**
+ * Die acht Farben der Palette zur Auswahl.
+ *
+ * Keine freie Farbwahl: die Palette ist auf Farbfehlsichtigkeit geprüft (siehe
+ * palette.ts), ein selbst gewählter Ton könnte diese Zusage nicht halten.
+ * Belegte Farben sind gesperrt statt versteckt - sonst wanderten die übrigen
+ * bei jeder Änderung an eine andere Stelle.
+ */
+function Farbwahl({
+  aktuell,
+  belegt,
+  traegtKurve,
+  onChange,
+}: {
+  readonly aktuell: ColorSlot
+  readonly belegt: readonly ColorSlot[]
+  readonly traegtKurve: boolean
+  readonly onChange: (slot: ColorSlot) => void
+}) {
+  const t = useT()
+  const genommen = new Set(belegt)
+  return (
+    <div className="mt-1.5 pl-1">
+      {traegtKurve ? null : (
+        <p className="mb-1 text-[11px] leading-snug text-[var(--text-muted)]">
+          {t(
+            'scenario.color.seriesEncoding',
+            'Solange nur ein Szenario sichtbar ist, färbt das Diagramm nach Serie – die Farbe steht hier und im Kopf der Einstellungen.',
+          )}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-1">
+      {Array.from({ length: SLOT_COUNT }, (_, i) => i + 1).map((slot) => {
+        const gesperrt = genommen.has(slot)
+        return (
+          <button
+            key={slot}
+            type="button"
+            disabled={gesperrt}
+            onClick={() => onChange(slot)}
+            aria-pressed={slot === aktuell}
+            title={
+              gesperrt
+                ? t('scenario.color.taken', 'Von einem anderen Szenario belegt')
+                : undefined
+            }
+            aria-label={t('scenario.color.slot', `Farbe ${slot}`, { slot: String(slot) })}
+            className={cn(
+              'flex size-8 items-center justify-center rounded-md transition-colors',
+              gesperrt ? 'cursor-not-allowed opacity-25' : 'hover:bg-[var(--surface-1)]',
+            )}
+          >
+            <span
+              aria-hidden
+              className={cn(
+                'size-4 rounded-full',
+                slot === aktuell ? 'ring-2 ring-[var(--text-primary)] ring-offset-2 ring-offset-[var(--grid)]' : '',
+              )}
+              style={{ background: slotVar(slot) }}
+            />
+          </button>
+        )
+      })}
+      </div>
+    </div>
   )
 }
