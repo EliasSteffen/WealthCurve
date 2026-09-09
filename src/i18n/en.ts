@@ -23,14 +23,14 @@ export const en: Catalog = {
   'settings.close': 'Hide settings',
   'category.szenarien.label': 'Scenarios',
   'category.szenarien.hint': 'Create, compare, show and hide',
-  'category.werte.label': 'Values',
-  'category.werte.hint': 'Contribution, return, withdrawal',
-  'category.zeitraum.label': 'Period',
-  'category.zeitraum.hint': 'Saving and withdrawal phase',
+  'category.generell.label': 'General',
+  'category.generell.hint': 'Return, starting capital, compounding',
+  'category.einzahlung.label': 'Contributions',
+  'category.einzahlung.hint': 'Monthly amount and saving phase',
+  'category.auszahlung.label': 'Withdrawals',
+  'category.auszahlung.hint': 'Payout and withdrawal phase',
   'category.kurven.label': 'Curves',
   'category.kurven.hint': 'Which series, which style',
-  'category.berechnung.label': 'Calculation',
-  'category.berechnung.hint': 'Compounding and withdrawal rule',
 
   // Szenarien
   'scenario.add': 'Add scenario',
@@ -39,6 +39,8 @@ export const en: Catalog = {
   'scenario.show': 'Show',
   'scenario.hide': 'Hide',
   'scenario.limit': '{max} scenarios is the maximum – that is as many colours as stay distinguishable.',
+  'scenario.limitShort': 'At most {max} scenarios',
+  'scenario.lastOne': 'The last scenario cannot be deleted',
 
   // Parameter
   'param.monthlyContribution.label': 'Monthly contribution',
@@ -145,7 +147,11 @@ export const en: Catalog = {
   'market.load': 'Load prices',
   'market.history': 'since {start} · {years} years of history',
   'market.unavailable': 'The price endpoint is not responding.',
-  'market.needsServer': 'Price data needs the server function – locally via `vercel dev`, otherwise in the deployment.',
+  'market.import': 'Load a price file (CSV or JSON)',
+  'market.noServer':
+    'This deployment has no price endpoint. Everything else works; prices come from a file – or start the app with `npm run serve`.',
+  'market.badFile':
+    'Could not read the file – expected at least 13 monthly prices with a date and a price column.',
 
   // Video
   'video.title': 'Create video',

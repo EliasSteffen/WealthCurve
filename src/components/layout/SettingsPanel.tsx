@@ -13,9 +13,11 @@ import { cn } from '../../lib/cn'
 import { useT } from '../../react/localeContext'
 import { useDispatch, useSelector } from '../../react/useSelector'
 import {
-  CalculationControls,
   ChartStyleControl,
+  CompoundingControl,
+  InflationAmountsControl,
   TimelineControls,
+  TimingControl,
   WithdrawalRuleControl,
 } from '../ModelSettings'
 import { MarketPanel } from '../MarketPanel'
@@ -47,7 +49,9 @@ export function SettingsPanel() {
 
   const t = useT()
   const [query, setQuery] = useState('')
-  const [zu, setZu] = useState<ReadonlySet<SettingsCategoryId>>(new Set())
+  // Aus dem Store, nicht aus lokalem State: das Bottom-Sheet montiert dieses
+  // Panel bei jedem Öffnen neu und hätte den Zustand sonst jedes Mal vergessen.
+  const zu = useSelector((s) => s.collapsedCategories)
 
   const index = useMemo(() => buildSettingsIndex(), [])
   const matches = useMemo(() => matchSettings(index, query), [index, query])
@@ -58,23 +62,56 @@ export function SettingsPanel() {
 
   const setModel = (next: typeof model) => dispatch(actions.setModel(next))
 
+  const regler = (category: SettingsCategoryId) => (
+    <ParameterPanel
+      category={category}
+      params={activeScenario.params}
+      activeParamIds={activeParamIds}
+      matches={matches}
+      onChange={(id, value) => dispatch(actions.setParam(activeScenario.id, id, value))}
+    />
+  )
+
   const inhalte: Record<SettingsCategoryId, ReactNode> = {
     szenarien:
       matches === null || matches.has('scenarios') ? (
         <ScenarioList scenarios={scenarios} activeScenarioId={activeScenarioId} />
       ) : null,
-    werte: (
-      <ParameterPanel
-        params={activeScenario.params}
-        activeParamIds={activeParamIds}
-        matches={matches}
-        onChange={(id, value) => dispatch(actions.setParam(activeScenario.id, id, value))}
-        groupExtras={{
-          entnahme: <WithdrawalRuleControl value={model} onChange={setModel} />,
-        }}
-      />
+    generell: (
+      <div className="space-y-5">
+        {regler('generell')}
+        <CompoundingControl value={model} onChange={setModel} matches={matches} />
+        <InflationAmountsControl value={model} onChange={setModel} matches={matches} />
+      </div>
     ),
-    zeitraum: <TimelineControls value={model} onChange={setModel} matches={matches} />,
+    einzahlung: (
+      <div className="space-y-5">
+        {regler('einzahlung')}
+        <TimelineControls
+          category="einzahlung"
+          value={model}
+          onChange={setModel}
+          matches={matches}
+        />
+        <TimingControl value={model} onChange={setModel} matches={matches} />
+      </div>
+    ),
+    auszahlung: (
+      <div className="space-y-5">
+        {/* Die Regel steht über den Beträgen: sie entscheidet, welcher der
+            beiden Regler überhaupt zählt. */}
+        {matches === null || matches.has('model:withdrawalRule') ? (
+          <WithdrawalRuleControl value={model} onChange={setModel} />
+        ) : null}
+        {regler('auszahlung')}
+        <TimelineControls
+          category="auszahlung"
+          value={model}
+          onChange={setModel}
+          matches={matches}
+        />
+      </div>
+    ),
     kurven: (
       <div className="space-y-5">
         <SeriesPanel
@@ -91,7 +128,6 @@ export function SettingsPanel() {
         />
       </div>
     ),
-    berechnung: <CalculationControls value={model} onChange={setModel} matches={matches} />,
   }
 
   const leer = sichtbareKategorien.size === 0
@@ -135,20 +171,13 @@ export function SettingsPanel() {
         const inhalt = inhalte[kategorie.id]
         if (!inhalt) return null
         // Bei aktiver Suche immer offen - sonst müsste man den Treffer erst aufklappen.
-        const offen = matches !== null || !zu.has(kategorie.id)
+        const offen = matches !== null || !zu.includes(kategorie.id)
 
         return (
-          <Card key={kategorie.id} className="p-0">
+          <Card key={kategorie.id} padded={false}>
             <button
               type="button"
-              onClick={() =>
-                setZu((prev) => {
-                  const next = new Set(prev)
-                  if (next.has(kategorie.id)) next.delete(kategorie.id)
-                  else next.add(kategorie.id)
-                  return next
-                })
-              }
+              onClick={() => dispatch(actions.toggleSettingsCategory(kategorie.id))}
               aria-expanded={offen}
               disabled={matches !== null}
               className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left disabled:cursor-default"

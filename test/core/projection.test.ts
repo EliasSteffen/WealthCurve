@@ -95,6 +95,97 @@ describe('buildProjection', () => {
   })
 })
 
+describe('Mehrere Wertpapiere', () => {
+  const kurs = (symbol: string, monatsrendite: number, monate = 240) => ({
+    symbol,
+    name: `${symbol} Inc.`,
+    currency: 'USD',
+    start: '2000-01-01',
+    monthlyReturns: Array(monate).fill(monatsrendite) as number[],
+  })
+
+  const mitKursen = (...markets: ReturnType<typeof kurs>[]) =>
+    build({ seriesIds: ['compound', 'marketReturn'], markets })
+
+  it('macht aus einer Serie eine Linie je Wertpapier', () => {
+    const p = mitKursen(kurs('AAPL', 0.006), kurs('MSFT', 0.004))
+    const kurslinien = p.lines.filter((l) => l.seriesId === 'marketReturn')
+    expect(kurslinien).toHaveLength(2)
+    expect(kurslinien.map((l) => l.variantLabel)).toEqual(['AAPL', 'MSFT'])
+    // Die Registry bleibt statisch - beide Linien stammen aus derselben Serie.
+    expect(new Set(kurslinien.map((l) => l.seriesId)).size).toBe(1)
+  })
+
+  it('gibt jedem Wertpapier eine eigene Farbe', () => {
+    // Zwei gleichfarbige Kurven wären nicht auseinanderzuhalten.
+    const p = mitKursen(kurs('AAPL', 0.006), kurs('MSFT', 0.004))
+    const farben = p.lines.filter((l) => l.seriesId === 'marketReturn').map((l) => l.colorVar)
+    expect(new Set(farben).size).toBe(2)
+  })
+
+  it('greift dabei keine Farbe ab, die schon eine andere Serie trägt', () => {
+    // "Ohne Rendite" hat einen festen Slot aus der Registry. Bekäme ein
+    // Wertpapier denselben, stünden zwei verschiedene Aussagen in einer Farbe.
+    const p = build({
+      seriesIds: ['compound', 'contributions', 'savingsAccount', 'marketReturn'],
+      markets: [kurs('AAPL', 0.006), kurs('MSFT', 0.004)],
+    })
+    const alle = p.lines.map((l) => l.colorVar)
+    expect(new Set(alle).size).toBe(alle.length)
+  })
+
+  it('rechnet jede Linie mit ihrem eigenen Verlauf', () => {
+    const p = mitKursen(kurs('HOCH', 0.01), kurs('FLACH', 0.001))
+    const hoch = p.lines.find((l) => l.variantLabel === 'HOCH')!
+    const flach = p.lines.find((l) => l.variantLabel === 'FLACH')!
+    // Jahr 15 liegt in beiden Historien (240 Monate = 20 Jahre).
+    expect(p.rows[15][hoch.key]).toBeGreaterThan(p.rows[15][flach.key] as number)
+  })
+
+  it('lässt jede Kurve am Ende ihrer eigenen Historie aufhören', () => {
+    // Eine kurze und eine lange Reihe enden zu verschiedenen Zeitpunkten -
+    // fortgeschrieben wäre keine, das wäre eine Behauptung statt einer Auskunft.
+    const p = mitKursen(kurs('KURZ', 0.005, 120), kurs('LANG', 0.005, 360))
+    const kurzeLinie = p.lines.find((l) => l.variantLabel === 'KURZ')!
+    const langeLinie = p.lines.find((l) => l.variantLabel === 'LANG')!
+    expect(p.rows[25][kurzeLinie.key]).toBeNull()
+    expect(p.rows[25][langeLinie.key]).toBeGreaterThan(0)
+  })
+
+  it('zählt aufgefächerte Linien in die Kapazität', () => {
+    // Sonst meldete die Warnung "ok", während der Chart überquillt.
+    const p = build({
+      scenarios: [scenario('a'), scenario('b', { colorSlot: 2 })],
+      seriesIds: ['compound', 'marketReturn'],
+      markets: [kurs('A', 0.005), kurs('B', 0.005), kurs('C', 0.005), kurs('D', 0.005)],
+    })
+    expect(p.lines).toHaveLength(10)
+    expect(p.capacity.lineCount).toBe(10)
+    expect(p.capacity.level).not.toBe('ok')
+  })
+
+  it('behält ohne Wertpapier genau eine Linie', () => {
+    // Die Serie soll nicht aus der Legende verschwinden, nur weil noch kein
+    // Kurs geladen ist - sie zeichnet dann eben nichts.
+    const p = build({ seriesIds: ['marketReturn'], markets: [] })
+    expect(p.lines).toHaveLength(1)
+    expect(p.lines[0].variantLabel).toBeUndefined()
+    expect(p.rows.at(-1)![p.lines[0].key]).toBeNull()
+  })
+
+  it('vergibt Schlüssel je Szenario und Wertpapier eindeutig', () => {
+    const p = build({
+      scenarios: [scenario('a'), scenario('b', { colorSlot: 2 })],
+      seriesIds: ['marketReturn'],
+      markets: [kurs('AAPL', 0.006), kurs('MSFT', 0.004)],
+    })
+    const keys = p.lines.map((l) => l.key)
+    expect(new Set(keys).size).toBe(keys.length)
+    expect(keys).toContain('a:marketReturn:AAPL')
+    expect(keys).toContain('b:marketReturn:MSFT')
+  })
+})
+
 describe('CSV-Export', () => {
   it('schreibt Kopfzeile und eine Zeile je Jahr', () => {
     const p = build()

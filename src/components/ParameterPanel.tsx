@@ -7,11 +7,14 @@ import {
   type ParamId,
   type SimulationParams,
 } from '../core/domain/parameters'
+import type { SettingsCategoryId } from '../core/settings'
 import { useT } from '../react/localeContext'
 import { SliderField } from './ui/SliderField'
 
 interface ParameterPanelProps {
   readonly params: SimulationParams
+  /** Welche Kategorie gezeigt wird - die Zuordnung steht in der Registry. */
+  readonly category: SettingsCategoryId
   /** Nur diese Regler werden gezeigt - der Rest hat gerade keine Wirkung. */
   readonly activeParamIds: ReadonlySet<ParamId>
   readonly onChange: (id: ParamId, value: number) => void
@@ -42,6 +45,7 @@ const GROUPS: readonly ParamGroup[] = ['basis', 'entnahme', 'annahmen']
  */
 export function ParameterPanel({
   params,
+  category,
   activeParamIds,
   onChange,
   groupExtras,
@@ -49,23 +53,33 @@ export function ParameterPanel({
 }: ParameterPanelProps) {
   const t = useT()
   const sichtbar = (id: ParamId) =>
-    activeParamIds.has(id) && (matches === null || matches.has(`param:${id}`))
+    PARAMETERS[id].category === category &&
+    activeParamIds.has(id) &&
+    (matches === null || matches.has(`param:${id}`))
+
+  const gruppen = GROUPS.map((group) => ({
+    group,
+    ids: PARAM_IDS.filter((id) => PARAMETERS[id].group === group && sichtbar(id)),
+  })).filter((g) => g.ids.length > 0)
+
+  // Nichts zu zeigen: null statt einer leeren Hülle, sonst stünde in der Karte
+  // ein Abstand ohne Inhalt.
+  if (gruppen.length === 0) return null
 
   return (
     <div className="space-y-5">
-      {GROUPS.map((group) => {
-        const ids = PARAM_IDS.filter((id) => PARAMETERS[id].group === group && sichtbar(id))
+      {gruppen.map(({ group, ids }) => {
         const extra = groupExtras?.[group]
-        const extraZeigen =
-          extra && (matches === null || matches.has('model:withdrawalRule')) && ids.length > 0
-        if (ids.length === 0) return null
+        const extraZeigen = extra && (matches === null || matches.has('model:withdrawalRule'))
 
         return (
           <div key={group} className="space-y-4">
             {/* Untergruppe innerhalb der Kategorie - nur wenn es mehr als eine gibt. */}
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-              {t(`param.group.${group}`, GROUP_LABELS[group])}
-            </div>
+            {gruppen.length > 1 ? (
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                {t(`param.group.${group}`, GROUP_LABELS[group])}
+              </div>
+            ) : null}
             {extraZeigen ? extra : null}
             {ids.map((id) => {
               // as const satisfies verengt die Registry-Typen so, dass

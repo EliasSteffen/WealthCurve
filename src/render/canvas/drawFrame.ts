@@ -77,6 +77,20 @@ function wrapLines(
   return ergebnis
 }
 
+/**
+ * Kürzt auf die verfügbare Breite.
+ *
+ * `fillText` bricht weder um noch schneidet es ab - zu langer Text läuft
+ * einfach aus dem Bild. In der Legende passiert das schnell: "Zinseszins ·
+ * Aggressiv" ist bei zwei Szenarien der Normalfall, nicht die Ausnahme.
+ */
+function kuerzen(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+  if (ctx.measureText(text).width <= maxWidth) return text
+  let kurz = text
+  while (kurz.length > 1 && ctx.measureText(`${kurz}…`).width > maxWidth) kurz = kurz.slice(0, -1)
+  return `${kurz}…`
+}
+
 /** Zeichnet mehrzeiligen, umgebrochenen Text und gibt die Gesamthöhe zurück. */
 function drawLines(
   ctx: CanvasRenderingContext2D,
@@ -138,23 +152,6 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
   ctx.fillRect(0, 0, width, height)
 
   const pad = Math.round(width * 0.075)
-  const headerH = Math.round(height * (format.height > format.width ? 0.2 : 0.16))
-  const footerH = Math.round(height * (format.height > format.width ? 0.13 : 0.15))
-  const plot = {
-    left: pad,
-    right: width - pad,
-    top: headerH,
-    bottom: height - footerH,
-  }
-
-  const lastYear = Math.max(1, projection.rows.length - 1)
-  const TICKS = 4
-  const schritt = niceStep(maxValue(projection), TICKS)
-  // Obergrenze auf die nächste runde Stufe aufziehen, damit die oberste
-  // Beschriftung genau auf der obersten Gitterlinie sitzt.
-  const obergrenze = Math.ceil(maxValue(projection) / schritt) * schritt
-  const x = scale(0, lastYear, plot.left, plot.right)
-  const y = scale(0, obergrenze, plot.bottom, plot.top)
 
   /* ------------------------------------------------------- Aufhänger allein */
   // Der Aufhänger zeigt nur Text. Ein halb gezeichnetes Diagramm darunter würde
@@ -199,59 +196,154 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
   const kopfzeilen = [...proSzenario.values()]
   const MAX_ZEILEN = 3
   const gezeigt = kopfzeilen.slice(0, MAX_ZEILEN)
+  const weitere = kopfzeilen.length - gezeigt.length
+
+  /*
+   * Schriftgröße und Zeilenabstand hängen voneinander ab.
+   *
+   * Vorher kam der Abstand aus der Bildhöhe und die Schrift aus der Bildbreite -
+   * zwei Größen, die nichts voneinander wussten. Im Quadrat- und Querformat war
+   * der Abstand (35 px) kleiner als die Schrift (56 bzw. 100 px), die Zeilen
+   * liefen also zwangsläufig ineinander. Jetzt folgt der Abstand aus dem, was
+   * tatsächlich darin steht.
+   */
+  const einzeilig = gezeigt.length <= 1
+  const untertitel = resolveText(frame.scene.text, input.facts)
+
+  /*
+   * Die kürzere Bildkante gibt das Maß, nicht die Breite.
+   *
+   * Im Querformat (1920x1080) ergäbe die Breite eine 111-px-Schrift in einem nur
+   * 1080 px hohen Bild - der Kopf fräße zwei Drittel der Fläche. Für Hoch- und
+   * Quadratformat ändert sich nichts, dort IST die Breite die kürzere Kante.
+   */
+  const bezug = Math.min(width, height)
+  const kopfOben = Math.round(pad * 0.7)
+  const kopfUnten = Math.round(pad * 0.5)
+  // Mehr als zwei Fünftel des Bildes darf die Beschriftung nicht belegen, sonst
+  // bleibt von der Kurve - dem eigentlichen Inhalt - nichts übrig.
+  const maxKopf = Math.round(height * 0.42)
+
+  const messen = (skala: number) => {
+    const wert = Math.round(
+      bezug * (einzeilig ? 0.085 : gezeigt.length === 2 ? 0.058 : 0.046) * skala,
+    )
+    const label = Math.round(bezug * (einzeilig ? 0.032 : 0.026) * skala)
+    const zeile = Math.round(label * 1.25 + wert * 1.2)
+    const weitereHoehe = weitere > 0 ? Math.round(label * 1.6) : 0
+    const unter = Math.round(bezug * 0.03 * skala)
+    // Umbrechen braucht die gesetzte Schrift, sonst misst measureText die falsche.
+    ctx.font = font(style, unter)
+    const zeilen =
+      frame.scene.kind === 'build' && untertitel ? wrapLines(ctx, untertitel, width - pad * 2) : []
+    const abstand = zeilen.length > 0 ? Math.round(unter * 0.6) : 0
+    const variabel =
+      gezeigt.length * zeile + weitereHoehe + abstand + zeilen.length * Math.round(unter * 1.3)
+    return {
+      wert,
+      label,
+      zeile,
+      weitereHoehe,
+      unter,
+      unterZeilenH: Math.round(unter * 1.3),
+      zeilen,
+      abstand,
+      variabel,
+      hoehe: kopfOben + variabel + kopfUnten,
+    }
+  }
+
+  let kopf = messen(1)
+  if (kopf.hoehe > maxKopf) {
+    // Nur der veränderliche Teil lässt sich stauchen; die festen Ränder nicht.
+    const platz = maxKopf - kopfOben - kopfUnten
+    kopf = messen(Math.max(0.45, platz / kopf.variabel))
+  }
+
+  const wertGroesse = kopf.wert
+  const labelGroesse = kopf.label
+  const zeilenH = kopf.zeile
+  const weitereH = kopf.weitereHoehe
+  const untertitelGroesse = kopf.unter
+  const untertitelZeilenH = kopf.unterZeilenH
+  const untertitelZeilen = kopf.zeilen
+  const untertitelAbstand = kopf.abstand
+
+  // Der Kopf darf wachsen, aber nicht schrumpfen: bei einem Szenario beginnt das
+  // Diagramm genau da, wo es immer begann.
+  const headerH = Math.max(
+    Math.round(height * (format.height > format.width ? 0.2 : 0.16)),
+    kopf.hoehe,
+  )
+  const footerH = Math.round(height * (format.height > format.width ? 0.13 : 0.15))
+  // Die Achsenbeschriftung steht ÜBER ihrer Gitterlinie. Ohne diese Reserve
+  // ragte die oberste Zahl in den Kopfbereich und legte sich auf die Kopfzeilen.
+  const achsenGroesse = Math.round(bezug * 0.024)
+  const plot = {
+    left: pad,
+    right: width - pad,
+    top: headerH + (style.axis.show ? achsenGroesse : 0),
+    bottom: height - footerH,
+  }
+
+  const lastYear = Math.max(1, projection.rows.length - 1)
+  const TICKS = 4
+  const schritt = niceStep(maxValue(projection), TICKS)
+  // Obergrenze auf die nächste runde Stufe aufziehen, damit die oberste
+  // Beschriftung genau auf der obersten Gitterlinie sitzt.
+  const obergrenze = Math.ceil(maxValue(projection) / schritt) * schritt
+  const x = scale(0, lastYear, plot.left, plot.right)
+  const y = scale(0, obergrenze, plot.bottom, plot.top)
 
   ctx.textAlign = 'left'
-  if (gezeigt.length <= 1) {
-    ctx.fillStyle = theme.textMuted
-    ctx.font = font(style, Math.round(width * 0.032))
-    ctx.fillText(gezeigt[0]?.label ?? input.title, pad, Math.round(headerH * 0.38))
+  let kopfY = kopfOben
+  for (const eintrag of gezeigt) {
+    // Bei einem Szenario bleibt die Zeile gedämpft, bei mehreren trägt sie die
+    // Farbe ihrer Kurve - sonst ist nicht zuzuordnen, welche Zahl wohin gehört.
+    ctx.fillStyle = einzeilig ? theme.textMuted : eintrag.color
+    ctx.font = font(style, labelGroesse)
+    ctx.fillText(eintrag.label, pad, kopfY + labelGroesse)
 
     ctx.fillStyle = theme.text
-    ctx.font = font(style, Math.round(width * 0.085), '600')
-    ctx.fillText(formatEur(gezeigt[0]?.value ?? 0), pad, Math.round(headerH * 0.66))
-  } else {
-    // Kleinere Schrift, dafuer jede Zeile in der Farbe ihrer Kurve.
-    const zeilenH = Math.round(headerH * 0.2)
-    const wertGroesse = Math.round(width * 0.052)
-    let y = Math.round(headerH * 0.3)
-    for (const eintrag of gezeigt) {
-      ctx.fillStyle = eintrag.color
-      ctx.font = font(style, Math.round(width * 0.026))
-      ctx.fillText(eintrag.label, pad, y - wertGroesse * 0.72)
-      ctx.fillStyle = theme.text
-      ctx.font = font(style, wertGroesse, '600')
-      ctx.fillText(formatEur(eintrag.value ?? 0), pad, y)
-      y += zeilenH
-    }
-    if (kopfzeilen.length > MAX_ZEILEN) {
-      ctx.fillStyle = theme.textMuted
-      ctx.font = font(style, Math.round(width * 0.024))
-      ctx.fillText(`+ ${kopfzeilen.length - MAX_ZEILEN} weitere`, pad, y - wertGroesse * 0.7)
-    }
+    ctx.font = font(style, wertGroesse, '600')
+    ctx.fillText(formatEur(eintrag.value ?? 0), pad, kopfY + labelGroesse * 1.25 + wertGroesse * 0.8)
+    kopfY += zeilenH
+  }
+  if (weitere > 0) {
+    ctx.fillStyle = theme.textMuted
+    ctx.font = font(style, Math.round(width * 0.024))
+    ctx.fillText(`+ ${weitere} weitere`, pad, kopfY + labelGroesse)
+    kopfY += weitereH
   }
 
-  // Untertitel des laufenden Abschnitts.
-  const untertitel = resolveText(frame.scene.text, input.facts)
-  if (frame.scene.kind === 'build' && untertitel) {
+  // Untertitel direkt unter dem Kopfblock statt an einer festen Bruchteilhöhe,
+  // die bei drei Zeilen längst überschrieben war.
+  if (untertitelZeilen.length > 0) {
     ctx.fillStyle = theme.textMuted
-    ctx.font = font(style, Math.round(width * 0.03))
-    drawLines(
-      ctx,
-      untertitel,
-      pad,
-      Math.round(headerH * 0.86),
-      Math.round(width * 0.038),
-      width - pad * 2,
+    ctx.font = font(style, untertitelGroesse)
+    untertitelZeilen.forEach((zeile, i) =>
+      ctx.fillText(zeile, pad, kopfY + untertitelAbstand + untertitelGroesse + i * untertitelZeilenH),
     )
   }
+
+  /*
+   * Nur Striche bis zur Obergrenze.
+   *
+   * `TICKS` ist ein Wunsch, keine Zusage: `niceStep` rundet die Schrittweite auf
+   * und `obergrenze` schneidet danach ab. Die feste Schleife bis `TICKS` zeichnete
+   * deshalb regelmäßig Linien und Beschriftungen OBERHALB der Plotfläche - bei
+   * kurzem Kopf fiel das in leeren Raum, bei zwei Szenarien landete es im Text.
+   */
+  const tickWerte: number[] = []
+  for (let value = 0; value <= obergrenze + schritt * 1e-9; value += schritt) tickWerte.push(value)
 
   /* ------------------------------------------------------------------ Gitter */
   if (style.grid.show) {
     ctx.strokeStyle = theme.grid
     ctx.lineWidth = 1
     ctx.setLineDash(style.grid.dash ? style.grid.dash.split(/[\s,]+/).map(Number) : [])
-    for (let i = 0; i <= TICKS; i += 1) {
-      const gy = y(schritt * i)
+    for (const value of tickWerte) {
+      const gy = y(value)
       ctx.beginPath()
       ctx.moveTo(plot.left, gy)
       ctx.lineTo(plot.right, gy)
@@ -263,12 +355,9 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
   /* ------------------------------------------------------------------ Achsen */
   if (style.axis.show) {
     ctx.fillStyle = theme.textMuted
-    ctx.font = font(style, Math.round(width * 0.024))
+    ctx.font = font(style, achsenGroesse)
     ctx.textAlign = 'left'
-    for (let i = 0; i <= TICKS; i += 1) {
-      const value = schritt * i
-      ctx.fillText(formatEurCompact(value), plot.left, y(value) - 8)
-    }
+    for (const value of tickWerte) ctx.fillText(formatEurCompact(value), plot.left, y(value) - 8)
   }
 
   /* ------------------------------------------------------------------ Kurven */
@@ -342,23 +431,54 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
   /* ------------------------------------------------------------------- Fußzeile */
   ctx.textAlign = 'left'
   ctx.fillStyle = theme.textMuted
-  ctx.font = font(style, Math.round(width * 0.028))
+  // Auch hier die kürzere Kante: im Querformat ergäbe die Breite eine 54-px-
+  // Zeile, die sich in die Legende darunter legte.
+  ctx.font = font(style, Math.round(bezug * 0.028))
   ctx.fillText(`Jahr ${frame.year}`, pad, plot.bottom + Math.round(footerH * 0.34))
 
-  const legendSize = Math.round(width * 0.026)
+  const legendSize = Math.round(bezug * 0.026)
+  const legendZeilenH = Math.round(legendSize * 1.5)
   ctx.font = font(style, legendSize)
-  let ly = plot.bottom + Math.round(footerH * 0.62)
-  for (const line of projection.lines.slice(0, 4)) {
+  const legendStart = plot.bottom + Math.round(footerH * 0.62)
+  // Nur so viele Einträge, wie unter der Achse wirklich Platz haben.
+  const passt = Math.max(1, Math.floor((height - legendStart) / legendZeilenH))
+  const textLinks = pad + legendSize * 2.2
+  const textBreite = width - pad - textLinks
+
+  /*
+   * Beim Vergleich nennt die Legende nur die Serien.
+   *
+   * Zwei Szenarien mal zwei Serien ergeben vier Einträge, von denen in die
+   * Fußzeile zwei passen - die Legende zeigte dann "... · Basis" zweimal und
+   * verschwieg das zweite Szenario komplett. Die Szenarien stehen ohnehin
+   * farbig im Kopf; hier unten fehlt nur noch, welche Kurve welche Serie ist.
+   */
+  const vergleich = new Set(projection.lines.map((l) => l.scenarioId)).size > 1
+  const legende = vergleich
+    ? [...new Map(projection.lines.map((l) => [l.seriesId, l])).values()]
+    : projection.lines
+
+  let ly = legendStart
+  for (const line of legende.slice(0, Math.min(4, passt))) {
     ctx.strokeStyle = colors[line.key] ?? theme.text
     ctx.lineWidth = Math.max(2, style.line.width * (width / 700))
+    ctx.setLineDash(line.dash ? line.dash.split(/[\s,]+/).map(Number) : [])
     ctx.beginPath()
     ctx.moveTo(pad, ly - legendSize * 0.35)
     ctx.lineTo(pad + legendSize * 1.6, ly - legendSize * 0.35)
     ctx.stroke()
+    ctx.setLineDash([])
+
+    // Das " · Szenario" am Ende weglassen - es benennt hier nur eines von
+    // mehreren und führte damit in die Irre.
+    const beschriftung =
+      vergleich && line.scenarioLabel
+        ? line.label.replace(` · ${line.scenarioLabel}`, '')
+        : line.label
 
     ctx.fillStyle = theme.text
-    ctx.fillText(line.label, pad + legendSize * 2.2, ly)
-    ly += legendSize * 1.5
+    ctx.fillText(kuerzen(ctx, beschriftung, textBreite), textLinks, ly)
+    ly += legendZeilenH
   }
 
   ctx.restore()

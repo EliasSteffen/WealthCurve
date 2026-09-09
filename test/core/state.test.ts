@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_SCENARIOS, actions, createInitialState, deserialize, reducer, serialize } from '@/core/state'
+import {
+  MAX_MARKETS,
+  MAX_SCENARIOS,
+  actions,
+  createInitialState,
+  deserialize,
+  reducer,
+  serialize,
+} from '@/core/state'
 import type { AppState } from '@/core/state'
 
 const run = (state: AppState, ...list: ReturnType<typeof actions.addScenario>[]) =>
@@ -92,6 +100,84 @@ describe('Reducer-Identität', () => {
     expect(reducer(state, actions.toggleSeries('gibt-es-nicht'))).toBe(state)
     expect(reducer(state, actions.setSidebarCollapsed(false))).toBe(state)
     expect(reducer(state, actions.renameScenario('gibt-es-nicht', 'x'))).toBe(state)
+  })
+})
+
+describe('Eingeklappte Kategorien', () => {
+  it('startet mit lauter offenen Kategorien', () => {
+    expect(createInitialState().collapsedCategories).toEqual([])
+  })
+
+  it('klappt zu und wieder auf', () => {
+    const zu = reducer(createInitialState(), actions.toggleSettingsCategory('auszahlung'))
+    expect(zu.collapsedCategories).toEqual(['auszahlung'])
+    expect(reducer(zu, actions.toggleSettingsCategory('auszahlung')).collapsedCategories).toEqual([])
+  })
+
+  it('überlebt die Serialisierung', () => {
+    // Der eigentliche Grund, warum der Zustand im Store liegt: das Bottom-Sheet
+    // montiert das Panel neu, lokaler State wäre danach vergessen.
+    const state = reducer(createInitialState(), actions.toggleSettingsCategory('generell'))
+    expect(deserialize(serialize(state))!.collapsedCategories).toEqual(['generell'])
+  })
+
+  it('lässt erfundene Kategorien nicht in den Zustand', () => {
+    const state = createInitialState()
+    // @ts-expect-error - genau der Fall, den der Reducer abfangen soll
+    expect(reducer(state, actions.toggleSettingsCategory('gibt-es-nicht'))).toBe(state)
+    const fremd = deserialize('{"scenarios":[{"label":"X"}],"collapsedCategories":["quatsch"]}')
+    expect(fremd!.collapsedCategories).toEqual([])
+  })
+})
+
+describe('Wertpapiere', () => {
+  const kurs = (symbol: string, start = '2000-01-01') => ({
+    symbol,
+    name: `${symbol} Inc.`,
+    currency: 'USD',
+    start,
+    monthlyReturns: Array(24).fill(0.005) as number[],
+  })
+
+  it('nimmt mehrere auf', () => {
+    const state = run(createInitialState(), actions.addMarket(kurs('AAPL')), actions.addMarket(kurs('MSFT')))
+    expect(state.markets.map((m) => m.symbol)).toEqual(['AAPL', 'MSFT'])
+  })
+
+  it('ersetzt dasselbe Papier, statt es zu verdoppeln', () => {
+    // Zwei identische Kurven in zwei Farben wären eine Falschaussage.
+    const state = run(
+      createInitialState(),
+      actions.addMarket(kurs('AAPL', '2000-01-01')),
+      actions.addMarket(kurs('AAPL', '1990-01-01')),
+    )
+    expect(state.markets).toHaveLength(1)
+    expect(state.markets[0].start).toBe('1990-01-01')
+  })
+
+  it('nimmt nicht mehr auf, als die Palette an Farben hergibt', () => {
+    const voll = run(
+      createInitialState(),
+      ...['A', 'B', 'C', 'D'].map((s) => actions.addMarket(kurs(s))),
+    )
+    expect(voll.markets).toHaveLength(MAX_MARKETS)
+    // Wie bei den Szenarien: lieber nichts tun als eine Farbe wiederholen.
+    expect(reducer(voll, actions.addMarket(kurs('E')))).toBe(voll)
+  })
+
+  it('entfernt gezielt und lässt Unbekanntes unberührt', () => {
+    const state = run(createInitialState(), actions.addMarket(kurs('AAPL')), actions.addMarket(kurs('MSFT')))
+    expect(reducer(state, actions.removeMarket('AAPL')).markets.map((m) => m.symbol)).toEqual(['MSFT'])
+    expect(reducer(state, actions.removeMarket('GIBTESNICHT'))).toBe(state)
+  })
+
+  it('überlebt die Serialisierung und siebt Unbrauchbares aus', () => {
+    const state = run(createInitialState(), actions.addMarket(kurs('AAPL')))
+    expect(deserialize(serialize(state))!.markets[0].symbol).toBe('AAPL')
+
+    // Eine Reihe ohne Renditen zeichnet nichts und wäre nicht mehr loszuwerden.
+    const kaputt = deserialize('{"scenarios":[{"label":"X"}],"markets":[{"symbol":"X"},null]}')
+    expect(kaputt!.markets).toEqual([])
   })
 })
 

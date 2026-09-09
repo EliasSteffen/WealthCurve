@@ -16,6 +16,9 @@ export const marketReturnSeries = defineSeries({
   unit: 'currency',
   defaultEnabled: false,
   requiredParams: ['monthlyContribution', 'initialCapital'],
+  // Mehrere geladene Wertpapiere ergeben mehrere Kurven - jede rechnet mit
+  // ihrem eigenen Verlauf, das Sparverhalten bleibt dasselbe.
+  fanOut: 'markets',
   compute: ({ base, params, model, market }) => {
     // Ohne geladenen Kurs gibt es nichts zu zeichnen. Eine erfundene Kurve
     // waere schlimmer als eine fehlende.

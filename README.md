@@ -5,12 +5,12 @@ Entwicklung über die Laufzeit live im Chart verfolgen.
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
+npm run dev        # http://localhost:5173 — inklusive Kursdaten
 npm test           # Finanzmathematik, Registries, Store, Architektur-Wächter
 npm run demo       # Headless-Beweis: läuft in Node ohne React und ohne DOM
 npm run mcp        # MCP-Server über stdio
-vercel dev         # mit Serverfunktion, für die Kursdaten
 npm run build      # Typecheck + Produktions-Build
+npm run serve      # liefert dist/ samt Kursdaten aus, ohne Vite und ohne Vercel
 ```
 
 ## Headless nutzen
@@ -136,12 +136,50 @@ Die Serie „Kursverlauf" rechnet mit den echten Monatsrenditen eines Wertpapier
 statt mit einem festen Zins — sie zeigt, was die Glättung auf „8 % pro Jahr"
 verschweigt.
 
-Der Abruf läuft über `api/quotes.ts` als Serverless-Funktion, weil Yahoo weder
-CORS-Header sendet noch direkte Browser-Aufrufe zulässt (HTTP 429). Der
-Edge-Cache (`s-maxage=86400`) ist die eigentliche Antwort auf die Drosselung —
-ein Proxy allein würde sie nur weiterreichen. Lokal braucht das `vercel dev`;
-mit `npm run dev` meldet die App das ausdrücklich, statt eine leere Kurve zu
-zeigen.
+Es lassen sich bis zu vier Papiere gleichzeitig laden. Aus der **einen** Serie
+wird dann eine Kurve je Wertpapier (`fanOut: 'markets'` in der Definition):
+`buildProjection` ruft dieselbe `compute` einmal pro Kurs auf und setzt jeweils
+`ctx.market`. Die Registry bleibt dadurch statisch, und jede Kurve zählt für
+Farbe, Strich und Kapazitätswarnung wie eine eigene Serie. Vier ist die Grenze,
+weil sich Szenarien und Wertpapiere die acht Farb-Slots teilen.
+
+### Warum es dafür einen Server braucht
+
+Yahoo sendet keine CORS-Header und verlangt Cookie plus Crumb — ein Browser kann
+das nicht. Für die frei zugänglichen Alternativen gilt dasselbe: eine
+schlüsselfreie Kursquelle mit CORS gibt es nicht. Der Abruf muss also
+serverseitig laufen.
+
+### Vier Wirte, ein Handler
+
+Die Beschaffung steht in `server/quotes.ts` — ohne Request, ohne Response, nur
+Symbol rein und Ergebnis raus. Erst die Adapter kennen HTTP:
+
+| Wirt | Adapter |
+|---|---|
+| `npm run dev` | `server/vitePlugin.ts` als Dev-Middleware |
+| `npm run serve` | `scripts/serve.ts`, nur Node, kein Framework |
+| Vercel | `api/quotes.ts` |
+| Cloudflare Workers, Deno, Bun | eigener Adapter über `handleQuotesRequest` |
+
+Damit hängt das Projekt an keiner Plattform. Der Edge-Cache (`s-maxage=86400`)
+ist die eigentliche Antwort auf die Drosselung — ein Proxy allein würde sie nur
+weiterreichen.
+
+### Ohne Serverfunktion
+
+Wird die Seite rein statisch ausgeliefert, **funktioniert alles außer dem
+Live-Abruf**. Die App merkt das beim Start und zeigt statt des Suchfelds einen
+Dateiimport. Akzeptiert werden:
+
+- **CSV** mit einer Datums- und einer Kursspalte — `date,close` oder `Datum;Kurs`,
+  Dezimaltrenner Punkt oder Komma, Trennzeichen Komma oder Semikolon
+- **JSON** als `[{ "date": "2000-01-01", "close": 100.5 }, …]`
+- **JSON** als gespeicherte Antwort von `/api/quotes` — ein Export ist damit
+  wieder importierbar
+
+Beide Wege enden in `marketFromPrices` (`src/core/market.ts`), damit eine
+importierte Reihe exakt so gerechnet wird wie eine abgerufene.
 
 Reicht die Historie nicht über die Laufzeit, endet die Kurve dort, statt
 fortgeschrieben zu werden — Serien dürfen dafür `null` liefern, was der Chart als
@@ -173,10 +211,28 @@ erste Jahr, in dem eine Entnahme nicht mehr voll bedient werden kann, steht als
 npm run mcp
 ```
 
-Drei Tools über stdio: `berechne` (Szenarien rechnen und vergleichen),
-`jahrestabelle` (derselbe Lauf als CSV) und `moeglichkeiten` (verfügbare Kurven,
-Entnahmeregeln und Wertebereiche). Der Server setzt direkt auf `buildProjection`
-auf — er prüft Eingaben und reicht Ergebnisse durch, mehr nicht.
+Sieben Tools über stdio. Der Server setzt direkt auf `buildProjection` auf — er
+prüft Eingaben und reicht Ergebnisse durch, mehr nicht.
+
+| Tool | Liefert |
+|---|---|
+| `berechne` | Endkapital, Zinsertrag, Entnahme je Szenario |
+| `projektion` | die **vollständige** Projektion: Linien, alle Jahreszeilen, Zusammenfassungen, Kodierung, Kapazität |
+| `jahrestabelle` | denselben Lauf als CSV |
+| `kursdaten` | Monatsrenditen eines Wertpapiers |
+| `zustand` | serialisierten Zustand erzeugen oder lesen — Brücke zur Oberfläche |
+| `video` | Bauplan des Reels, aufgelöste Platzhalter und ein gerendertes Standbild als PNG |
+| `moeglichkeiten` | Kurven, Regeln, Stile, Kodierungen, Formate, Kategorien, Wertebereiche |
+
+Alle rechnenden Tools nehmen `symbols` entgegen und laden echte Kursverläufe
+über dieselbe Quelle wie die Oberfläche.
+
+**Zu den Videos:** der Server rendert Einzelbilder mit demselben `drawFrame` wie
+die App — `@napi-rs/canvas` liefert das Canvas, ein Browser ist nicht nötig. Das
+Zusammensetzen zum Film bleibt im Browser: `MediaRecorder` nimmt in Echtzeit auf,
+ein Video hier zu kodieren hieße, ffmpeg als dauerhafte Abhängigkeit
+mitzuschleppen. Das Standbild plus `spezifikation` beschreibt das Video
+vollständig — was fehlt, ist nur die Kodierung.
 
 Eintrag für eine MCP-Konfiguration:
 

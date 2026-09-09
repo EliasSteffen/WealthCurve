@@ -26,9 +26,9 @@ export const selectProjection = createSelector(
     (s: AppState) => s.enabledSeriesIds,
     (s: AppState) => s.model,
     (s: AppState) => s.encoding,
-    (s: AppState) => s.market,
+    (s: AppState) => s.markets,
   ],
-  (scenarios, seriesIds, model, encoding, market): Projection =>
+  (scenarios, seriesIds, model, encoding, markets): Projection =>
     buildProjection({
       scenarios: scenarios.map((s) => ({
         id: s.id,
@@ -39,7 +39,7 @@ export const selectProjection = createSelector(
       seriesIds,
       model,
       encoding,
-      market,
+      markets,
     }),
 )
 

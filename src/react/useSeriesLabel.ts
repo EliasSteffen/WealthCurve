@@ -13,7 +13,9 @@ export function useSeriesLabel(): (line: ProjectionLine) => string {
   const t = useT()
   return (line) => {
     const series = SERIES_BY_ID.get(line.seriesId)
-    const name = series ? t(`series.${line.seriesId}.label`, series.label) : line.label
+    const uebersetzt = series ? t(`series.${line.seriesId}.label`, series.label) : line.label
+    // Das Tickersymbol bleibt unübersetzt - es IST der Name des Papiers.
+    const name = line.variantLabel ? `${uebersetzt} ${line.variantLabel}` : uebersetzt
     return line.scenarioLabel ? `${name} · ${line.scenarioLabel}` : name
   }
 }

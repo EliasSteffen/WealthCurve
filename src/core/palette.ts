@@ -29,6 +29,19 @@ export function slotVar(slot: ColorSlot): string {
 }
 
 /**
+ * Der Ersatzwert aus einem `var(--x, #hex)`.
+ *
+ * Für Umgebungen ohne CSS: Node kennt keine Custom Properties, und ein Canvas
+ * ignoriert `fillStyle = "var(--chart-1)"` stillschweigend - die Kurve bliebe
+ * unsichtbar. Im Browser löst `resolveCssColor` stattdessen den tatsächlich
+ * gesetzten Wert auf, damit das gewählte Thema greift.
+ */
+export function colorFallback(colorVar: string): string {
+  const treffer = /var\(\s*--[\w-]+\s*,\s*([^)]+)\)/.exec(colorVar)
+  return (treffer?.[1] ?? colorVar).trim() || '#888888'
+}
+
+/**
  * Niedrigster freier Slot.
  *
  * Slots werden vergeben und festgehalten, nie aus dem Array-Index abgeleitet -

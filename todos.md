@@ -1,11 +1,117 @@
-## Erledigt
+## Offen
 
-- [x] tests — 182 Tests: Finanzmathematik, Registries, Store, Animation, Renderer,
-      Einstellungs-Suche, Kursdaten, Sprachen, Architektur-Wächter
+- [ ] **1. entferne co-authored by claude aus allen commits!** — vorbereitet,
+      aber blockiert: der Berechtigungs-Klassifikator lässt `git filter-repo` in
+      meiner Sitzung nicht zu. `origin` hat noch keine Branches, ein Force-Push
+      entfällt also; betroffen sind 7 Commits ab `7d80b81`.
+
+      ```bash
+      git branch backup/vor-rewrite            # Sicherung
+      git filter-repo --force --commit-callback '
+      import re
+      commit.message = re.sub(rb"(?im)^co-authored-by:.*claude.*(\r?\n)?", b"", commit.message).rstrip() + b"\n"
+      '
+      # filter-repo entfernt danach den Remote:
+      git remote add origin https://github.com/EliasSteffen/WealthCurve.git
+      ```
+
+- [ ] **anfangsalter eingeben können** (sodass die jahre nicht mit 1 anfangen,
+      sondern mit dem tatsächlichen alter). dann lässt sich auch genauer angeben,
+      wann man mit dem auszahlen beginnen möchte (z. B. im alter von 65 jahren.)
+      dies ist natürlich eine weitere option für die anzeige. also auch eine
+      darstellungs option (relative or absolute years zb)
+
+      Umfang: `startAge` gehört global in `ModelSettings`, wie die übrige
+      Zeitachse. Es bleibt reine Beschriftung — `year` ist ein Index, die
+      Rechnung ändert sich nicht. Betroffen sind vier Anzeigestellen:
+      `GrowthChart`, `DataTable`, `projectionToCsv` und `drawFrame`. Wichtig,
+      dass es eine Darstellungsoption bleibt, sonst müsste jede Serie davon
+      wissen.
+
+      Außerdem sollte es auch die möglichkeit geben ein startjahr einzugeben. sodass man sagen könnte: wenn du 1960 angefangen hättest in apple zu investieren, würde das ganze nun so aussehen ... verstehst du, was ich meine? sonst ist der market asset vergleich komisch, da wir ja nicht vorrausschauen können, wie sich der wert entwickeln wird. daher kann eine aktie nur dann mit angezeigt werden, wenn ein startjahr angegeben wurde.
+
+- [ ] `{{rendite}}` im Video nennt immer das erste sichtbare Szenario. Bei zwei
+      Szenarien mit verschiedenen Renditen ist das irreführend — ein
+      `{{renditen}}` analog zu `{{szenarien}}` wäre die Entsprechung.
+
+- [ ] `selectActiveParamIds` ist laut Kommentar „nur für die visuelle
+      Hervorhebung", steuert aber tatsächlich, ob ein Regler überhaupt gerendert
+      wird. Entweder der Kommentar oder das Verhalten ist falsch.
+
+- [ ] Farbe soll wählbar sein
+
+- [ ] Die kategorien der einstellungen sind scheiße. sie sind super unübersichtlich kategoriesiert.
+- [ ] In dem Video den Start der Auszahlung mit anzeigen, falls es auszahlungen geben soll.
+
+## Erledigt in dieser Runde
+
+- [x] **Knöpfe in der Seitenspalte nicht klickbar** — es waren zwei getrennte
+      Fehler, der zweite war der eigentliche:
+
+      1. **Geschlossener Dialog lag über der Seite.** `.settings-sheet` und
+         `.video-dialog` setzten `display: flex` bedingungslos und hoben damit
+         das `display: none` auf, das ein `<dialog>` ohne `[open]` vom Browser
+         bekommt. Gemessen: der *geschlossene* Video-Dialog war 993 × 636 px
+         groß, `opacity: 0`, `pointer-events: auto` — eine unsichtbare Fläche
+         über dem oberen Seitenbereich, die jeden Klick darunter verschluckte.
+         Je schmaler das Fenster, desto weiter reichte sie in die Seitenspalte.
+         Behoben mit `display: none` in beiden `:not([open])`-Regeln; die
+         Ein- und Ausblendung bleibt, dafür ist `transition: display
+         allow-discrete` schon da.
+      2. **Trefferflächen zu klein.** Symbolknöpfe 21 → 36 px, Seitenspalte
+         einklappen 27 → 36 px, Regler 6 → 24 px (Spur bleibt optisch dünn,
+         siehe `.slider` in index.css), Dialog-Schließen 28 → 40 px. Die
+         Serien-Checkboxen bleiben 16 px, aber die ganze Zeile ist jetzt das
+         Label und damit das Ziel — Padding am `<input>` ignorieren native
+         Checkboxen, das war nachgemessen wirkungslos.
+
+      Außerdem sagt ein deaktivierter Knopf jetzt im Titel, *warum* er nicht
+      geht („Das letzte Szenario lässt sich nicht löschen") — vorher war er von
+      einem kaputten nicht zu unterscheiden.
+
+- [x] **2. die einstellungen einklappen funktioniert nicht** — die Logik war
+      intakt (in jsdom geprüft), der Fehler saß im Padding:
+      `cn('… p-4 sm:p-5', 'p-0')` ergibt `sm:p-5 p-0`, tailwind-merge lässt ein
+      unpräfigiertes `p-0` das `sm:p-5` nicht überschreiben. Ab 640 px blieb eine
+      fette leere Box stehen. `Card` hat jetzt `padded={false}` (gemessen
+      378 → 61 px), und der Klappzustand liegt im Store — sonst vergisst ihn das
+      Bottom-Sheet bei jedem Öffnen, weil es das Panel neu montiert.
+- [x] **3. kategorie „einzahlung" und „auszahlung"**, rendite und startkapital in
+      „generelle einstellungen" — die Zuordnung steht als `category` in der
+      Parameter-Registry, nicht in einer zweiten Liste. Die Zeitraum-Felder
+      stehen bei der Phase, auf die sie sich beziehen.
+- [x] **4. mehrere aktien anzeigen können** — bis zu vier gleichzeitig. Aus einer
+      Serie wird eine Kurve je Papier (`fanOut: 'markets'`), jede mit eigener
+      Farbe, die weder einer anderen Serie noch einem Szenario gehört.
+- [x] **5. sdk und mcp server mit vollzugriff, sowie die videos** — sieben
+      Werkzeuge: komplette Projektion, Kursdaten, Zustands-Roundtrip,
+      Videobauplan samt gerendertem PNG. Die Filmkodierung bleibt bewusst im
+      Browser (Begründung im README).
+- [x] **6. mobile gefällt mir sehr gut!** — danke!
+- [x] **7. nicht auf vercel server-functions festcoden** — ein Handler, vier
+      Wirte (`npm run dev`, `npm run serve`, Vercel, eigener Adapter). Ohne
+      Serverfunktion bleibt die Seite voll nutzbar; Kurse kommen dann aus einer
+      CSV- oder JSON-Datei.
+- [x] **8. text in den generierten videos bei mehreren szenarien** — der
+      Zeilenabstand folgt jetzt der Schrift statt der Bildhöhe, die
+      Schriftgrößen der kürzeren Bildkante. Nebenbei zwei Altlasten gefunden: die
+      Achsen zeichneten Beschriftungen oberhalb der Plotfläche, und die Fußzeile
+      überlappte im Querformat.
+- [x] **vite fehler (Dateiendungen)** — war eine Regression aus dem Serverumbau:
+      vorher hatte `vite.config.ts` gar keine lokalen Importe. Die fünf
+      betroffenen Importe tragen jetzt `.ts`, damit auch der native
+      Config-Loader sie auflöst. Warnung ist weg.
+
+## Erledigt (früher)
+
+- [x] tests — inzwischen 220 Tests: Finanzmathematik, Registries, Store,
+      Animation, Renderer, Einstellungs-Suche, Kursdaten, Sprachen,
+      Architektur-Wächter
 - [x] entnahme plan konfigurieren können
 - [x] alle szenarien teilen den gleichen zeitraum
 - [x] responsive design
-- [x] als MCP server zur Verfügung stellen — `npm run mcp`, drei Tools über stdio
+- [x] als MCP server zur Verfügung stellen — `npm run mcp`, inzwischen sieben
+      Tools über stdio
 - [x] video pop up ist super klein
 - [x] einstellungen in kategorien aufteilen und suchbar machen
 - [x] Videos konfigurierbar mit Aufhänger → Aufbau → Pointe
@@ -20,18 +126,19 @@
 - [x] in dem video müssen alle szenarien dargestellt werden können — eine Zeile je
       Szenario in seiner Farbe, plus Platzhalter `{{szenarien}}`
 - [x] Invests in eine aktie mit anzeigen — Serie „Kursverlauf" mit echten
-      Monatsrenditen über `api/quotes.ts`
+      Monatsrenditen
 - [x] mehrsprachigkeit — Deutsch und Englisch, Katalog nur für Abweichungen
 - [x] License — MIT
 - [x] git history fixen — thematische Commits statt eines Wusts
-- [x] ~~github pages deploy step~~ — entfällt: GitHub Pages führt keine
-      Serverfunktionen aus, die Kursdaten brauchen aber eine. Stattdessen Vercel
-      (`vercel.json`).
+- [x] ~~github pages deploy step~~ — überholt: seit dem Serverumbau läuft die
+      Seite auch rein statisch, nur ohne Live-Kurse. Die kommen dann aus einer
+      Datei. GitHub Pages wäre damit wieder möglich.
 
 ## Ideen
 
 - [ ] Szenarien speichern / per Link teilen — `serialize()` und `deserialize()`
-      sind vorhanden und getestet, es fehlt nur die Anbindung
+      sind vorhanden und getestet, es fehlt nur die Anbindung. Das MCP-Werkzeug
+      `zustand` benutzt beide bereits.
 - [ ] Steuern (Abgeltungsteuer, Vorabpauschale) als weitere Serie
 - [ ] Sparraten-Dynamik über die Inflation hinaus (z. B. Gehaltssprünge)
 - [ ] Tonspur oder Untertitel fürs Reel

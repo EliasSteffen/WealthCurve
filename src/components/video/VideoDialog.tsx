@@ -202,7 +202,7 @@ function VideoDialogInhalt({ onClose }: { readonly onClose: () => void }) {
           type="button"
           onClick={onClose}
           aria-label="Schließen"
-          className="rounded-md p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--text-primary)]"
+          className="flex size-10 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--text-primary)]"
         >
           <X size={16} aria-hidden />
         </button>

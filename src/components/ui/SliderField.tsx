@@ -59,7 +59,10 @@ export function SliderField({ definition, value, onChange }: SliderFieldProps) {
         step={definition.step}
         value={value}
         onChange={(e) => onChange(e.target.valueAsNumber)}
-        className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-[var(--grid)] accent-[var(--chart-1)]"
+        /* Spur und Griff kommen aus `.slider` in index.css - nur dort lassen
+           sich die Pseudo-Elemente ansprechen, die die Trefferfläche von der
+           sichtbaren Spur entkoppeln. */
+        className="slider"
       />
 
       {definition.hint ? (

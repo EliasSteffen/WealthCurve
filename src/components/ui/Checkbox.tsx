@@ -10,10 +10,18 @@ interface CheckboxProps {
   readonly colorVar?: string
 }
 
+/**
+ * Schalter, bei dem die ganze Zeile das Ziel ist.
+ *
+ * Das Kästchen selbst misst 16 px und liegt damit unter dem Minimum, das sich
+ * zuverlässig treffen lässt. Padding am `<input>` hilft nicht - native
+ * Checkboxen ignorieren es. Umschließt das Label dagegen Kästchen, Text und
+ * Beschreibung, löst ein Klick irgendwo in der Zeile den Schalter aus.
+ */
 export function Checkbox({ checked, onChange, label, description, colorVar }: CheckboxProps) {
   const id = useId()
   return (
-    <div className="flex items-start gap-2.5">
+    <label htmlFor={id} className="flex cursor-pointer select-none items-start gap-2.5 py-1.5">
       <input
         id={id}
         type="checkbox"
@@ -21,13 +29,15 @@ export function Checkbox({ checked, onChange, label, description, colorVar }: Ch
         onChange={(e) => onChange(e.target.checked)}
         className="mt-0.5 size-4 shrink-0 cursor-pointer accent-[var(--chart-1)]"
       />
-      <label htmlFor={id} className="cursor-pointer select-none">
+      <span>
         <span className="flex items-center gap-2">
           {colorVar ? (
             <span
               aria-hidden
-              className={cn('h-0.5 w-4 shrink-0 rounded-full transition-opacity',
-                checked ? 'opacity-100' : 'opacity-30')}
+              className={cn(
+                'h-0.5 w-4 shrink-0 rounded-full transition-opacity',
+                checked ? 'opacity-100' : 'opacity-30',
+              )}
               style={{ background: colorVar }}
             />
           ) : null}
@@ -38,7 +48,7 @@ export function Checkbox({ checked, onChange, label, description, colorVar }: Ch
             {description}
           </span>
         ) : null}
-      </label>
-    </div>
+      </span>
+    </label>
   )
 }

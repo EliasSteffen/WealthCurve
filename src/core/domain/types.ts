@@ -120,6 +120,15 @@ export interface SeriesDefinition {
   /** Steuert, welche Regler als aktiv hervorgehoben werden. */
   readonly requiredParams: readonly ParamId[]
   /**
+   * Eine Linie je geladenem Wertpapier statt einer einzigen.
+   *
+   * Die Registry bleibt dadurch statisch - `buildProjection` ruft `compute`
+   * einmal pro Kurs auf und setzt jeweils `ctx.market`. Ohne das müsste für
+   * jedes Wertpapier eine eigene Serie erfunden werden, und die feste
+   * Farbzuordnung der Registry ginge verloren.
+   */
+  readonly fanOut?: 'markets'
+  /**
    * Muss exakt `base.years.length` Werte liefern, index-aligned.
    *
    * `null` heisst "fuer dieses Jahr gibt es keinen Wert" - etwa wenn ein

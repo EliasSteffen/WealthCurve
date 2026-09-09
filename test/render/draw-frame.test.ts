@@ -137,6 +137,111 @@ describe('drawFrame', () => {
   })
 })
 
+describe('Kopfzeilen bei mehreren Szenarien', () => {
+  const zweiSzenarien = buildProjection({
+    scenarios: [
+      { id: 'a', label: 'Basis', colorSlot: 1, params: DEFAULT_PARAMS },
+      { id: 'b', label: 'Aggressiv', colorSlot: 2, params: { ...DEFAULT_PARAMS, annualRate: 9 } },
+    ],
+    seriesIds: ['compound', 'contributions'],
+    model: DEFAULT_MODEL,
+  })
+
+  /** Schreibt jeden Textkasten mit Grundlinie und Schriftgröße mit. */
+  function messCtx() {
+    const kaesten: Array<{ text: string; x: number; y: number; size: number }> = []
+    let size = 16
+    const ctx = {
+      save() {}, restore() {}, beginPath() {}, closePath() {},
+      moveTo() {}, lineTo() {}, stroke() {}, fill() {}, fillRect() {},
+      setLineDash() {},
+      measureText: (t: string) => ({ width: t.length * 0.5 * size }),
+      fillText: (text: string, x: number, y: number) => kaesten.push({ text, x, y, size }),
+      fillStyle: '', strokeStyle: '', lineWidth: 0, lineCap: '', lineJoin: '',
+      globalAlpha: 1, textAlign: 'left',
+      set font(wert: string) {
+        size = Number.parseFloat(/(\d+(?:\.\d+)?)px/.exec(wert)?.[1] ?? '16')
+      },
+      get font() {
+        return `${size}px sans`
+      },
+    } as unknown as CanvasRenderingContext2D
+    return { ctx, kaesten }
+  }
+
+  const zeichneAufbau = (formatId: string, projektion = zweiSzenarien) => {
+    const { ctx, kaesten } = messCtx()
+    drawFrame(ctx, {
+      // Der Aufbau zeigt Kopfzeilen, Untertitel, Achsen und Legende gleichzeitig -
+      // die dichteste Belegung, die im Video vorkommt.
+      frame: frameAt(DEFAULT_SPEC, projektion, HOOK_BILDER + 150),
+      projection: projektion,
+      style: clean,
+      format: resolveFormat(formatId),
+      theme,
+      colors: Object.fromEntries(projektion.lines.map((l, i) => [l.key, `#00ff0${i}`])),
+      title: 'Basis',
+      facts: { rendite: '7 %' },
+    })
+    return kaesten
+  }
+
+  for (const formatId of ['reel', 'square', 'wide']) {
+    it(`stapelt im Format "${formatId}" keine Zeile auf eine andere`, () => {
+      // Der eigentliche Fehler: der Zeilenabstand kam aus der Bildhöhe, die
+      // Schriftgröße aus der Bildbreite. Im Quadrat standen 35 px Abstand gegen
+      // 56 px Schrift - die Zeilen lagen übereinander.
+      const kaesten = zeichneAufbau(formatId)
+      const kasten = (k: (typeof kaesten)[number]) => ({
+        links: k.x,
+        rechts: k.x + k.text.length * 0.5 * k.size,
+        oben: k.y - k.size * 0.8,
+        unten: k.y + k.size * 0.25,
+      })
+
+      for (let i = 0; i < kaesten.length; i += 1) {
+        for (let j = i + 1; j < kaesten.length; j += 1) {
+          const a = kasten(kaesten[i])
+          const b = kasten(kaesten[j])
+          const ueberlappt =
+            a.links < b.rechts && b.links < a.rechts && a.oben < b.unten && b.oben < a.unten
+          expect(ueberlappt, `"${kaesten[i].text}" überlappt "${kaesten[j].text}"`).toBe(false)
+        }
+      }
+    })
+
+    it(`hält im Format "${formatId}" allen Text im Bild`, () => {
+      const format = resolveFormat(formatId)
+      for (const k of zeichneAufbau(formatId)) {
+        expect(k.x + k.text.length * 0.5 * k.size, k.text).toBeLessThanOrEqual(format.width)
+        expect(k.y, k.text).toBeLessThanOrEqual(format.height)
+      }
+    })
+  }
+
+  it('nennt beide Szenarien im Kopf', () => {
+    const texte = zeichneAufbau('reel').map((k) => k.text)
+    expect(texte).toContain('Basis')
+    expect(texte).toContain('Aggressiv')
+  })
+
+  it('nennt in der Legende die Serien, nicht ein herausgegriffenes Szenario', () => {
+    // In die Fußzeile passen zwei Zeilen. Von vier Linien blieben sonst zwei
+    // übrig, beide mit "· Basis" beschriftet - das zweite Szenario käme unten
+    // gar nicht vor und die Legende behauptete etwas Falsches.
+    const texte = zeichneAufbau('reel').map((k) => k.text)
+    expect(texte).toContain('Zinseszins')
+    expect(texte.some((t) => t.includes(' · '))).toBe(false)
+  })
+
+  it('behält bei einem Szenario die volle Beschriftung', () => {
+    // Ohne Vergleich ist der Serienname allein schon eindeutig - und war es
+    // immer. Die Kürzung darf nur beim Vergleich greifen.
+    const texte = zeichneAufbau('reel', projection).map((k) => k.text)
+    expect(texte).toContain('Zinseszins')
+  })
+})
+
 describe('resolveText', () => {
   it('setzt Platzhalter ein', () => {
     expect(resolveText('{{rate}} im Monat', { rate: '500 €' })).toBe('500 € im Monat')

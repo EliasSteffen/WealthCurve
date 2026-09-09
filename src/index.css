@@ -145,7 +145,18 @@ body {
     display 220ms allow-discrete;
 }
 
+/*
+ * `display: none` gehört zwingend dazu.
+ *
+ * Ein <dialog> ohne [open] ist per UA-Stylesheet display:none. Die Regel oben
+ * setzt display:flex bedingungslos und hebt das auf - der geschlossene Dialog
+ * bliebe sonst als unsichtbare, aber klickfängige Fläche über der Seite liegen
+ * und verschluckte jeden Klick darunter. `transition: display allow-discrete`
+ * schiebt das Ausblenden ans Ende der Animation, die Ein- und Ausblendung
+ * bleibt also erhalten.
+ */
 .settings-sheet:not([open]) {
+  display: none;
   opacity: 0;
   translate: 0 100%;
 }
@@ -210,7 +221,11 @@ body {
     display 160ms allow-discrete;
 }
 
+/* Siehe .settings-sheet: ohne display:none lag dieser Dialog geschlossen als
+   993x636-Fläche über der Seitenspalte und machte die Szenario-Knöpfe
+   unklickbar. */
 .video-dialog:not([open]) {
+  display: none;
   opacity: 0;
   scale: 0.97;
 }
@@ -224,4 +239,64 @@ body {
 
 .video-dialog::backdrop {
   background: rgb(0 0 0 / 0.5);
+}
+
+/*
+ * Regler mit brauchbarer Trefferfläche.
+ *
+ * Ein `<input type=range>` ist genau so hoch wie seine Spur - bei 6 px hieß das:
+ * der sichtbare Griff war größer als die Fläche, die auf Klicks reagiert, und
+ * wer knapp daneben zielte, traf nichts. Die Spur bleibt optisch dünn, das
+ * Element selbst wird 24 px hoch (WCAG 2.2 SC 2.5.8 verlangt 24 als Minimum).
+ */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 24px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.slider:focus-visible {
+  outline: 2px solid var(--chart-1);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--grid);
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  /* Auf der 6-px-Spur zentrieren: (6 - 16) / 2 */
+  margin-top: -5px;
+  border: none;
+  border-radius: 9999px;
+  background: var(--chart-1);
+}
+
+.slider::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--grid);
+}
+
+.slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 9999px;
+  background: var(--chart-1);
+}
+
+.slider:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }

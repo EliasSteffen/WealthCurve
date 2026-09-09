@@ -7,6 +7,7 @@ import {
 } from '../core/domain/parameters'
 import type { ModelSettings as ModelSettingsValue } from '../core/domain/types'
 import { WITHDRAWAL_STRATEGIES } from '../core/domain/withdrawal'
+import type { SettingsCategoryId } from '../core/settings'
 import { useT } from '../react/localeContext'
 import { SegmentedControl } from './ui/SegmentedControl'
 import { SelectField } from './ui/SelectField'
@@ -43,9 +44,16 @@ export function WithdrawalRuleControl({ value, onChange }: ModelProps) {
  * Die Zeitachse gilt für alle Szenarien gemeinsam - sonst lägen die Kurven auf
  * unterschiedlichen X-Achsen und der Vergleich wäre wertlos.
  */
-export function TimelineControls({ value, onChange, matches = null }: ModelProps) {
+export function TimelineControls({
+  value,
+  onChange,
+  matches = null,
+  category,
+}: ModelProps & { readonly category: SettingsCategoryId }) {
   const t = useT()
-  const ids = TIMELINE_FIELD_IDS.filter((id) => zeigt(matches, `timeline:${id}`))
+  const ids = TIMELINE_FIELD_IDS.filter(
+    (id) => TIMELINE_FIELDS[id].category === category && zeigt(matches, `timeline:${id}`),
+  )
   if (ids.length === 0) return null
 
   return (
@@ -71,81 +79,93 @@ export function TimelineControls({ value, onChange, matches = null }: ModelProps
   )
 }
 
-/** Rechenkonventionen - sie ändern die Zahlen, nicht das Szenario. */
-export function CalculationControls({ value, onChange, matches = null }: ModelProps) {
-  const t = useT()
-  const zinsmodus = zeigt(matches, 'model:compounding')
-  const timing = zeigt(matches, 'model:timing')
-  const inflation = zeigt(matches, 'model:amountsInflationAdjusted')
-  if (!zinsmodus && !timing && !inflation) return null
+/*
+ * Die drei Rechenschalter stehen einzeln da, nicht als ein Block.
+ *
+ * Sie ändern zwar alle die Zahlen und nicht das Szenario, gehören aber in
+ * verschiedene Kategorien: wann die Sparrate fließt, ist eine Frage der
+ * Einzahlung; wie verzinst wird, eine allgemeine.
+ */
 
+/** Wie der Jahreszins auf die Perioden verteilt wird. */
+export function CompoundingControl({ value, onChange, matches = null }: ModelProps) {
+  const t = useT()
+  if (!zeigt(matches, 'model:compounding')) return null
   return (
-    <div className="space-y-4">
-      {zinsmodus ? (
-        <SegmentedControl
-          label={t('model.compounding', 'Zinsmodus')}
-          value={value.compounding}
-          onChange={(compounding) => onChange({ ...value, compounding })}
-          options={[
-            {
-              value: 'monthly-effective',
-              label: t('model.compounding.monthly-effective', 'Effektiv'),
-              hint: 'Zwölf Monatsschritte ergeben exakt den Jahreszins (ETF-Konvention).',
-            },
-            {
-              value: 'monthly-nominal',
-              label: t('model.compounding.monthly-nominal', 'Nominal'),
-              hint: 'Zins/12 – Bankkonvention. Ergibt mehr als den eingegebenen Jahreszins.',
-            },
-            {
-              value: 'annual',
-              label: t('model.compounding.annual', 'Jährlich'),
-              hint: 'Einmal pro Jahr verzinst, Raten sammeln sich unverzinst.',
-            },
-          ]}
-        />
-      ) : null}
-      {timing ? (
-        <SegmentedControl
-          label={t('model.timing', 'Sparrate')}
-          value={value.timing}
-          onChange={(timing) => onChange({ ...value, timing })}
-          options={[
-            {
-              value: 'end',
-              label: t('model.timing.end', 'Nachschüssig'),
-              hint: 'Einzahlung am Monatsende.',
-            },
-            {
-              value: 'start',
-              label: t('model.timing.start', 'Vorschüssig'),
-              hint: 'Einzahlung am Monatsanfang.',
-            },
-          ]}
-        />
-      ) : null}
-      {inflation ? (
-        <SegmentedControl
-          label={t('model.amounts', 'Beträge')}
-          value={value.amountsInflationAdjusted ? 'real' : 'nominal'}
-          onChange={(v) => onChange({ ...value, amountsInflationAdjusted: v === 'real' })}
-          options={[
-            {
-              value: 'nominal',
-              label: t('model.amounts.nominal', 'Nominal'),
-              hint: 'Spar- und Auszahlbetrag bleiben über die Jahre unverändert.',
-            },
-            {
-              value: 'real',
-              label: t('model.amounts.real', 'Inflationsbereinigt'),
-              hint:
-                'Der eingetragene Betrag gilt als heutige Kaufkraft; nominal steigt er ' +
-                'jährlich mit der Inflation, damit sein realer Wert konstant bleibt.',
-            },
-          ]}
-        />
-      ) : null}
-    </div>
+    <SegmentedControl
+      label={t('model.compounding', 'Zinsmodus')}
+      value={value.compounding}
+      onChange={(compounding) => onChange({ ...value, compounding })}
+      options={[
+        {
+          value: 'monthly-effective',
+          label: t('model.compounding.monthly-effective', 'Effektiv'),
+          hint: 'Zwölf Monatsschritte ergeben exakt den Jahreszins (ETF-Konvention).',
+        },
+        {
+          value: 'monthly-nominal',
+          label: t('model.compounding.monthly-nominal', 'Nominal'),
+          hint: 'Zins/12 – Bankkonvention. Ergibt mehr als den eingegebenen Jahreszins.',
+        },
+        {
+          value: 'annual',
+          label: t('model.compounding.annual', 'Jährlich'),
+          hint: 'Einmal pro Jahr verzinst, Raten sammeln sich unverzinst.',
+        },
+      ]}
+    />
+  )
+}
+
+/** Vorschüssig oder nachschüssig - gehört zur Einzahlung. */
+export function TimingControl({ value, onChange, matches = null }: ModelProps) {
+  const t = useT()
+  if (!zeigt(matches, 'model:timing')) return null
+  return (
+    <SegmentedControl
+      label={t('model.timing', 'Sparrate')}
+      value={value.timing}
+      onChange={(timing) => onChange({ ...value, timing })}
+      options={[
+        {
+          value: 'end',
+          label: t('model.timing.end', 'Nachschüssig'),
+          hint: 'Einzahlung am Monatsende.',
+        },
+        {
+          value: 'start',
+          label: t('model.timing.start', 'Vorschüssig'),
+          hint: 'Einzahlung am Monatsanfang.',
+        },
+      ]}
+    />
+  )
+}
+
+/** Gelten die eingetragenen Beträge als heutige Kaufkraft? */
+export function InflationAmountsControl({ value, onChange, matches = null }: ModelProps) {
+  const t = useT()
+  if (!zeigt(matches, 'model:amountsInflationAdjusted')) return null
+  return (
+    <SegmentedControl
+      label={t('model.amounts', 'Beträge')}
+      value={value.amountsInflationAdjusted ? 'real' : 'nominal'}
+      onChange={(v) => onChange({ ...value, amountsInflationAdjusted: v === 'real' })}
+      options={[
+        {
+          value: 'nominal',
+          label: t('model.amounts.nominal', 'Nominal'),
+          hint: 'Spar- und Auszahlbetrag bleiben über die Jahre unverändert.',
+        },
+        {
+          value: 'real',
+          label: t('model.amounts.real', 'Inflationsbereinigt'),
+          hint:
+            'Der eingetragene Betrag gilt als heutige Kaufkraft; nominal steigt er ' +
+            'jährlich mit der Inflation, damit sein realer Wert konstant bleibt.',
+        },
+      ]}
+    />
   )
 }
 

@@ -3,6 +3,7 @@ import type { ParamDefinition } from '../domain/parameters'
 import { PARAMETERS, PARAM_IDS, TIMELINE_FIELDS, TIMELINE_FIELD_IDS } from '../domain/parameters'
 import { SERIES } from '../domain/series'
 import { WITHDRAWAL_STRATEGIES } from '../domain/withdrawal'
+import { SETTINGS_CATEGORIES, type SettingsCategoryId } from './categories'
 
 /**
  * Suchindex über alle Einstellungen.
@@ -12,21 +13,8 @@ import { WITHDRAWAL_STRATEGIES } from '../domain/withdrawal'
  * automatisch in Kategorie und Suche auf.
  */
 
-export type SettingsCategoryId = 'szenarien' | 'werte' | 'zeitraum' | 'kurven' | 'berechnung'
-
-export interface SettingsCategory {
-  readonly id: SettingsCategoryId
-  readonly label: string
-  readonly hint: string
-}
-
-export const SETTINGS_CATEGORIES: readonly SettingsCategory[] = [
-  { id: 'szenarien', label: 'Szenarien', hint: 'Anlegen, vergleichen, ein- und ausblenden' },
-  { id: 'werte', label: 'Werte', hint: 'Sparrate, Rendite, Entnahme' },
-  { id: 'zeitraum', label: 'Zeitraum', hint: 'Anspar- und Entnahmephase' },
-  { id: 'kurven', label: 'Kurven', hint: 'Welche Serien, welcher Stil' },
-  { id: 'berechnung', label: 'Berechnung', hint: 'Zinsmodus und Entnahmeregel' },
-]
+export { SETTINGS_CATEGORIES, SETTINGS_CATEGORY_IDS } from './categories'
+export type { SettingsCategory, SettingsCategoryId } from './categories'
 
 export interface SettingsEntry {
   /** Stabile ID, nach der die Oberfläche filtert. */
@@ -58,25 +46,27 @@ const STATISCH: readonly SettingsEntry[] = [
   },
   {
     id: 'model:compounding',
-    category: 'berechnung',
+    category: 'generell',
     label: 'Zinsmodus',
     keywords: ['zins', 'effektiv', 'nominal', 'jährlich', 'verzinsung', 'konvention'],
   },
   {
+    // Gehört zur Einzahlung, nicht zur Rechenweise: der Schalter entscheidet,
+    // wann die Sparrate fließt, nicht wie verzinst wird.
     id: 'model:timing',
-    category: 'berechnung',
+    category: 'einzahlung',
     label: 'Zeitpunkt der Sparrate',
     keywords: ['vorschüssig', 'nachschüssig', 'monatsanfang', 'monatsende', 'timing'],
   },
   {
     id: 'model:amountsInflationAdjusted',
-    category: 'berechnung',
+    category: 'generell',
     label: 'Beträge inflationsbereinigt',
     keywords: ['inflation', 'kaufkraft', 'real', 'nominal', 'teuerung', 'betrag'],
   },
   {
     id: 'model:withdrawalRule',
-    category: 'berechnung',
+    category: 'auszahlung',
     label: 'Entnahmeregel',
     keywords: ['entnahme', 'regel', 'prozentregel', 'fester betrag', '4 prozent', 'rente'],
   },
@@ -91,7 +81,7 @@ export function buildSettingsIndex(): readonly SettingsEntry[] {
       const def: ParamDefinition = PARAMETERS[id]
       return {
         id: `param:${id}`,
-        category: 'werte' as SettingsCategoryId,
+        category: def.category,
         label: def.label,
         keywords: [def.hint ?? '', def.group, id],
       }
@@ -100,7 +90,7 @@ export function buildSettingsIndex(): readonly SettingsEntry[] {
       const def: ParamDefinition = TIMELINE_FIELDS[id]
       return {
         id: `timeline:${id}`,
-        category: 'zeitraum' as SettingsCategoryId,
+        category: def.category,
         label: def.label,
         keywords: [def.hint ?? '', 'laufzeit', 'jahre', id],
       }
@@ -119,7 +109,7 @@ export function buildSettingsIndex(): readonly SettingsEntry[] {
     })),
     ...WITHDRAWAL_STRATEGIES.map((s) => ({
       id: 'model:withdrawalRule',
-      category: 'berechnung' as SettingsCategoryId,
+      category: 'auszahlung' as SettingsCategoryId,
       label: s.label,
       keywords: [s.description, 'entnahme'],
     })),

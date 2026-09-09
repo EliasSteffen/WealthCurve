@@ -23,9 +23,9 @@ export function Sidebar() {
         aria-label="Einstellungen einblenden"
         aria-expanded={false}
         title="Einstellungen einblenden"
-        className="my-4 ml-4 flex h-24 w-7 shrink-0 items-center justify-center self-start rounded-lg border border-[var(--hairline)] bg-[var(--surface-1)] text-[var(--text-muted)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--text-primary)]"
+        className="my-4 ml-4 flex h-24 w-9 shrink-0 items-center justify-center self-start rounded-lg border border-[var(--hairline)] bg-[var(--surface-1)] text-[var(--text-muted)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--text-primary)]"
       >
-        <PanelLeftOpen size={15} aria-hidden />
+        <PanelLeftOpen size={16} aria-hidden />
       </button>
     )
   }
@@ -39,9 +39,9 @@ export function Sidebar() {
           aria-label="Einstellungen ausblenden"
           aria-expanded
           title="Einstellungen ausblenden"
-          className="rounded-md p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--text-primary)]"
+          className="flex size-9 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--text-primary)]"
         >
-          <PanelLeftClose size={15} aria-hidden />
+          <PanelLeftClose size={16} aria-hidden />
         </button>
       </div>
       <SettingsPanel />

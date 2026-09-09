@@ -9,6 +9,8 @@
  * automatisch nach, weil das ParameterPanel über dieses Objekt iteriert.
  */
 
+import type { SettingsCategoryId } from '../settings/categories'
+
 export type ParamUnit = 'currency' | 'percent' | 'years'
 /** Basis = immer relevant. Annahmen = modellabhängig, nur für manche Serien. */
 export type ParamGroup = 'basis' | 'entnahme' | 'annahmen'
@@ -21,7 +23,15 @@ export interface ParamDefinition {
   readonly max: number
   readonly step: number
   readonly defaultValue: number
+  /** Untergruppe innerhalb einer Kategorie - nur für die Zwischenüberschrift. */
   readonly group: ParamGroup
+  /**
+   * In welche Einstellungs-Kategorie der Regler gehört.
+   *
+   * Steht hier und nicht im Suchindex, weil sonst zwei Listen zu pflegen wären:
+   * ein neuer Parameter landete sonst still in der falschen Karte.
+   */
+  readonly category: SettingsCategoryId
 }
 
 export const PARAMETERS = {
@@ -33,6 +43,7 @@ export const PARAMETERS = {
     step: 25,
     defaultValue: 500,
     group: 'basis',
+    category: 'einzahlung',
   },
   annualRate: {
     label: 'Rendite p. a.',
@@ -43,6 +54,7 @@ export const PARAMETERS = {
     step: 0.1,
     defaultValue: 7,
     group: 'basis',
+    category: 'generell',
   },
   initialCapital: {
     label: 'Startkapital',
@@ -52,6 +64,7 @@ export const PARAMETERS = {
     step: 500,
     defaultValue: 0,
     group: 'basis',
+    category: 'generell',
   },
   inflationRate: {
     label: 'Inflation p. a.',
@@ -62,6 +75,7 @@ export const PARAMETERS = {
     step: 0.1,
     defaultValue: 2,
     group: 'annahmen',
+    category: 'generell',
   },
   monthlyWithdrawal: {
     label: 'Monatliche Entnahme',
@@ -72,6 +86,7 @@ export const PARAMETERS = {
     step: 100,
     defaultValue: 2_000,
     group: 'entnahme',
+    category: 'auszahlung',
   },
   withdrawalRate: {
     label: 'Entnahmerate p. a.',
@@ -82,6 +97,7 @@ export const PARAMETERS = {
     step: 0.1,
     defaultValue: 4,
     group: 'entnahme',
+    category: 'auszahlung',
   },
   savingsRate: {
     label: 'Tagesgeldzins p. a.',
@@ -92,6 +108,7 @@ export const PARAMETERS = {
     step: 0.1,
     defaultValue: 2,
     group: 'annahmen',
+    category: 'generell',
   },
 } as const satisfies Record<string, ParamDefinition>
 
@@ -132,6 +149,7 @@ export const TIMELINE_FIELDS = {
     step: 1,
     defaultValue: 30,
     group: 'basis',
+    category: 'einzahlung',
   },
   withdrawalYears: {
     label: 'Entnahmephase',
@@ -142,6 +160,7 @@ export const TIMELINE_FIELDS = {
     step: 1,
     defaultValue: 25,
     group: 'basis',
+    category: 'auszahlung',
   },
 } as const satisfies Record<string, ParamDefinition>
 

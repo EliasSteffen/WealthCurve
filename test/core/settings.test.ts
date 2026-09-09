@@ -27,6 +27,31 @@ describe('Suchindex', () => {
     for (const id of PARAM_IDS) expect(index.some((e) => e.id === `param:${id}`), id).toBe(true)
     for (const s of SERIES) expect(index.some((e) => e.id === `series:${s.id}`), s.id).toBe(true)
   })
+
+  it('übernimmt die Kategorie aus der Registry, statt sie pauschal zu setzen', () => {
+    // Der eigentliche Zweck des `category`-Feldes: Sparrate und Entnahme sind
+    // beide Geldbeträge und landeten früher zwangsläufig in derselben Karte.
+    const kategorieVon = (id: string) => index.find((e) => e.id === id)?.category
+    expect(kategorieVon('param:monthlyContribution')).toBe('einzahlung')
+    expect(kategorieVon('param:monthlyWithdrawal')).toBe('auszahlung')
+    expect(kategorieVon('param:annualRate')).toBe('generell')
+    expect(kategorieVon('param:initialCapital')).toBe('generell')
+  })
+
+  it('legt die Zeitraum-Felder zu ihrer jeweiligen Phase', () => {
+    // "dort kann dann jeweils betrag, zeitraum, ... eingestellt werden" -
+    // die Jahre stehen bei dem Betrag, auf den sie sich beziehen.
+    const kategorieVon = (id: string) => index.find((e) => e.id === id)?.category
+    expect(kategorieVon('timeline:accumulationYears')).toBe('einzahlung')
+    expect(kategorieVon('timeline:withdrawalYears')).toBe('auszahlung')
+  })
+
+  it('ordnet jeden Parameter genau einer Kategorie zu', () => {
+    for (const id of PARAM_IDS) {
+      const treffer = index.filter((e) => e.id === `param:${id}`)
+      expect(new Set(treffer.map((e) => e.category)).size, id).toBe(1)
+    }
+  })
 })
 
 describe('matchSettings', () => {
@@ -71,7 +96,7 @@ describe('matchingCategories', () => {
 
   it('reduziert auf die Kategorien mit Treffern', () => {
     const kategorien = matchingCategories(index, matchSettings(index, 'Zinsmodus'))
-    expect([...kategorien]).toEqual(['berechnung'])
+    expect([...kategorien]).toEqual(['generell'])
   })
 
   it('liefert bei fehlendem Treffer gar keine Kategorie', () => {

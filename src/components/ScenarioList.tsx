@@ -48,7 +48,7 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
                 )}
               />
 
-              <div className="flex shrink-0 items-center gap-0.5">
+              <div className="flex shrink-0 items-center">
                 <IconButton
                   label={
                     scenario.visible
@@ -59,21 +59,30 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
                     dispatch(actions.setScenarioVisible(scenario.id, !scenario.visible))
                   }
                 >
-                  {scenario.visible ? <Eye size={13} /> : <EyeOff size={13} />}
+                  {scenario.visible ? <Eye size={15} /> : <EyeOff size={15} />}
                 </IconButton>
                 <IconButton
                   label={t('scenario.duplicate', 'Duplizieren')}
                   disabled={atLimit}
+                  // Ein ausgegrauter Knopf ohne Begründung ist von einem kaputten
+                  // nicht zu unterscheiden.
+                  disabledReason={t('scenario.limitShort', `Maximal ${MAX_SCENARIOS} Szenarien`, {
+                    max: MAX_SCENARIOS,
+                  })}
                   onClick={() => dispatch(actions.duplicateScenario(scenario.id))}
                 >
-                  <Copy size={13} />
+                  <Copy size={15} />
                 </IconButton>
                 <IconButton
                   label={t('scenario.delete', 'Löschen')}
                   disabled={scenarios.length <= 1}
+                  disabledReason={t(
+                    'scenario.lastOne',
+                    'Das letzte Szenario lässt sich nicht löschen',
+                  )}
                   onClick={() => dispatch(actions.removeScenario(scenario.id))}
                 >
-                  <Trash2 size={13} />
+                  <Trash2 size={15} />
                 </IconButton>
               </div>
             </li>
@@ -112,15 +121,26 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
   )
 }
 
+/**
+ * Symbolknopf mit ausreichend großer Trefferfläche.
+ *
+ * `size-9` sind 36 px - deutlich über den 24 px, die WCAG 2.2 als Minimum
+ * verlangt. Das Symbol bleibt klein, nur die anklickbare Fläche wächst;
+ * vorher waren es 21 px bei 2 px Abstand zum Nachbarn, und daneben lag sofort
+ * der falsche Knopf.
+ */
 function IconButton({
   label,
   onClick,
   disabled,
+  disabledReason,
   children,
 }: {
   readonly label: string
   readonly onClick: () => void
   readonly disabled?: boolean
+  /** Warum der Knopf gerade nicht geht - sonst wirkt er schlicht kaputt. */
+  readonly disabledReason?: string
   readonly children: React.ReactNode
 }) {
   return (
@@ -129,9 +149,9 @@ function IconButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
-      title={label}
+      title={disabled && disabledReason ? `${label} – ${disabledReason}` : label}
       className={cn(
-        'rounded p-1 text-[var(--text-muted)] transition-colors',
+        'flex size-9 shrink-0 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors',
         disabled
           ? 'cursor-not-allowed opacity-30'
           : 'hover:bg-[var(--surface-1)] hover:text-[var(--text-primary)]',

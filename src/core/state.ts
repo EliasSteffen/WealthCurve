@@ -11,6 +11,7 @@ import {
 import { DEFAULT_ENABLED_SERIES, SERIES } from './domain/series'
 import type { MarketSeries, ModelSettings } from './domain/types'
 import { SLOT_COUNT, allocateSlot, type ColorSlot } from './palette'
+import { SETTINGS_CATEGORY_IDS, type SettingsCategoryId } from './settings/categories'
 
 export interface Scenario {
   readonly id: string
@@ -32,8 +33,21 @@ export interface AppState {
   readonly encoding: EncodingPreference
   readonly chartStyleId: string
   readonly sidebarCollapsed: boolean
-  /** Geladener Kursverlauf fuer die Serie "Kursverlauf". */
-  readonly market: MarketSeries | null
+  /**
+   * Zugeklappte Einstellungs-Kategorien.
+   *
+   * Gehoert in den Store und nicht in den Komponenten-State: das Bottom-Sheet
+   * montiert das Panel bei jedem Oeffnen neu, lokaler State waere danach jedes
+   * Mal vergessen.
+   */
+  readonly collapsedCategories: readonly SettingsCategoryId[]
+  /**
+   * Geladene Kursverlaeufe fuer die Serie "Kursverlauf" - einer je Wertpapier.
+   *
+   * Begrenzt durch MAX_MARKETS: jede Kurve braucht einen eigenen Farb-Slot, und
+   * die Palette hat acht, die sie sich mit den Szenarien teilt.
+   */
+  readonly markets: readonly MarketSeries[]
 }
 
 let counter = 0
@@ -75,11 +89,21 @@ export function createInitialState(): AppState {
     encoding: 'auto',
     chartStyleId: DEFAULT_CHART_STYLE_ID,
     sidebarCollapsed: false,
-    market: null,
+    collapsedCategories: [],
+    markets: [],
   }
 }
 
 export const MAX_SCENARIOS = SLOT_COUNT
+
+/**
+ * Wie viele Wertpapiere gleichzeitig.
+ *
+ * Vier lassen der Palette noch vier Slots fuer Szenarien. Mehr waere technisch
+ * moeglich, aber ab dem neunten Farbton sind Kurven unter Farbfehlsichtigkeit
+ * nicht mehr zu trennen - siehe palette.ts.
+ */
+export const MAX_MARKETS = 4
 
 /* ------------------------------------------------------------------ Actions */
 
@@ -96,8 +120,10 @@ export type Action =
   | { type: 'model/setTimeline'; field: TimelineFieldId; value: number }
   | { type: 'encoding/set'; encoding: EncodingPreference }
   | { type: 'chartStyle/set'; id: string }
-  | { type: 'market/set'; market: MarketSeries | null }
+  | { type: 'market/add'; market: MarketSeries }
+  | { type: 'market/remove'; symbol: string }
   | { type: 'sidebar/setCollapsed'; collapsed: boolean }
+  | { type: 'settings/toggleCategory'; id: SettingsCategoryId }
   | { type: 'state/replace'; state: AppState }
   | { type: 'state/reset' }
 
@@ -131,10 +157,15 @@ export const actions = {
   }),
   setEncoding: (encoding: EncodingPreference): Action => ({ type: 'encoding/set', encoding }),
   setChartStyle: (id: string): Action => ({ type: 'chartStyle/set', id }),
-  setMarket: (market: MarketSeries | null): Action => ({ type: 'market/set', market }),
+  addMarket: (market: MarketSeries): Action => ({ type: 'market/add', market }),
+  removeMarket: (symbol: string): Action => ({ type: 'market/remove', symbol }),
   setSidebarCollapsed: (collapsed: boolean): Action => ({
     type: 'sidebar/setCollapsed',
     collapsed,
+  }),
+  toggleSettingsCategory: (id: SettingsCategoryId): Action => ({
+    type: 'settings/toggleCategory',
+    id,
   }),
   replaceState: (state: AppState): Action => ({ type: 'state/replace', state }),
   reset: (): Action => ({ type: 'state/reset' }),
@@ -247,13 +278,42 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'chartStyle/set':
       return state.chartStyleId === action.id ? state : { ...state, chartStyleId: action.id }
 
-    case 'market/set':
-      return { ...state, market: action.market }
+    case 'market/add': {
+      // Dasselbe Papier zweimal waere zwei identische Kurven in zwei Farben -
+      // stattdessen die vorhandene Reihe ersetzen, die neue ist die frischere.
+      const vorhanden = state.markets.findIndex((m) => m.symbol === action.market.symbol)
+      if (vorhanden !== -1) {
+        const markets = [...state.markets]
+        markets[vorhanden] = action.market
+        return { ...state, markets }
+      }
+      // Kein Farb-Slot mehr frei - lieber nichts tun als eine Farbe wiederholen.
+      if (state.markets.length >= MAX_MARKETS) return state
+      return { ...state, markets: [...state.markets, action.market] }
+    }
+
+    case 'market/remove': {
+      const markets = state.markets.filter((m) => m.symbol !== action.symbol)
+      return markets.length === state.markets.length ? state : { ...state, markets }
+    }
 
     case 'sidebar/setCollapsed':
       return state.sidebarCollapsed === action.collapsed
         ? state
         : { ...state, sidebarCollapsed: action.collapsed }
+
+    case 'settings/toggleCategory': {
+      // Gleiche Form wie 'series/toggle': unbekannte IDs prallen ab, statt eine
+      // Kategorie zu erfinden, die es nicht gibt.
+      if (!SETTINGS_CATEGORY_IDS.includes(action.id)) return state
+      const zu = state.collapsedCategories.includes(action.id)
+      return {
+        ...state,
+        collapsedCategories: zu
+          ? state.collapsedCategories.filter((id) => id !== action.id)
+          : [...state.collapsedCategories, action.id],
+      }
+    }
 
     case 'state/replace':
       return action.state
@@ -300,6 +360,23 @@ export function deserialize(raw: string): AppState | null {
         ? parsed.activeScenarioId!
         : scenarios[0].id,
       model: { ...base.model, ...parsed.model },
+      // Nur bekannte Kategorien uebernehmen - eine erfundene ID bliebe sonst
+      // fuer immer im Zustand stehen und liesse sich durch nichts mehr loesen.
+      collapsedCategories: Array.isArray(parsed.collapsedCategories)
+        ? parsed.collapsedCategories.filter((id): id is SettingsCategoryId =>
+            SETTINGS_CATEGORY_IDS.includes(id as SettingsCategoryId),
+          )
+        : base.collapsedCategories,
+      // Eine Kursreihe ohne Renditen zeichnet nichts und faende sich nie wieder
+      // aus dem Zustand heraus - deshalb hier aussortieren statt aufheben.
+      markets: Array.isArray(parsed.markets)
+        ? parsed.markets
+            .filter(
+              (m): m is MarketSeries =>
+                typeof m?.symbol === 'string' && Array.isArray(m?.monthlyReturns),
+            )
+            .slice(0, MAX_MARKETS)
+        : base.markets,
     }
   } catch {
     return null
