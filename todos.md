@@ -1,26 +1,38 @@
 # Todos
 
-- [ ] `{{rendite}}` im Video nennt immer das erste sichtbare Szenario. Bei zwei
-      Szenarien mit verschiedenen Renditen ist das irreführend — ein
-      `{{renditen}}` analog zu `{{szenarien}}` wäre die Entsprechung.
+## Erledigt
 
-- [ ] `selectActiveParamIds` ist laut Kommentar „nur für die visuelle
-      Hervorhebung", steuert aber tatsächlich, ob ein Regler überhaupt gerendert
-      wird. Entweder der Kommentar oder das Verhalten ist falsch.
+- [x] `{{rendite}}` im Video nennt immer das erste sichtbare Szenario —
+      jetzt `{{s1.rendite}}`, `{{s2.endkapital}}` je Szenario und `{{renditen}}`
+      als Sammelform (`94f084f`)
+- [x] `selectActiveParamIds` — der Kommentar war falsch, nicht das Verhalten;
+      Karten, die dadurch leer werden, nennen jetzt den Grund (`e2fb18d`)
+- [x] Farbe soll wählbar sein — Szenariofarbe aus den acht geprüften
+      Palettenfarben, belegte gesperrt (`23ecaea`)
+- [x] Platzhalter je Szenario (`94f084f`)
+- [x] Start der Auszahlung im Video anzeigen (`7111e4b`)
+- [x] Logo für die Web-App (`c63daff`)
+- [x] Auszahlung generell optional (`e2fb18d`)
+- [x] Eingabe des Startjahrs — der Rohtext bleibt beim Tippen stehen, geklemmt
+      wird erst beim Verlassen (`b94e711`)
+- [x] Szenario-Einstellungen getrennt — zwei Bereiche „Nur <Szenario>" und
+      „Für alle Szenarien" (`8635e42`)
+- [x] Jahreszahlen im Video optional (`7111e4b`)
 
-- [ ] Farbe soll wählbar sein
-- [ ] platzhalter bei mehreren szenarien sollen auch je szenario verfügbar sein (scenario::placeholder oder so)
-- [ ] In dem Video den Start der Auszahlung mit anzeigen, falls es auszahlungen geben soll.
-- [ ] Logo für die Web-App
-- [ ] auszahlung genrell optional machen
-- [ ] die eingabe eines start jahres ist sehr buggy und lässt nur das eintippen von 1900 oder 2100 zu...
-- [ ] das scenario setting gehört in eine andere spalte (es muss visuell deutlich werden, was je scenario gepseichert wird und was über die scenarien hinweg gilt)
-- [ ] jahreszahlen im video optional sichbar sein.
+## Offen
 
 - [ ] Szenarien speichern / per Link teilen — `serialize()` und `deserialize()`
       sind vorhanden und getestet, es fehlt nur die Anbindung. Das MCP-Werkzeug
       `zustand` benutzt beide bereits.
-- [ ] Steuern (Abgeltungsteuer, Vorabpauschale) als weitere Serie
+- [ ] Steuern (Abgeltungsteuer, Vorabpauschale) als weitere Serie — die
+      Vorabpauschale braucht den Basiszins je Jahr, also eine Datenquelle
 - [ ] Sparraten-Dynamik über die Inflation hinaus (z. B. Gehaltssprünge)
-- [ ] Tonspur oder Untertitel fürs Reel
+- [ ] Tonspur oder Untertitel fürs Reel — `MediaRecorder` nimmt nur das Canvas
+      auf, Ton bräuchte eine zweite Spur
 - [ ] Weitere Sprachen — der Katalog ist dafür vorbereitet
+
+## Aufgefallen, aber nicht angefasst
+
+- [ ] Die Legende im Video zeigt beim Vergleich einen Eintrag je Serie und nimmt
+      dafür die Farbe der zuletzt gebauten Linie — im Bild kann so „Zinseszins"
+      orange sein, obwohl die erste Kurve blau ist.
