@@ -41,7 +41,9 @@ export interface DrawInput {
   readonly facts: Readonly<Record<string, string>>
 }
 
-const PLATZHALTER = /\{\{\s*(\w+)\s*\}\}/g
+// Der Punkt gehört dazu: `{{s2.rendite}}` nennt das zweite Szenario. Ohne ihn
+// brach der Ausdruck am Punkt ab und liess "{{s2" unaufgelöst im Bild stehen.
+const PLATZHALTER = /\{\{\s*([\w.]+)\s*\}\}/g
 
 export function resolveText(template: string, facts: Readonly<Record<string, string>>): string {
   return template.replace(PLATZHALTER, (_, key: string) => facts[key] ?? '')

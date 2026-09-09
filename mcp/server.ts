@@ -43,6 +43,7 @@ import { buildProjection, type Projection, type ProjectionScenario } from '../sr
 import { SETTINGS_CATEGORIES } from '../src/core/settings'
 import { deserialize, serialize } from '../src/core/state'
 import { drawFrame } from '../src/render/canvas/drawFrame'
+import { buildFacts } from '../src/render/facts'
 import { fetchQuotes } from '../server/quotes'
 
 const server = new McpServer({ name: 'zinseszins', version: '2.0.0' })
@@ -462,24 +463,13 @@ server.registerTool(
     const index = eingabe.frame ?? Math.floor(gesamt * 0.6)
     const frame = frameAt(DEFAULT_SPEC, projection, index)
 
-    const summary = projection.summaries[0]
-    const params = eingabe.scenarios[0]
-    const facts: Record<string, string> = {
-      endkapital: euro.format(summary?.final.balance ?? 0),
-      eingezahlt: euro.format(summary?.final.contributions ?? 0),
-      zinsertrag: euro.format(summary?.final.interest ?? 0),
-      rentenkapital: euro.format(summary?.capitalAtRetirement ?? 0),
-      entnahme: euro.format(summary?.monthlyWithdrawal ?? 0),
-      rate: euro.format(params?.monthlyContribution ?? 0),
-      rendite: `${String(params?.annualRate ?? 0).replace('.', ',')} %`,
-      ansparjahre: String(toModel(eingabe.model).accumulationYears),
-      jahre: String(projection.rows.length - 1),
-      reicht:
-        summary?.depletedAtYear == null ? 'reicht durch' : `bis Jahr ${summary.depletedAtYear}`,
-      szenarien: projection.summaries
-        .map((s) => `${s.label}: ${euro.format(s.final.balance)}`)
-        .join(' · '),
-    }
+    // Dieselbe Liste wie im Browser - buildFacts ist die einzige Stelle, an der
+    // steht, welche Platzhalter es gibt.
+    const facts = buildFacts(projection, toModel(eingabe.model), {
+      eur: (v) => euro.format(v),
+      percent: (v) => `${String(v).replace('.', ',')} %`,
+      years: (v) => String(v),
+    })
 
     /*
      * Das Thema kommt als Literal, nicht aus dem DOM.

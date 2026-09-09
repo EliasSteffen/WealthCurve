@@ -18,6 +18,7 @@ import { pickRecordingFormat, recordCanvas } from '../../lib/recordCanvas'
 import { transcodeToMp4 } from '../../lib/transcodeToMp4'
 import { useDispatch, useSelector } from '../../react/useSelector'
 import { drawFrame } from '../../render/canvas/drawFrame'
+import { buildFacts, suggestedFactKeys } from '../../render/facts'
 import { readLineColors, readRenderTheme } from '../../render/canvas/readTheme'
 import { SelectField } from '../ui/SelectField'
 
@@ -87,29 +88,19 @@ function VideoDialogInhalt({ onClose }: { readonly onClose: () => void }) {
    * Werte für die Platzhalter im Szenentext - hier fertig formatiert, damit der
    * Renderer nur noch einsetzen muss.
    */
-  const facts = useMemo(() => {
-    const summary = projection.summaries[0]
-    const p = aktiv?.params
-    const letzte = projection.rows.at(-1)
-    const zins = summary?.final.interest ?? 0
-    return {
-      endkapital: formatEur(summary?.final.balance ?? 0),
-      eingezahlt: formatEur(summary?.final.contributions ?? 0),
-      zinsertrag: formatEur(zins),
-      rentenkapital: formatEur(summary?.capitalAtRetirement ?? 0),
-      entnahme: formatEur(summary?.monthlyWithdrawal ?? 0),
-      rate: formatEur(p?.monthlyContribution ?? 0),
-      rendite: formatPercent(p?.annualRate ?? 0),
-      ansparjahre: String(model.accumulationYears),
-      jahre: formatYears(letzte?.year ?? 0),
-      reicht:
-        summary?.depletedAtYear == null ? 'reicht durch' : `bis Jahr ${summary.depletedAtYear}`,
-      // Alle sichtbaren Szenarien auf einmal - fuer Vergleichsvideos.
-      szenarien: projection.summaries
-        .map((s) => `${s.label}: ${formatEur(s.final.balance)}`)
-        .join(' · '),
-    } as Record<string, string>
-  }, [projection, aktiv, model.accumulationYears])
+  /**
+   * Werte für die Platzhalter im Szenentext - hier fertig formatiert, damit der
+   * Renderer nur noch einsetzen muss.
+   */
+  const facts = useMemo(
+    () =>
+      buildFacts(projection, model, {
+        eur: formatEur,
+        percent: formatPercent,
+        years: formatYears,
+      }),
+    [projection, model],
+  )
 
   const zeichne = useCallback(
     (index: number) => {
@@ -245,7 +236,7 @@ function VideoDialogInhalt({ onClose }: { readonly onClose: () => void }) {
           <SzenenEditor
             scenes={spec.scenes}
             onChange={(scenes) => setSpec((p) => ({ ...p, scenes }))}
-            platzhalter={Object.keys(facts)}
+            platzhalter={suggestedFactKeys(facts, projection.summaries.length)}
           />
 
           {zustand === 'laeuft' ? (

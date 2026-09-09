@@ -74,6 +74,14 @@ export type ProjectionRow = { year: number } & Record<string, number | null>
 export interface ProjectionSummary {
   readonly scenarioId: string
   readonly label: string
+  /**
+   * Die Eingaben des Szenarios.
+   *
+   * Damit steht in der Projektion alles, was ein Videotext über ein Szenario
+   * sagen kann - sonst brauchte jeder Aufrufer eine zweite Quelle daneben und
+   * müsste sie selbst zur Reihenfolge der Kurven passend halten.
+   */
+  readonly params: SimulationParams
   readonly final: YearSnapshot
   /** Depotwert am Ende der Ansparphase. */
   readonly capitalAtRetirement: number
@@ -261,6 +269,7 @@ export function buildProjection(input: ProjectionInput): Projection {
     return {
       scenarioId: scenario.id,
       label: scenario.label,
+      params: scenario.params,
       final: result.years.at(-1)!,
       capitalAtRetirement: result.capitalAtRetirement,
       monthlyWithdrawal: result.monthlyWithdrawal,
