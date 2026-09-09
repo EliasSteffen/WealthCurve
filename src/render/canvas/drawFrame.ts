@@ -434,7 +434,18 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
   // Auch hier die kürzere Kante: im Querformat ergäbe die Breite eine 54-px-
   // Zeile, die sich in die Legende darunter legte.
   ctx.font = font(style, Math.round(bezug * 0.028))
-  ctx.fillText(`Jahr ${frame.year}`, pad, plot.bottom + Math.round(footerH * 0.34))
+  /*
+   * Dieselbe Beschriftung wie im Chart.
+   *
+   * Weicht sie vom Index ab, ist sie absolut (Alter oder Kalenderjahr) und
+   * steht für sich - „Jahr 2007" wäre falsch.
+   */
+  const jahrText = projection.yearLabels[frame.year]
+  ctx.fillText(
+    jahrText !== undefined && jahrText !== String(frame.year) ? jahrText : `Jahr ${frame.year}`,
+    pad,
+    plot.bottom + Math.round(footerH * 0.34),
+  )
 
   const legendSize = Math.round(bezug * 0.026)
   const legendZeilenH = Math.round(legendSize * 1.5)

@@ -11,6 +11,7 @@ import type {
   YearSnapshot,
 } from './domain/types'
 import { allocateSlot, slotVar } from './palette'
+import { yearLabels } from './timeAxis'
 
 /**
  * Die reine Rechenschicht zwischen Domäne und UI.
@@ -92,6 +93,14 @@ export interface ProjectionSummary {
 export interface Projection {
   readonly lines: readonly ProjectionLine[]
   readonly rows: readonly ProjectionRow[]
+  /**
+   * Beschriftung je Jahres-Index - „12", „mit 42" oder „2007".
+   *
+   * Einmal berechnet, damit Chart, Tabelle, CSV und Videobild dieselbe Achse
+   * beschriften. Ohne das müsste jede Anzeige das Modell selbst auswerten, und
+   * die vier liefen früher oder später auseinander.
+   */
+  readonly yearLabels: readonly string[]
   readonly summaries: readonly ProjectionSummary[]
   /** Jahr des Phasenwechsels - der Chart markiert es. */
   readonly retirementYear: number
@@ -267,6 +276,7 @@ export function buildProjection(input: ProjectionInput): Projection {
   return {
     lines,
     rows,
+    yearLabels: yearLabels(rows.length, model),
     summaries,
     retirementYear: model.accumulationYears,
     encodingDescription: encoding.describe(encodingInput),

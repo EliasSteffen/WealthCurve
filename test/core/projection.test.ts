@@ -104,8 +104,11 @@ describe('Mehrere Wertpapiere', () => {
     monthlyReturns: Array(monate).fill(monatsrendite) as number[],
   })
 
+  /** Die synthetischen Kurse beginnen 2000-01 - das Startjahr muss dazu passen. */
+  const imJahr2000 = { ...DEFAULT_MODEL, startYear: 2000 }
+
   const mitKursen = (...markets: ReturnType<typeof kurs>[]) =>
-    build({ seriesIds: ['compound', 'marketReturn'], markets })
+    build({ seriesIds: ['compound', 'marketReturn'], markets, model: imJahr2000 })
 
   it('macht aus einer Serie eine Linie je Wertpapier', () => {
     const p = mitKursen(kurs('AAPL', 0.006), kurs('MSFT', 0.004))
@@ -129,6 +132,7 @@ describe('Mehrere Wertpapiere', () => {
     const p = build({
       seriesIds: ['compound', 'contributions', 'savingsAccount', 'marketReturn'],
       markets: [kurs('AAPL', 0.006), kurs('MSFT', 0.004)],
+      model: imJahr2000,
     })
     const alle = p.lines.map((l) => l.colorVar)
     expect(new Set(alle).size).toBe(alle.length)
@@ -158,6 +162,7 @@ describe('Mehrere Wertpapiere', () => {
       scenarios: [scenario('a'), scenario('b', { colorSlot: 2 })],
       seriesIds: ['compound', 'marketReturn'],
       markets: [kurs('A', 0.005), kurs('B', 0.005), kurs('C', 0.005), kurs('D', 0.005)],
+      model: imJahr2000,
     })
     expect(p.lines).toHaveLength(10)
     expect(p.capacity.lineCount).toBe(10)
@@ -167,7 +172,7 @@ describe('Mehrere Wertpapiere', () => {
   it('behält ohne Wertpapier genau eine Linie', () => {
     // Die Serie soll nicht aus der Legende verschwinden, nur weil noch kein
     // Kurs geladen ist - sie zeichnet dann eben nichts.
-    const p = build({ seriesIds: ['marketReturn'], markets: [] })
+    const p = build({ seriesIds: ['marketReturn'], markets: [], model: imJahr2000 })
     expect(p.lines).toHaveLength(1)
     expect(p.lines[0].variantLabel).toBeUndefined()
     expect(p.rows.at(-1)![p.lines[0].key]).toBeNull()
@@ -178,6 +183,7 @@ describe('Mehrere Wertpapiere', () => {
       scenarios: [scenario('a'), scenario('b', { colorSlot: 2 })],
       seriesIds: ['marketReturn'],
       markets: [kurs('AAPL', 0.006), kurs('MSFT', 0.004)],
+      model: imJahr2000,
     })
     const keys = p.lines.map((l) => l.key)
     expect(new Set(keys).size).toBe(keys.length)

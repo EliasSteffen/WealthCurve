@@ -48,6 +48,9 @@ const einmalig = buildProjection({
     withdrawalYears: 25,
     withdrawalStrategyId: 'percentRule',
     amountsInflationAdjusted: false,
+    timeAxis: 'relative',
+    startAge: null,
+    startYear: null,
   },
 })
 

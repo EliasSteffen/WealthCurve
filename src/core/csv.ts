@@ -17,7 +17,9 @@ export function projectionToCsv(projection: Projection): string {
 
   const header = ['Jahr', ...projection.lines.map((line) => line.label)]
   const body = projection.rows.map((row) => [
-    String(row.year),
+    // Dieselbe Beschriftung wie Chart und Tabelle - ein Export, der andere
+    // Jahre nennt als der Bildschirm, ist schlimmer als gar keiner.
+    projection.yearLabels[row.year] ?? String(row.year),
     ...projection.lines.map((line) => {
       const value = row[line.key]
       return typeof value === 'number' ? number(value) : ''

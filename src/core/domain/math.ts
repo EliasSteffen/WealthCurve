@@ -17,6 +17,11 @@ export const DEFAULT_MODEL: ModelSettings = {
   withdrawalYears: 25,
   withdrawalStrategyId: DEFAULT_WITHDRAWAL_STRATEGY_ID,
   amountsInflationAdjusted: false,
+  // Ohne Anker bleibt es bei „Jahr 0, 1, 2 …" - der Stand, den alle bisher
+  // gespeicherten Zustände beschreiben.
+  timeAxis: 'relative',
+  startAge: null,
+  startYear: null,
 }
 
 const finite = (value: number, fallback = 0): number => (Number.isFinite(value) ? value : fallback)

@@ -16,6 +16,7 @@ import {
   ChartStyleControl,
   CompoundingControl,
   InflationAmountsControl,
+  TimeAxisControls,
   TimelineControls,
   TimingControl,
   WithdrawalRuleControl,
@@ -82,6 +83,7 @@ export function SettingsPanel() {
         {regler('generell')}
         <CompoundingControl value={model} onChange={setModel} matches={matches} />
         <InflationAmountsControl value={model} onChange={setModel} matches={matches} />
+        <TimeAxisControls value={model} onChange={setModel} matches={matches} />
       </div>
     ),
     einzahlung: (

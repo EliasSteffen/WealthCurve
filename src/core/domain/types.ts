@@ -8,6 +8,18 @@ export type ContributionTiming = 'start' | 'end'
 /** Ansparen oder entnehmen - das Vorzeichen des Zahlungsstroms. */
 export type PhaseKind = 'accumulate' | 'withdraw'
 
+/**
+ * Wie die Zeitachse beschriftet wird.
+ *
+ * Reine Anzeige: `year` bleibt in jeder Serie ein Index ab 0, die Rechnung
+ * kennt weder Alter noch Kalender. Sonst müsste jede Serie davon wissen, und
+ * ein Umschalten der Beschriftung änderte plötzlich Zahlen.
+ *
+ * Eine Ausnahme gibt es: der Kursverlauf braucht den Kalender wirklich, weil
+ * echte Renditen an echten Monaten hängen - siehe `startYear`.
+ */
+export type TimeAxisMode = 'relative' | 'age' | 'calendar'
+
 export interface Phase {
   readonly kind: PhaseKind
   readonly months: number
@@ -33,6 +45,24 @@ export interface ModelSettings {
    * Wenn ja, wachsen sie nominal jährlich mit der Inflationsrate mit.
    */
   readonly amountsInflationAdjusted: boolean
+  /** Beschriftung der Zeitachse - ändert keine Zahl. */
+  readonly timeAxis: TimeAxisMode
+  /**
+   * Alter zu Beginn der Ansparphase; null = keine Altersangabe.
+   *
+   * Macht aus „Jahr 35" ein „mit 65" und damit den Rentenbeginn greifbar.
+   */
+  readonly startAge: number | null
+  /**
+   * Kalenderjahr, in dem die Ansparphase beginnt; null = kein Kalenderbezug.
+   *
+   * Für den Kursverlauf mehr als Kosmetik: echte Monatsrenditen hängen an
+   * echten Monaten. Ohne Anker hieße „Apple als Vergleich" stillschweigend
+   * „ab dem Tag, an dem Yahoos Historie zufällig beginnt" - und niemand kann
+   * vorwärts wissen, wie sich ein Kurs entwickelt. Ohne Startjahr zeichnet die
+   * Kursserie deshalb nichts.
+   */
+  readonly startYear: number | null
 }
 
 export interface SimulationConfig {

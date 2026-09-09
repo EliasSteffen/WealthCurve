@@ -59,6 +59,21 @@ const STATISCH: readonly SettingsEntry[] = [
     keywords: ['vorschüssig', 'nachschüssig', 'monatsanfang', 'monatsende', 'timing'],
   },
   {
+    id: 'model:timeAxis',
+    category: 'generell',
+    label: 'Zeitachse, Alter und Startjahr',
+    keywords: [
+      'alter',
+      'startjahr',
+      'kalender',
+      'jahreszahl',
+      'achse',
+      'zeit',
+      'rentenbeginn',
+      'geburtsjahr',
+    ],
+  },
+  {
     id: 'model:amountsInflationAdjusted',
     category: 'generell',
     label: 'Beträge inflationsbereinigt',

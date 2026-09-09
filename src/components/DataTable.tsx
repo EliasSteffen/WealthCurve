@@ -7,6 +7,10 @@ import { useSeriesLabel } from '../react/useSeriesLabel'
 interface DataTableProps {
   readonly rows: readonly ProjectionRow[]
   readonly series: readonly ProjectionLine[]
+  /** Beschriftung je Jahres-Index; ohne sie steht der rohe Index da. */
+  readonly yearLabels?: readonly string[]
+  /** Überschrift der ersten Spalte; folgt der gewählten Beschriftung. */
+  readonly yearHeading?: string
 }
 
 /**
@@ -15,7 +19,7 @@ interface DataTableProps {
  * farbunabhängigen Weg zu jedem Wert. Für einen Finanzrechner ist sie ohnehin
  * das, was man am Ende abliest.
  */
-export function DataTable({ rows, series }: DataTableProps) {
+export function DataTable({ rows, series, yearLabels, yearHeading }: DataTableProps) {
   const t = useT()
   const labelOf = useSeriesLabel()
   const [open, setOpen] = useState(false)
@@ -41,7 +45,7 @@ export function DataTable({ rows, series }: DataTableProps) {
           <thead className="sticky top-0 bg-[var(--surface-1)]">
             <tr className="border-b border-[var(--hairline)]">
               <th scope="col" className="px-4 py-2 text-left font-medium text-[var(--text-muted)]">
-                {t('table.year', 'Jahr')}
+                {yearHeading ?? t('table.year', 'Jahr')}
               </th>
               {series.map((s) => (
                 <th
@@ -58,7 +62,7 @@ export function DataTable({ rows, series }: DataTableProps) {
             {rows.map((row) => (
               <tr key={row.year} className="border-b border-[var(--hairline)] last:border-0">
                 <th scope="row" className="px-4 py-1.5 text-left font-normal text-[var(--text-secondary)]">
-                  {row.year}
+                  {yearLabels?.[row.year] ?? row.year}
                 </th>
                 {series.map((s) => {
                   const value = row[s.key]

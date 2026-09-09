@@ -111,6 +111,16 @@ export const en: Catalog = {
   'model.amounts': 'Amounts',
   'model.amounts.nominal': 'Nominal',
   'model.amounts.real': 'Inflation-adjusted',
+  'model.timeAxis': 'Time axis',
+  'model.timeAxis.relative': 'Years from 0',
+  'model.timeAxis.age': 'Age',
+  'model.timeAxis.calendar': 'Calendar year',
+  'model.startAge': 'Age at start',
+  'model.startYear': 'Start year',
+  'model.noAnchor': 'none',
+  'model.startYear.needed':
+    'Without a start year the price curve stays empty: real returns are tied to real months, and no price can be projected forward.',
+  'model.anchors.hint': 'The labelling only changes the axis, never a number.',
 
   // Kennzahlen
   'stat.atRetirement': 'At retirement',
@@ -128,6 +138,8 @@ export const en: Catalog = {
 
   // Chart und Tabelle
   'chart.years': 'Years',
+  'chart.age': 'Age',
+  'chart.calendar': 'Year',
   'chart.retirement': 'Retirement',
   'chart.noScenario': 'No scenario visible – show at least one.',
   'chart.noSeries': 'No series active – pick at least one.',
@@ -148,6 +160,9 @@ export const en: Catalog = {
   'market.history': 'since {start} · {years} years of history',
   'market.unavailable': 'The price endpoint is not responding.',
   'market.import': 'Load a price file (CSV or JSON)',
+  'market.needsStartYear':
+    'The price curve needs a start year – set it under “General”. Only then is it clear from when the position would have been held.',
+  'market.startsLater': 'Only traded from {jahr} – no curve before that year.',
   'market.noServer':
     'This deployment has no price endpoint. Everything else works; prices come from a file – or start the app with `npm run serve`.',
   'market.badFile':

@@ -1,3 +1,4 @@
+import { marketMonthOffset } from '../../timeAxis'
 import { simulate } from '../math'
 import { defineSeries } from '../types'
 
@@ -20,15 +21,31 @@ export const marketReturnSeries = defineSeries({
   // ihrem eigenen Verlauf, das Sparverhalten bleibt dasselbe.
   fanOut: 'markets',
   compute: ({ base, params, model, market }) => {
+    const leer = () => base.years.map(() => null)
+
     // Ohne geladenen Kurs gibt es nichts zu zeichnen. Eine erfundene Kurve
     // waere schlimmer als eine fehlende.
-    if (!market || market.monthlyReturns.length === 0) {
-      return base.years.map(() => null)
-    }
+    if (!market || market.monthlyReturns.length === 0) return leer()
+
+    /*
+     * Ohne Startjahr ebenfalls nichts.
+     *
+     * Echte Monatsrenditen haengen an echten Monaten. Ohne Kalenderanker hiesse
+     * "Apple als Vergleich" stillschweigend "ab dem Monat, in dem die Historie
+     * zufaellig beginnt" - und vorwaerts laesst sich ein Kurs ohnehin nicht
+     * fortschreiben. Die Frage muss lauten: haette man AB WANN gehalten?
+     */
+    if (model.startYear === null) return leer()
+
+    const versatz = marketMonthOffset(market.start, model.startYear)
+    // Negativ heisst: das Papier gab es im Startjahr noch nicht.
+    if (versatz === null || versatz < 0) return leer()
 
     const renditen = market.monthlyReturns
+    if (versatz >= renditen.length) return leer()
+
     const proJahr = model.compounding === 'annual' ? 1 : 12
-    const gedeckteJahre = Math.floor(renditen.length / proJahr)
+    const gedeckteJahre = Math.floor((renditen.length - versatz) / proJahr)
 
     const werte = simulate({
       annualRatePercent: 0,
@@ -37,7 +54,7 @@ export const marketReturnSeries = defineSeries({
       monthlyWithdrawalOverride: base.monthlyWithdrawal,
       params,
       model,
-      rateAt: (i) => renditen[i] ?? 0,
+      rateAt: (i) => renditen[versatz + i] ?? 0,
     }).years.map((y) => y.balance)
 
     // Jenseits der Historie endet die Kurve, statt fortgeschrieben zu werden -

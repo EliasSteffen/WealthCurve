@@ -38,6 +38,7 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
   const t = useT()
   const markets = useSelector((s) => s.markets)
   const enabledSeriesIds = useSelector((s) => s.enabledSeriesIds)
+  const startYear = useSelector((s) => s.model.startYear)
   const [symbol, setSymbol] = useState('')
   const [laedt, setLaedt] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
@@ -213,6 +214,19 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
         )}
       </div>
 
+      {/*
+        Ohne Startjahr rechnet die Kursserie nichts - das muss hier stehen und
+        nicht erst auffallen, wenn der Chart leer bleibt.
+      */}
+      {markets.length > 0 && startYear === null ? (
+        <p className="rounded-md border border-dashed border-[var(--chart-8)] px-2 py-1.5 text-[11px] leading-snug text-[var(--text-secondary)]">
+          {t(
+            'market.needsStartYear',
+            'Für den Kursverlauf fehlt das Startjahr – unter „Generell" eintragen. Erst damit steht fest, ab wann gehalten worden wäre.',
+          )}
+        </p>
+      ) : null}
+
       {markets.length > 0 ? (
         <ul className="space-y-1">
           {markets.map((m) => (
@@ -223,6 +237,11 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
               <span className="min-w-0 text-[11px] leading-snug text-[var(--text-muted)]">
                 <span className="block truncate text-[var(--text-primary)]">{m.name}</span>
                 {m.symbol} · seit {m.start} · {Math.floor(m.monthlyReturns.length / 12)} Jahre
+                {startYear !== null && Number(m.start.slice(0, 4)) > startYear ? (
+                  <span className="mt-0.5 block text-[var(--chart-8)]">
+                    {t('market.startsLater', `Erst ab ${m.start.slice(0, 4)} handelbar – keine Kurve vor diesem Jahr.`, { jahr: m.start.slice(0, 4) })}
+                  </span>
+                ) : null}
               </span>
               <button
                 type="button"

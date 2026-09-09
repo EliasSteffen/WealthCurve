@@ -123,6 +123,27 @@ const modellSchema = z.object({
       'true: die eingetragenen Beträge gelten als heutige Kaufkraft und wachsen nominal mit ' +
         'der Inflation mit. false: sie bleiben über die Jahre unverändert.',
     ),
+  timeAxis: z
+    .enum(['relative', 'age', 'calendar'])
+    .default('relative')
+    .describe(
+      'Beschriftung der Zeitachse. Ändert keine Zahl, nur die Achse: relative = 0, 1, 2 …; ' +
+        'age = Lebensalter (braucht startAge); calendar = Jahreszahlen (braucht startYear).',
+    ),
+  startAge: z
+    .number()
+    .nullable()
+    .default(null)
+    .describe('Alter zu Beginn der Ansparphase; null = keine Altersangabe.'),
+  startYear: z
+    .number()
+    .nullable()
+    .default(null)
+    .describe(
+      'Kalenderjahr, in dem die Ansparphase beginnt. PFLICHT für die Serie "marketReturn": ' +
+        'echte Monatsrenditen hängen an echten Monaten, und ohne Anker gäbe es keinen ' +
+        'ehrlichen Vergleich. Ohne Startjahr bleibt die Kurve leer.',
+    ),
 })
 
 /** Die gemeinsame Eingabe aller rechnenden Werkzeuge. */

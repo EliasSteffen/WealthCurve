@@ -33,6 +33,10 @@ const config = (o: Overrides = {}): SimulationConfig => ({
     withdrawalYears: o.withdrawalYears ?? 0,
     withdrawalStrategyId: o.withdrawalStrategyId ?? 'fixedAmount',
     amountsInflationAdjusted: o.amountsInflationAdjusted ?? false,
+    // Die Zeitachse ist reine Beschriftung - die Rechnung liest sie nie.
+    timeAxis: 'relative',
+    startAge: null,
+    startYear: null,
   },
 })
 

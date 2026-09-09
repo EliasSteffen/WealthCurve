@@ -1,5 +1,6 @@
 import { selectChartStyle, selectProjection } from '../core/derive'
 import { actions } from '../core/state'
+import { effectiveMode } from '../core/timeAxis'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTheme } from '../hooks/useTheme'
 import { useT } from '../react/localeContext'
@@ -41,6 +42,19 @@ export function Dashboard() {
   const chartStyle = useSelector(selectChartStyle)
 
   const visibleCount = scenarios.filter((s) => s.visible).length
+
+  /*
+   * Überschrift der Zeitachse.
+   *
+   * Folgt dem WIRKSAMEN Modus, nicht dem gewählten: stünde „Alter" an der
+   * Achse, ohne dass ein Alter gesetzt ist, beschriftete man sie mit einer
+   * Unwahrheit - die Zahlen wären weiterhin die rohen Indizes.
+   */
+  const achsenTitel = {
+    relative: t('chart.years', 'Jahre'),
+    age: t('chart.age', 'Alter'),
+    calendar: t('chart.calendar', 'Jahr'),
+  }[effectiveMode(model)]
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -91,6 +105,8 @@ export function Dashboard() {
                   style={chartStyle}
                   primaryKey={projection.lines[0]?.key}
                   retirementYear={projection.retirementYear}
+                  yearLabels={projection.yearLabels}
+                  axisTitle={achsenTitel}
                 />
                 <figcaption className="shrink-0">
                   <ChartLegend
@@ -111,7 +127,12 @@ export function Dashboard() {
           </Card>
 
           <div className="shrink-0">
-            <DataTable rows={projection.rows} series={projection.lines} />
+            <DataTable
+              rows={projection.rows}
+              series={projection.lines}
+              yearLabels={projection.yearLabels}
+              yearHeading={achsenTitel}
+            />
           </div>
         </main>
       </div>

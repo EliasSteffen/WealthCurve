@@ -9,7 +9,8 @@ import {
   type TimelineFieldId,
 } from './domain/parameters'
 import { DEFAULT_ENABLED_SERIES, SERIES } from './domain/series'
-import type { MarketSeries, ModelSettings } from './domain/types'
+import type { MarketSeries, ModelSettings, TimeAxisMode } from './domain/types'
+import { sanitizeStartAge, sanitizeStartYear } from './timeAxis'
 import { SLOT_COUNT, allocateSlot, type ColorSlot } from './palette'
 import { SETTINGS_CATEGORY_IDS, type SettingsCategoryId } from './settings/categories'
 
@@ -104,6 +105,9 @@ export const MAX_SCENARIOS = SLOT_COUNT
  * nicht mehr zu trennen - siehe palette.ts.
  */
 export const MAX_MARKETS = 4
+
+/** Die erlaubten Beschriftungen der Zeitachse - fuer die Pruefung beim Einlesen. */
+export const TIME_AXIS_MODES: readonly TimeAxisMode[] = ['relative', 'age', 'calendar']
 
 /* ------------------------------------------------------------------ Actions */
 
@@ -264,7 +268,16 @@ export function reducer(state: AppState, action: Action): AppState {
     }
 
     case 'model/set':
-      return { ...state, model: action.model }
+      return {
+        ...state,
+        model: {
+          ...action.model,
+          // Ein geleertes Zahlenfeld liefert NaN. Hier wird daraus null, also
+          // "kein Anker" - genau das, was das Leeren bedeuten soll.
+          startAge: sanitizeStartAge(action.model.startAge),
+          startYear: sanitizeStartYear(action.model.startYear),
+        },
+      }
 
     case 'model/setTimeline':
       return {
@@ -359,7 +372,17 @@ export function deserialize(raw: string): AppState | null {
       activeScenarioId: scenarios.some((s) => s.id === parsed.activeScenarioId)
         ? parsed.activeScenarioId!
         : scenarios[0].id,
-      model: { ...base.model, ...parsed.model },
+      model: {
+        ...base.model,
+        ...parsed.model,
+        // Fremdes JSON darf keinen Anker jenseits der Grenzen setzen - ein
+        // Startjahr von 1e9 machte jede Achsenbeschriftung unlesbar.
+        timeAxis: TIME_AXIS_MODES.includes(parsed.model?.timeAxis as TimeAxisMode)
+          ? (parsed.model?.timeAxis as TimeAxisMode)
+          : base.model.timeAxis,
+        startAge: sanitizeStartAge(parsed.model?.startAge ?? null),
+        startYear: sanitizeStartYear(parsed.model?.startYear ?? null),
+      },
       // Nur bekannte Kategorien uebernehmen - eine erfundene ID bliebe sonst
       // fuer immer im Zustand stehen und liesse sich durch nichts mehr loesen.
       collapsedCategories: Array.isArray(parsed.collapsedCategories)

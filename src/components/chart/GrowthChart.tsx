@@ -25,6 +25,10 @@ interface GrowthChartProps {
   readonly primaryKey?: string
   /** Jahr des Phasenwechsels; 0 oder undefined blendet die Markierung aus. */
   readonly retirementYear?: number
+  /** Beschriftung je Jahres-Index aus der Projektion - „12", „mit 42", „2007". */
+  readonly yearLabels?: readonly string[]
+  /** Überschrift der Achse; folgt der gewählten Beschriftung. */
+  readonly axisTitle?: string
 }
 
 // Recharts typisiert Label-Koordinaten als string | number.
@@ -41,9 +45,14 @@ export function GrowthChart({
   style,
   primaryKey,
   retirementYear,
+  yearLabels,
+  axisTitle,
 }: GrowthChartProps) {
   const t = useT()
   const lastIndex = rows.length - 1
+  // Die Achse bleibt numerisch - sonst verlöre die Referenzlinie ihren Bezug.
+  // Nur die Beschriftung wird ersetzt.
+  const tickText = (year: number) => yearLabels?.[year] ?? String(year)
 
   // Bei Amplitude 0 die eingebaute Kurve nehmen - der Skizzenpfad kostet sonst
   // ohne Wirkung Rechenzeit.
@@ -107,11 +116,12 @@ export function GrowthChart({
             axisLine={{ stroke: 'var(--axis)' }}
             tick={tick}
             minTickGap={24}
+            tickFormatter={tickText}
             // Ohne das fällt Jahr 0 weg, obwohl die Daten dort beginnen.
             interval="preserveStartEnd"
           >
             <Label
-              value={t('chart.years', 'Jahre')}
+              value={axisTitle ?? t('chart.years', 'Jahre')}
               position="insideBottom"
               offset={-12}
               style={{ fill: 'var(--text-muted)', fontSize: style.axis.fontSize }}
@@ -145,7 +155,7 @@ export function GrowthChart({
           ) : null}
 
           <Tooltip
-            content={<ChartTooltip series={series} />}
+            content={<ChartTooltip series={series} yearLabels={yearLabels} />}
             cursor={{ stroke: 'var(--axis)', strokeWidth: 1 }}
           />
 

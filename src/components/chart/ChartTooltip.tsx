@@ -12,6 +12,8 @@ interface ChartTooltipProps {
   readonly label?: string | number
   readonly payload?: readonly TooltipPayloadEntry[]
   readonly series: readonly ProjectionLine[]
+  /** Beschriftung je Jahres-Index; ohne sie steht der rohe Index da. */
+  readonly yearLabels?: readonly string[]
 }
 
 /**
@@ -19,7 +21,7 @@ interface ChartTooltipProps {
  * einzelne Linie treffen. Der Wert führt, der Serienname folgt: der Leser hat
  * die Serie schon und will die Zahl.
  */
-export function ChartTooltip({ active, label, payload, series }: ChartTooltipProps) {
+export function ChartTooltip({ active, label, payload, series, yearLabels }: ChartTooltipProps) {
   const labelOf = useSeriesLabel()
   if (!active || !payload?.length) return null
 
@@ -31,10 +33,21 @@ export function ChartTooltip({ active, label, payload, series }: ChartTooltipPro
 
   if (rows.length === 0) return null
 
+  const beschriftung = yearLabels?.[Number(label)]
+  const kopfzeile =
+    beschriftung !== undefined && beschriftung !== String(label)
+      ? beschriftung
+      : `Jahr ${String(label)}`
+
   return (
     <div className="rounded-lg border border-[var(--hairline)] bg-[var(--surface-1)] px-3 py-2 shadow-lg">
       <p className="mb-1.5 text-xs font-semibold text-[var(--text-primary)]">
-        Jahr {String(label)}
+        {/*
+          Weicht die Beschriftung vom Index ab, ist sie absolut (Alter oder
+          Kalenderjahr) und spricht für sich - „Jahr 2007" wäre schlicht falsch.
+          Sonst braucht die nackte Zahl das Wort davor.
+        */}
+        {kopfzeile}
       </p>
       <ul className="space-y-1">
         {rows.map(({ series: s, value }) => (
