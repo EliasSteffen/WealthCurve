@@ -15,6 +15,7 @@ import { SummaryStats } from './SummaryStats'
 import { VideoDialog } from './video/VideoDialog'
 import { ThemeToggle } from './ThemeToggle'
 import { Card } from './ui/Card'
+import { Logo } from './ui/Logo'
 
 /** Ab hier ist Platz für eine dauerhaft sichtbare Seitenspalte. */
 const DESKTOP = '(min-width: 1024px)'
@@ -59,13 +60,18 @@ export function Dashboard() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[var(--hairline)] px-4 py-3 lg:px-6">
-        <div className="min-w-0">
-          <h1 className="truncate text-base font-semibold text-[var(--text-primary)] lg:text-lg">
-            {t('app.title', 'Zinseszins')}
-          </h1>
-          <p className="hidden text-xs text-[var(--text-secondary)] sm:block">
-            {t('app.subtitle', 'Wie sich Sparrate, Rendite und Zeit auf das Vermögen auswirken.')}
-          </p>
+        <div className="flex min-w-0 items-center gap-2.5">
+          {/* Die Marke steht neben dem Namen, nicht darüber: die Kopfzeile ist
+              auf kleinen Geräten nur eine Zeile hoch. */}
+          <Logo size={26} />
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-semibold text-[var(--text-primary)] lg:text-lg">
+              {t('app.title', 'Zinseszins')}
+            </h1>
+            <p className="hidden text-xs text-[var(--text-secondary)] sm:block">
+              {t('app.subtitle', 'Wie sich Sparrate, Rendite und Zeit auf das Vermögen auswirken.')}
+            </p>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <button
