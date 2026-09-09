@@ -42,6 +42,7 @@
 
 - [ ] Die kategorien der einstellungen sind scheiße. sie sind super unübersichtlich kategoriesiert.
 - [ ] In dem Video den Start der Auszahlung mit anzeigen, falls es auszahlungen geben soll.
+- [ ] Logo für die Web-App
 
 ## Erledigt in dieser Runde
 
