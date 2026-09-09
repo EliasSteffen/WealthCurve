@@ -419,6 +419,7 @@ server.registerTool(
       chartStyleId: 'clean',
       sidebarCollapsed: false,
       collapsedCategories: [],
+      settingsView: 'kompakt',
       markets: [],
     })
     return { content: [{ type: 'text', text: erzeugt }] }

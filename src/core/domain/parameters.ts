@@ -32,6 +32,8 @@ export interface ParamDefinition {
    * ein neuer Parameter landete sonst still in der falschen Karte.
    */
   readonly category: SettingsCategoryId
+  /** Nur in der vollen Ansicht sichtbar - selten angefasst, nicht unwichtig. */
+  readonly advanced?: boolean
 }
 
 export const PARAMETERS = {
@@ -54,7 +56,7 @@ export const PARAMETERS = {
     step: 0.1,
     defaultValue: 7,
     group: 'basis',
-    category: 'generell',
+    category: 'kapital',
   },
   initialCapital: {
     label: 'Startkapital',
@@ -64,7 +66,7 @@ export const PARAMETERS = {
     step: 500,
     defaultValue: 0,
     group: 'basis',
-    category: 'generell',
+    category: 'kapital',
   },
   inflationRate: {
     label: 'Inflation p. a.',
@@ -75,7 +77,8 @@ export const PARAMETERS = {
     step: 0.1,
     defaultValue: 2,
     group: 'annahmen',
-    category: 'generell',
+    category: 'annahmen',
+    advanced: true,
   },
   monthlyWithdrawal: {
     label: 'Monatliche Entnahme',
@@ -108,7 +111,8 @@ export const PARAMETERS = {
     step: 0.1,
     defaultValue: 2,
     group: 'annahmen',
-    category: 'generell',
+    category: 'annahmen',
+    advanced: true,
   },
 } as const satisfies Record<string, ParamDefinition>
 

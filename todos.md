@@ -1,35 +1,5 @@
 ## Offen
 
-- [ ] **1. entferne co-authored by claude aus allen commits!** — vorbereitet,
-      aber blockiert: der Berechtigungs-Klassifikator lässt `git filter-repo` in
-      meiner Sitzung nicht zu. `origin` hat noch keine Branches, ein Force-Push
-      entfällt also; betroffen sind 7 Commits ab `7d80b81`.
-
-      ```bash
-      git branch backup/vor-rewrite            # Sicherung
-      git filter-repo --force --commit-callback '
-      import re
-      commit.message = re.sub(rb"(?im)^co-authored-by:.*claude.*(\r?\n)?", b"", commit.message).rstrip() + b"\n"
-      '
-      # filter-repo entfernt danach den Remote:
-      git remote add origin https://github.com/EliasSteffen/WealthCurve.git
-      ```
-
-- [ ] **anfangsalter eingeben können** (sodass die jahre nicht mit 1 anfangen,
-      sondern mit dem tatsächlichen alter). dann lässt sich auch genauer angeben,
-      wann man mit dem auszahlen beginnen möchte (z. B. im alter von 65 jahren.)
-      dies ist natürlich eine weitere option für die anzeige. also auch eine
-      darstellungs option (relative or absolute years zb)
-
-      Umfang: `startAge` gehört global in `ModelSettings`, wie die übrige
-      Zeitachse. Es bleibt reine Beschriftung — `year` ist ein Index, die
-      Rechnung ändert sich nicht. Betroffen sind vier Anzeigestellen:
-      `GrowthChart`, `DataTable`, `projectionToCsv` und `drawFrame`. Wichtig,
-      dass es eine Darstellungsoption bleibt, sonst müsste jede Serie davon
-      wissen.
-
-      Außerdem sollte es auch die möglichkeit geben ein startjahr einzugeben. sodass man sagen könnte: wenn du 1960 angefangen hättest in apple zu investieren, würde das ganze nun so aussehen ... verstehst du, was ich meine? sonst ist der market asset vergleich komisch, da wir ja nicht vorrausschauen können, wie sich der wert entwickeln wird. daher kann eine aktie nur dann mit angezeigt werden, wenn ein startjahr angegeben wurde.
-
 - [ ] `{{rendite}}` im Video nennt immer das erste sichtbare Szenario. Bei zwei
       Szenarien mit verschiedenen Renditen ist das irreführend — ein
       `{{renditen}}` analog zu `{{szenarien}}` wäre die Entsprechung.
@@ -40,11 +10,26 @@
 
 - [ ] Farbe soll wählbar sein
 
-- [ ] Die kategorien der einstellungen sind scheiße. sie sind super unübersichtlich kategoriesiert.
 - [ ] In dem Video den Start der Auszahlung mit anzeigen, falls es auszahlungen geben soll.
 - [ ] Logo für die Web-App
 
 ## Erledigt in dieser Runde
+
+- [x] **1. co-authored by aus allen Commits entfernen** — von dir selbst
+      erledigt. Nachgeprüft: eine Suche über alle 11 Commit-Bodies nach
+      `co-author`, `noreply@anthropic` und `claude` findet nichts, und die SHAs
+      haben sich geändert. Kein Commit nötig.
+- [x] **2. anfangsalter oder anfangsjahr als option** — `9b4b53b`. Die Achse
+      beschriftet wahlweise mit Lebensalter oder Kalenderjahr. Reine Anzeige:
+      `year` bleibt überall ein Index, ein Test hält fest, dass das Umschalten
+      keine Zahl ändert. Fürs Startjahr gilt deine Regel: ohne Anker zeichnet
+      der Kursverlauf nichts, mit Anker springt er um die passenden Monate in
+      die Historie — „ab wann hätte man gehalten?".
+- [x] **3. einstellungen anders kategorisieren und darstellen** — „Generell"
+      war mit neun Bedienelementen zum Sammelbecken geworden. Jetzt acht
+      schlanke Kategorien mit höchstens vier Elementen, dazu ein Schalter
+      Kompakt/Alles. Kompakt zeigt fünf Karten, „Alles" alle acht; die Suche
+      hebt die Einschränkung auf, weil wer sucht finden will.
 
 - [x] **Knöpfe in der Seitenspalte nicht klickbar** — es waren zwei getrennte
       Fehler, der zweite war der eigentliche:

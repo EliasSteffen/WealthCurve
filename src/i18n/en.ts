@@ -16,6 +16,9 @@ export const en: Catalog = {
   'app.video': 'Video',
 
   // Kategorien
+  'settings.view.kompakt': 'Compact',
+  'settings.view.alles': 'All',
+  'settings.view': 'View',
   'settings.search': 'Search settings …',
   'settings.clearSearch': 'Clear search',
   'settings.empty': 'Nothing found for “{query}”.',
@@ -23,14 +26,20 @@ export const en: Catalog = {
   'settings.close': 'Hide settings',
   'category.szenarien.label': 'Scenarios',
   'category.szenarien.hint': 'Create, compare, show and hide',
-  'category.generell.label': 'General',
-  'category.generell.hint': 'Return, starting capital, compounding',
+  'category.kapital.label': 'Capital',
+  'category.kapital.hint': 'Return and starting capital',
   'category.einzahlung.label': 'Contributions',
   'category.einzahlung.hint': 'Monthly amount and saving phase',
   'category.auszahlung.label': 'Withdrawals',
   'category.auszahlung.hint': 'Payout and withdrawal phase',
   'category.kurven.label': 'Curves',
   'category.kurven.hint': 'Which series, which style',
+  'category.zeit.label': 'Time',
+  'category.zeit.hint': 'Age, start year, axis labelling',
+  'category.wertpapiere.label': 'Securities',
+  'category.wertpapiere.hint': 'Load real price histories',
+  'category.annahmen.label': 'Assumptions',
+  'category.annahmen.hint': 'Inflation, savings rate, conventions',
 
   // Szenarien
   'scenario.add': 'Add scenario',

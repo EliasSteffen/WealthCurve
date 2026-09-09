@@ -117,8 +117,8 @@ describe('Eingeklappte Kategorien', () => {
   it('überlebt die Serialisierung', () => {
     // Der eigentliche Grund, warum der Zustand im Store liegt: das Bottom-Sheet
     // montiert das Panel neu, lokaler State wäre danach vergessen.
-    const state = reducer(createInitialState(), actions.toggleSettingsCategory('generell'))
-    expect(deserialize(serialize(state))!.collapsedCategories).toEqual(['generell'])
+    const state = reducer(createInitialState(), actions.toggleSettingsCategory('kapital'))
+    expect(deserialize(serialize(state))!.collapsedCategories).toEqual(['kapital'])
   })
 
   it('lässt erfundene Kategorien nicht in den Zustand', () => {

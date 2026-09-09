@@ -22,6 +22,8 @@ export interface SettingsEntry {
   readonly category: SettingsCategoryId
   readonly label: string
   readonly keywords: readonly string[]
+  /** Nur in der vollen Ansicht sichtbar - selten angefasst, nicht unwichtig. */
+  readonly advanced?: boolean
 }
 
 /** Von Hand gepflegt, weil diese Schalter kein eigenes Registry haben. */
@@ -34,19 +36,22 @@ const STATISCH: readonly SettingsEntry[] = [
   },
   {
     id: 'market',
-    category: 'kurven',
+    category: 'wertpapiere',
+    advanced: true,
     label: 'Wertpapier',
     keywords: ['aktie', 'etf', 'kurs', 'yahoo', 'symbol', 'ticker', 'index', 'historie'],
   },
   {
     id: 'style',
     category: 'kurven',
+    advanced: true,
     label: 'Darstellung',
     keywords: ['stil', 'aussehen', 'design', 'look', 'gezeichnet', 'skizze', 'minimal'],
   },
   {
     id: 'model:compounding',
-    category: 'generell',
+    category: 'annahmen',
+    advanced: true,
     label: 'Zinsmodus',
     keywords: ['zins', 'effektiv', 'nominal', 'jährlich', 'verzinsung', 'konvention'],
   },
@@ -55,12 +60,14 @@ const STATISCH: readonly SettingsEntry[] = [
     // wann die Sparrate fließt, nicht wie verzinst wird.
     id: 'model:timing',
     category: 'einzahlung',
+    advanced: true,
     label: 'Zeitpunkt der Sparrate',
     keywords: ['vorschüssig', 'nachschüssig', 'monatsanfang', 'monatsende', 'timing'],
   },
   {
     id: 'model:timeAxis',
-    category: 'generell',
+    category: 'zeit',
+    advanced: true,
     label: 'Zeitachse, Alter und Startjahr',
     keywords: [
       'alter',
@@ -75,7 +82,8 @@ const STATISCH: readonly SettingsEntry[] = [
   },
   {
     id: 'model:amountsInflationAdjusted',
-    category: 'generell',
+    category: 'annahmen',
+    advanced: true,
     label: 'Beträge inflationsbereinigt',
     keywords: ['inflation', 'kaufkraft', 'real', 'nominal', 'teuerung', 'betrag'],
   },
@@ -97,6 +105,7 @@ export function buildSettingsIndex(): readonly SettingsEntry[] {
       return {
         id: `param:${id}`,
         category: def.category,
+        advanced: def.advanced,
         label: def.label,
         keywords: [def.hint ?? '', def.group, id],
       }
@@ -106,6 +115,7 @@ export function buildSettingsIndex(): readonly SettingsEntry[] {
       return {
         id: `timeline:${id}`,
         category: def.category,
+        advanced: def.advanced,
         label: def.label,
         keywords: [def.hint ?? '', 'laufzeit', 'jahre', id],
       }
@@ -119,6 +129,7 @@ export function buildSettingsIndex(): readonly SettingsEntry[] {
     ...CHART_STYLES.map((s) => ({
       id: 'style',
       category: 'kurven' as SettingsCategoryId,
+      advanced: true,
       label: s.label,
       keywords: [s.description, 'stil'],
     })),
@@ -169,4 +180,23 @@ export function matchingCategories(
   const kategorien = new Set<SettingsCategoryId>()
   for (const entry of index) if (matches.has(entry.id)) kategorien.add(entry.category)
   return kategorien
+}
+
+/**
+ * Die IDs, die in der kompakten Ansicht sichtbar bleiben.
+ *
+ * Gibt eine Menge zurueck, keine `null` - damit laeuft sie durch dieselbe
+ * Filterung wie ein Suchergebnis, und die Anzeige-Komponenten brauchen keinen
+ * zweiten Weg zu kennen.
+ */
+export function compactIds(index: readonly SettingsEntry[]): ReadonlySet<string> {
+  const fortgeschritten = new Set(
+    SETTINGS_CATEGORIES.filter((c) => c.advanced).map((c) => c.id),
+  )
+  const sichtbar = new Set<string>()
+  for (const entry of index) {
+    if (entry.advanced || fortgeschritten.has(entry.category)) continue
+    sichtbar.add(entry.id)
+  }
+  return sichtbar
 }

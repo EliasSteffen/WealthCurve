@@ -34,8 +34,8 @@ describe('Suchindex', () => {
     const kategorieVon = (id: string) => index.find((e) => e.id === id)?.category
     expect(kategorieVon('param:monthlyContribution')).toBe('einzahlung')
     expect(kategorieVon('param:monthlyWithdrawal')).toBe('auszahlung')
-    expect(kategorieVon('param:annualRate')).toBe('generell')
-    expect(kategorieVon('param:initialCapital')).toBe('generell')
+    expect(kategorieVon('param:annualRate')).toBe('kapital')
+    expect(kategorieVon('param:initialCapital')).toBe('kapital')
   })
 
   it('legt die Zeitraum-Felder zu ihrer jeweiligen Phase', () => {
@@ -96,7 +96,7 @@ describe('matchingCategories', () => {
 
   it('reduziert auf die Kategorien mit Treffern', () => {
     const kategorien = matchingCategories(index, matchSettings(index, 'Zinsmodus'))
-    expect([...kategorien]).toEqual(['generell'])
+    expect([...kategorien]).toEqual(['annahmen'])
   })
 
   it('liefert bei fehlendem Treffer gar keine Kategorie', () => {

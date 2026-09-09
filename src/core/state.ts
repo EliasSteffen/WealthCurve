@@ -12,7 +12,12 @@ import { DEFAULT_ENABLED_SERIES, SERIES } from './domain/series'
 import type { MarketSeries, ModelSettings, TimeAxisMode } from './domain/types'
 import { sanitizeStartAge, sanitizeStartYear } from './timeAxis'
 import { SLOT_COUNT, allocateSlot, type ColorSlot } from './palette'
-import { SETTINGS_CATEGORY_IDS, type SettingsCategoryId } from './settings/categories'
+import {
+  SETTINGS_CATEGORY_IDS,
+  SETTINGS_VIEWS,
+  type SettingsCategoryId,
+  type SettingsView,
+} from './settings/categories'
 
 export interface Scenario {
   readonly id: string
@@ -42,6 +47,13 @@ export interface AppState {
    * Mal vergessen.
    */
   readonly collapsedCategories: readonly SettingsCategoryId[]
+  /**
+   * Wie viel die Einstellungen zeigen.
+   *
+   * "kompakt" ist die Vorgabe - die Karten, an denen man wirklich dreht.
+   * Der Rest ist einen Klick entfernt, nicht verschwunden.
+   */
+  readonly settingsView: SettingsView
   /**
    * Geladene Kursverlaeufe fuer die Serie "Kursverlauf" - einer je Wertpapier.
    *
@@ -91,6 +103,7 @@ export function createInitialState(): AppState {
     chartStyleId: DEFAULT_CHART_STYLE_ID,
     sidebarCollapsed: false,
     collapsedCategories: [],
+    settingsView: 'kompakt',
     markets: [],
   }
 }
@@ -128,6 +141,7 @@ export type Action =
   | { type: 'market/remove'; symbol: string }
   | { type: 'sidebar/setCollapsed'; collapsed: boolean }
   | { type: 'settings/toggleCategory'; id: SettingsCategoryId }
+  | { type: 'settings/setView'; view: SettingsView }
   | { type: 'state/replace'; state: AppState }
   | { type: 'state/reset' }
 
@@ -171,6 +185,7 @@ export const actions = {
     type: 'settings/toggleCategory',
     id,
   }),
+  setSettingsView: (view: SettingsView): Action => ({ type: 'settings/setView', view }),
   replaceState: (state: AppState): Action => ({ type: 'state/replace', state }),
   reset: (): Action => ({ type: 'state/reset' }),
 }
@@ -315,6 +330,9 @@ export function reducer(state: AppState, action: Action): AppState {
         ? state
         : { ...state, sidebarCollapsed: action.collapsed }
 
+    case 'settings/setView':
+      return state.settingsView === action.view ? state : { ...state, settingsView: action.view }
+
     case 'settings/toggleCategory': {
       // Gleiche Form wie 'series/toggle': unbekannte IDs prallen ab, statt eine
       // Kategorie zu erfinden, die es nicht gibt.
@@ -390,6 +408,9 @@ export function deserialize(raw: string): AppState | null {
             SETTINGS_CATEGORY_IDS.includes(id as SettingsCategoryId),
           )
         : base.collapsedCategories,
+      settingsView: SETTINGS_VIEWS.includes(parsed.settingsView as SettingsView)
+        ? (parsed.settingsView as SettingsView)
+        : base.settingsView,
       // Eine Kursreihe ohne Renditen zeichnet nichts und faende sich nie wieder
       // aus dem Zustand heraus - deshalb hier aussortieren statt aufheben.
       markets: Array.isArray(parsed.markets)

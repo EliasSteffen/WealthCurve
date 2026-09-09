@@ -4,6 +4,7 @@ import { selectActiveParamIds, selectActiveScenario, selectProjection } from '..
 import {
   SETTINGS_CATEGORIES,
   buildSettingsIndex,
+  compactIds,
   matchSettings,
   matchingCategories,
   type SettingsCategoryId,
@@ -26,6 +27,7 @@ import { ParameterPanel } from '../ParameterPanel'
 import { ScenarioList } from '../ScenarioList'
 import { SeriesPanel } from '../SeriesPanel'
 import { Card } from '../ui/Card'
+import { SegmentedControl } from '../ui/SegmentedControl'
 
 /**
  * Der komplette Einstellungsbereich - genau einmal definiert.
@@ -53,9 +55,21 @@ export function SettingsPanel() {
   // Aus dem Store, nicht aus lokalem State: das Bottom-Sheet montiert dieses
   // Panel bei jedem Öffnen neu und hätte den Zustand sonst jedes Mal vergessen.
   const zu = useSelector((s) => s.collapsedCategories)
+  const ansicht = useSelector((s) => s.settingsView)
 
   const index = useMemo(() => buildSettingsIndex(), [])
-  const matches = useMemo(() => matchSettings(index, query), [index, query])
+  const suche = useMemo(() => matchSettings(index, query), [index, query])
+  /*
+   * Die kompakte Ansicht laeuft durch dieselbe Filterung wie die Suche.
+   *
+   * Sie liefert eine Menge erlaubter IDs statt `null` - damit brauchen die
+   * Anzeige-Komponenten keinen zweiten Weg zu kennen. Bei aktiver Suche
+   * gewinnt die Suche: wer sucht, will finden, nicht gefiltert werden.
+   */
+  const matches = useMemo(
+    () => (suche !== null ? suche : ansicht === 'kompakt' ? compactIds(index) : null),
+    [suche, ansicht, index],
+  )
   const sichtbareKategorien = useMemo(
     () => matchingCategories(index, matches),
     [index, matches],
@@ -78,14 +92,16 @@ export function SettingsPanel() {
       matches === null || matches.has('scenarios') ? (
         <ScenarioList scenarios={scenarios} activeScenarioId={activeScenarioId} />
       ) : null,
-    generell: (
+    kapital: regler('kapital'),
+    zeit: <TimeAxisControls value={model} onChange={setModel} matches={matches} />,
+    annahmen: (
       <div className="space-y-5">
-        {regler('generell')}
+        {regler('annahmen')}
         <CompoundingControl value={model} onChange={setModel} matches={matches} />
         <InflationAmountsControl value={model} onChange={setModel} matches={matches} />
-        <TimeAxisControls value={model} onChange={setModel} matches={matches} />
       </div>
     ),
+    wertpapiere: <MarketPanel matches={matches} />,
     einzahlung: (
       <div className="space-y-5">
         {regler('einzahlung')}
@@ -122,7 +138,6 @@ export function SettingsPanel() {
           capacity={capacity}
           matches={matches}
         />
-        <MarketPanel matches={matches} />
         <ChartStyleControl
           value={chartStyleId}
           onChange={(id) => dispatch(actions.setChartStyle(id))}
@@ -162,6 +177,31 @@ export function SettingsPanel() {
         ) : null}
       </div>
 
+      {/*
+        Kompakt zeigt die Karten, an denen man wirklich dreht. Bei aktiver Suche
+        hat der Schalter keine Wirkung und verschwindet deshalb - ein Regler,
+        der nichts tut, ist schlimmer als keiner.
+      */}
+      {suche === null ? (
+        <SegmentedControl
+          label={t('settings.view', 'Ansicht')}
+          value={ansicht}
+          onChange={(view) => dispatch(actions.setSettingsView(view))}
+          options={[
+            {
+              value: 'kompakt' as const,
+              label: t('settings.view.kompakt', 'Kompakt'),
+              hint: 'Nur die Einstellungen, die man häufig anfasst.',
+            },
+            {
+              value: 'alles' as const,
+              label: t('settings.view.alles', 'Alles'),
+              hint: 'Zusätzlich Zeit, Wertpapiere und Rechenannahmen.',
+            },
+          ]}
+        />
+      ) : null}
+
       {leer ? (
         <p className="px-1 py-6 text-center text-xs text-[var(--text-muted)]">
           {t('settings.empty', `Nichts gefunden für „${query}“.`, { query })}
@@ -173,7 +213,7 @@ export function SettingsPanel() {
         const inhalt = inhalte[kategorie.id]
         if (!inhalt) return null
         // Bei aktiver Suche immer offen - sonst müsste man den Treffer erst aufklappen.
-        const offen = matches !== null || !zu.includes(kategorie.id)
+        const offen = suche !== null || !zu.includes(kategorie.id)
 
         return (
           <Card key={kategorie.id} padded={false}>
@@ -181,7 +221,7 @@ export function SettingsPanel() {
               type="button"
               onClick={() => dispatch(actions.toggleSettingsCategory(kategorie.id))}
               aria-expanded={offen}
-              disabled={matches !== null}
+              disabled={suche !== null}
               className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left disabled:cursor-default"
             >
               <span>
