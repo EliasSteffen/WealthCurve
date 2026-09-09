@@ -103,30 +103,45 @@ describe('Reducer-Identität', () => {
   })
 })
 
-describe('Eingeklappte Kategorien', () => {
-  it('startet mit lauter offenen Kategorien', () => {
-    expect(createInitialState().collapsedCategories).toEqual([])
+describe('Eingeklappte Karten', () => {
+  it('startet mit lauter offenen Karten', () => {
+    expect(createInitialState().collapsedCards).toEqual([])
   })
 
   it('klappt zu und wieder auf', () => {
-    const zu = reducer(createInitialState(), actions.toggleSettingsCategory('auszahlung'))
-    expect(zu.collapsedCategories).toEqual(['auszahlung'])
-    expect(reducer(zu, actions.toggleSettingsCategory('auszahlung')).collapsedCategories).toEqual([])
+    const zu = reducer(createInitialState(), actions.toggleSettingsCard('global:auszahlung'))
+    expect(zu.collapsedCards).toEqual(['global:auszahlung'])
+    expect(reducer(zu, actions.toggleSettingsCard('global:auszahlung')).collapsedCards).toEqual([])
+  })
+
+  it('hält die beiden Hälften einer Kategorie auseinander', () => {
+    // "Einzahlung" gibt es zweimal - die eine zuzuklappen darf die andere
+    // nicht mitnehmen.
+    const zu = reducer(createInitialState(), actions.toggleSettingsCard('scenario:einzahlung'))
+    expect(zu.collapsedCards).toEqual(['scenario:einzahlung'])
+    expect(zu.collapsedCards).not.toContain('global:einzahlung')
   })
 
   it('überlebt die Serialisierung', () => {
     // Der eigentliche Grund, warum der Zustand im Store liegt: das Bottom-Sheet
     // montiert das Panel neu, lokaler State wäre danach vergessen.
-    const state = reducer(createInitialState(), actions.toggleSettingsCategory('kapital'))
-    expect(deserialize(serialize(state))!.collapsedCategories).toEqual(['kapital'])
+    const state = reducer(createInitialState(), actions.toggleSettingsCard('scenario:kapital'))
+    expect(deserialize(serialize(state))!.collapsedCards).toEqual(['scenario:kapital'])
   })
 
-  it('lässt erfundene Kategorien nicht in den Zustand', () => {
+  it('lässt erfundene Karten nicht in den Zustand', () => {
     const state = createInitialState()
     // @ts-expect-error - genau der Fall, den der Reducer abfangen soll
-    expect(reducer(state, actions.toggleSettingsCategory('gibt-es-nicht'))).toBe(state)
-    const fremd = deserialize('{"scenarios":[{"label":"X"}],"collapsedCategories":["quatsch"]}')
-    expect(fremd!.collapsedCategories).toEqual([])
+    expect(reducer(state, actions.toggleSettingsCard('gibt-es-nicht'))).toBe(state)
+    const fremd = deserialize('{"scenarios":[{"label":"X"}],"collapsedCards":["quatsch"]}')
+    expect(fremd!.collapsedCards).toEqual([])
+  })
+
+  it('verwirft die alten Schlüssel ohne Bereich', () => {
+    // Aus einem gespeicherten Zustand von vorher: "kapital" ohne Bereich meint
+    // keine Karte mehr. Alles offen ist die richtige Antwort darauf.
+    const alt = deserialize('{"scenarios":[{"label":"X"}],"collapsedCategories":["kapital"]}')
+    expect(alt!.collapsedCards).toEqual([])
   })
 })
 

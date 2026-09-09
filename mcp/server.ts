@@ -418,7 +418,7 @@ server.registerTool(
       encoding: 'auto',
       chartStyleId: 'clean',
       sidebarCollapsed: false,
-      collapsedCategories: [],
+      collapsedCards: [],
       settingsView: 'kompakt',
       markets: [],
     })

@@ -41,6 +41,15 @@ export const en: Catalog = {
   'category.annahmen.label': 'Assumptions',
   'category.annahmen.hint': 'Inflation, savings rate, conventions',
 
+  // Wo eine Einstellung gespeichert wird - die beiden Bereiche im Panel.
+  'scope.scenario.label': 'This scenario only',
+  'scope.scenario.labelNamed': 'Only “{name}”',
+  'scope.scenario.hint':
+    'Saved in the scenario. A second scenario can hold different values here.',
+  'scope.global.label': 'All scenarios',
+  'scope.global.hint':
+    'Applies to every curve in the chart. Without a shared axis there would be nothing to compare.',
+
   // Szenarien
   'scenario.add': 'Add scenario',
   'scenario.duplicate': 'Duplicate',

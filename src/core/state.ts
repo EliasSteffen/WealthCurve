@@ -13,9 +13,9 @@ import type { MarketSeries, ModelSettings, TimeAxisMode } from './domain/types'
 import { sanitizeStartAge, sanitizeStartYear } from './timeAxis'
 import { SLOT_COUNT, allocateSlot, type ColorSlot } from './palette'
 import {
-  SETTINGS_CATEGORY_IDS,
+  SETTINGS_CARD_IDS,
   SETTINGS_VIEWS,
-  type SettingsCategoryId,
+  type SettingsCardId,
   type SettingsView,
 } from './settings/categories'
 
@@ -40,13 +40,17 @@ export interface AppState {
   readonly chartStyleId: string
   readonly sidebarCollapsed: boolean
   /**
-   * Zugeklappte Einstellungs-Kategorien.
+   * Zugeklappte Einstellungs-Karten, als "bereich:kategorie".
    *
    * Gehoert in den Store und nicht in den Komponenten-State: das Bottom-Sheet
    * montiert das Panel bei jedem Oeffnen neu, lokaler State waere danach jedes
    * Mal vergessen.
+   *
+   * Der Schluessel traegt den Bereich mit, weil es "Einzahlung" zweimal gibt -
+   * einmal je Szenario, einmal darueber hinaus. Ohne ihn klappten beide Karten
+   * gemeinsam zu, obwohl sie nichts miteinander zu tun haben.
    */
-  readonly collapsedCategories: readonly SettingsCategoryId[]
+  readonly collapsedCards: readonly SettingsCardId[]
   /**
    * Wie viel die Einstellungen zeigen.
    *
@@ -102,7 +106,7 @@ export function createInitialState(): AppState {
     encoding: 'auto',
     chartStyleId: DEFAULT_CHART_STYLE_ID,
     sidebarCollapsed: false,
-    collapsedCategories: [],
+    collapsedCards: [],
     settingsView: 'kompakt',
     markets: [],
   }
@@ -140,7 +144,7 @@ export type Action =
   | { type: 'market/add'; market: MarketSeries }
   | { type: 'market/remove'; symbol: string }
   | { type: 'sidebar/setCollapsed'; collapsed: boolean }
-  | { type: 'settings/toggleCategory'; id: SettingsCategoryId }
+  | { type: 'settings/toggleCard'; id: SettingsCardId }
   | { type: 'settings/setView'; view: SettingsView }
   | { type: 'state/replace'; state: AppState }
   | { type: 'state/reset' }
@@ -181,8 +185,8 @@ export const actions = {
     type: 'sidebar/setCollapsed',
     collapsed,
   }),
-  toggleSettingsCategory: (id: SettingsCategoryId): Action => ({
-    type: 'settings/toggleCategory',
+  toggleSettingsCard: (id: SettingsCardId): Action => ({
+    type: 'settings/toggleCard',
     id,
   }),
   setSettingsView: (view: SettingsView): Action => ({ type: 'settings/setView', view }),
@@ -333,16 +337,16 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'settings/setView':
       return state.settingsView === action.view ? state : { ...state, settingsView: action.view }
 
-    case 'settings/toggleCategory': {
+    case 'settings/toggleCard': {
       // Gleiche Form wie 'series/toggle': unbekannte IDs prallen ab, statt eine
-      // Kategorie zu erfinden, die es nicht gibt.
-      if (!SETTINGS_CATEGORY_IDS.includes(action.id)) return state
-      const zu = state.collapsedCategories.includes(action.id)
+      // Karte zu erfinden, die es nicht gibt.
+      if (!SETTINGS_CARD_IDS.includes(action.id)) return state
+      const zu = state.collapsedCards.includes(action.id)
       return {
         ...state,
-        collapsedCategories: zu
-          ? state.collapsedCategories.filter((id) => id !== action.id)
-          : [...state.collapsedCategories, action.id],
+        collapsedCards: zu
+          ? state.collapsedCards.filter((id) => id !== action.id)
+          : [...state.collapsedCards, action.id],
       }
     }
 
@@ -401,13 +405,15 @@ export function deserialize(raw: string): AppState | null {
         startAge: sanitizeStartAge(parsed.model?.startAge ?? null),
         startYear: sanitizeStartYear(parsed.model?.startYear ?? null),
       },
-      // Nur bekannte Kategorien uebernehmen - eine erfundene ID bliebe sonst
-      // fuer immer im Zustand stehen und liesse sich durch nichts mehr loesen.
-      collapsedCategories: Array.isArray(parsed.collapsedCategories)
-        ? parsed.collapsedCategories.filter((id): id is SettingsCategoryId =>
-            SETTINGS_CATEGORY_IDS.includes(id as SettingsCategoryId),
+      // Nur bekannte Karten uebernehmen - eine erfundene ID bliebe sonst fuer
+      // immer im Zustand stehen und liesse sich durch nichts mehr loesen. Das
+      // faengt zugleich die alten Schluessel ohne Bereich ab: sie fallen hier
+      // heraus, und alle Karten stehen wieder offen.
+      collapsedCards: Array.isArray(parsed.collapsedCards)
+        ? parsed.collapsedCards.filter((id): id is SettingsCardId =>
+            SETTINGS_CARD_IDS.includes(id as SettingsCardId),
           )
-        : base.collapsedCategories,
+        : base.collapsedCards,
       settingsView: SETTINGS_VIEWS.includes(parsed.settingsView as SettingsView)
         ? (parsed.settingsView as SettingsView)
         : base.settingsView,

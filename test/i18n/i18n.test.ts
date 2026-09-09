@@ -5,7 +5,7 @@ import { CHART_STYLES } from '@/core/chart-style'
 import { PARAM_IDS } from '@/core/domain/parameters'
 import { SERIES } from '@/core/domain/series'
 import { WITHDRAWAL_STRATEGIES } from '@/core/domain/withdrawal'
-import { SETTINGS_CATEGORIES } from '@/core/settings'
+import { SETTINGS_CATEGORIES, SETTINGS_SCOPE_META } from '@/core/settings'
 
 describe('Sprachen', () => {
   it('vergibt eindeutige IDs', () => {
@@ -73,6 +73,15 @@ describe('Katalog-Abdeckung', () => {
       [`category.${c.id}.label`, `category.${c.id}.hint`].filter(fehlt),
     )
     expect(luecken).toEqual([])
+  })
+
+  it('übersetzt beide Einstellungs-Bereiche', () => {
+    const luecken = SETTINGS_SCOPE_META.flatMap((b) =>
+      [`scope.${b.id}.label`, `scope.${b.id}.hint`].filter(fehlt),
+    )
+    expect(luecken).toEqual([])
+    // Der Bereich des Szenarios trägt zusätzlich dessen Namen.
+    expect(fehlt('scope.scenario.labelNamed')).toBe(false)
   })
 
   it('enthält keine leeren Übersetzungen', () => {

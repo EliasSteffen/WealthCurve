@@ -3,7 +3,13 @@ import type { ParamDefinition } from '../domain/parameters'
 import { PARAMETERS, PARAM_IDS, TIMELINE_FIELDS, TIMELINE_FIELD_IDS } from '../domain/parameters'
 import { SERIES } from '../domain/series'
 import { WITHDRAWAL_STRATEGIES } from '../domain/withdrawal'
-import { SETTINGS_CATEGORIES, type SettingsCategoryId } from './categories'
+import {
+  SETTINGS_CATEGORIES,
+  cardId,
+  type SettingsCardId,
+  type SettingsCategoryId,
+  type SettingsScope,
+} from './categories'
 
 /**
  * Suchindex über alle Einstellungen.
@@ -13,13 +19,34 @@ import { SETTINGS_CATEGORIES, type SettingsCategoryId } from './categories'
  * automatisch in Kategorie und Suche auf.
  */
 
-export { SETTINGS_CATEGORIES, SETTINGS_CATEGORY_IDS } from './categories'
-export type { SettingsCategory, SettingsCategoryId } from './categories'
+export {
+  SETTINGS_CARD_IDS,
+  SETTINGS_CATEGORIES,
+  SETTINGS_CATEGORY_IDS,
+  SETTINGS_SCOPES,
+  SETTINGS_SCOPE_META,
+  cardId,
+} from './categories'
+export type {
+  SettingsCardId,
+  SettingsCategory,
+  SettingsCategoryId,
+  SettingsScope,
+  SettingsScopeMeta,
+} from './categories'
 
 export interface SettingsEntry {
   /** Stabile ID, nach der die Oberfläche filtert. */
   readonly id: string
   readonly category: SettingsCategoryId
+  /**
+   * Ob der Wert im Szenario oder darüber hinaus gespeichert wird.
+   *
+   * Für die abgeleiteten Einträge fällt das nicht als Meinung an, sondern
+   * ergibt sich aus der Quelle: PARAMETERS gehört zum Szenario, alles andere
+   * liegt daneben im Zustand.
+   */
+  readonly scope: SettingsScope
   readonly label: string
   readonly keywords: readonly string[]
   /** Nur in der vollen Ansicht sichtbar - selten angefasst, nicht unwichtig. */
@@ -31,12 +58,14 @@ const STATISCH: readonly SettingsEntry[] = [
   {
     id: 'scenarios',
     category: 'szenarien',
+    scope: 'global',
     label: 'Szenarien',
     keywords: ['szenario', 'vergleich', 'variante', 'duplizieren', 'farbe'],
   },
   {
     id: 'market',
     category: 'wertpapiere',
+    scope: 'global',
     advanced: true,
     label: 'Wertpapier',
     keywords: ['aktie', 'etf', 'kurs', 'yahoo', 'symbol', 'ticker', 'index', 'historie'],
@@ -44,6 +73,7 @@ const STATISCH: readonly SettingsEntry[] = [
   {
     id: 'style',
     category: 'kurven',
+    scope: 'global',
     advanced: true,
     label: 'Darstellung',
     keywords: ['stil', 'aussehen', 'design', 'look', 'gezeichnet', 'skizze', 'minimal'],
@@ -51,6 +81,7 @@ const STATISCH: readonly SettingsEntry[] = [
   {
     id: 'model:compounding',
     category: 'annahmen',
+    scope: 'global',
     advanced: true,
     label: 'Zinsmodus',
     keywords: ['zins', 'effektiv', 'nominal', 'jährlich', 'verzinsung', 'konvention'],
@@ -60,6 +91,7 @@ const STATISCH: readonly SettingsEntry[] = [
     // wann die Sparrate fließt, nicht wie verzinst wird.
     id: 'model:timing',
     category: 'einzahlung',
+    scope: 'global',
     advanced: true,
     label: 'Zeitpunkt der Sparrate',
     keywords: ['vorschüssig', 'nachschüssig', 'monatsanfang', 'monatsende', 'timing'],
@@ -67,6 +99,7 @@ const STATISCH: readonly SettingsEntry[] = [
   {
     id: 'model:timeAxis',
     category: 'zeit',
+    scope: 'global',
     advanced: true,
     label: 'Zeitachse, Alter und Startjahr',
     keywords: [
@@ -83,6 +116,7 @@ const STATISCH: readonly SettingsEntry[] = [
   {
     id: 'model:amountsInflationAdjusted',
     category: 'annahmen',
+    scope: 'global',
     advanced: true,
     label: 'Beträge inflationsbereinigt',
     keywords: ['inflation', 'kaufkraft', 'real', 'nominal', 'teuerung', 'betrag'],
@@ -90,6 +124,7 @@ const STATISCH: readonly SettingsEntry[] = [
   {
     id: 'model:withdrawalRule',
     category: 'auszahlung',
+    scope: 'global',
     label: 'Entnahmeregel',
     keywords: ['entnahme', 'regel', 'prozentregel', 'fester betrag', '4 prozent', 'rente'],
   },
@@ -105,6 +140,9 @@ export function buildSettingsIndex(): readonly SettingsEntry[] {
       return {
         id: `param:${id}`,
         category: def.category,
+        // Parameter sind je Szenario gespeichert - das ist keine Zuordnung von
+        // Hand, sondern die Bauart von SimulationParams.
+        scope: 'scenario' as SettingsScope,
         advanced: def.advanced,
         label: def.label,
         keywords: [def.hint ?? '', def.group, id],
@@ -115,6 +153,7 @@ export function buildSettingsIndex(): readonly SettingsEntry[] {
       return {
         id: `timeline:${id}`,
         category: def.category,
+        scope: 'global' as SettingsScope,
         advanced: def.advanced,
         label: def.label,
         keywords: [def.hint ?? '', 'laufzeit', 'jahre', id],
@@ -123,12 +162,14 @@ export function buildSettingsIndex(): readonly SettingsEntry[] {
     ...SERIES.map((s) => ({
       id: `series:${s.id}`,
       category: 'kurven' as SettingsCategoryId,
+      scope: 'global' as SettingsScope,
       label: s.label,
       keywords: [s.description, 'serie', 'kurve', s.id],
     })),
     ...CHART_STYLES.map((s) => ({
       id: 'style',
       category: 'kurven' as SettingsCategoryId,
+      scope: 'global' as SettingsScope,
       advanced: true,
       label: s.label,
       keywords: [s.description, 'stil'],
@@ -136,6 +177,7 @@ export function buildSettingsIndex(): readonly SettingsEntry[] {
     ...WITHDRAWAL_STRATEGIES.map((s) => ({
       id: 'model:withdrawalRule',
       category: 'auszahlung' as SettingsCategoryId,
+      scope: 'global' as SettingsScope,
       label: s.label,
       keywords: [s.description, 'entnahme'],
     })),
@@ -171,15 +213,23 @@ export function matchSettings(
   return treffer
 }
 
-/** Welche Kategorien nach der Suche überhaupt noch etwas zeigen. */
-export function matchingCategories(
+/**
+ * Welche Karten nach der Filterung überhaupt noch etwas zeigen.
+ *
+ * Auch ohne Suche wird abgeleitet statt aufgezählt: es gibt keine Karte
+ * „Kapital, für alle Szenarien", weil kein einziger Eintrag dort hineinfällt.
+ * Eine leere Karte wäre schlimmer als keine - sie behauptet, es gäbe dort etwas.
+ */
+export function matchingCards(
   index: readonly SettingsEntry[],
   matches: ReadonlySet<string> | null,
-): ReadonlySet<SettingsCategoryId> {
-  if (matches === null) return new Set(SETTINGS_CATEGORIES.map((c) => c.id))
-  const kategorien = new Set<SettingsCategoryId>()
-  for (const entry of index) if (matches.has(entry.id)) kategorien.add(entry.category)
-  return kategorien
+): ReadonlySet<SettingsCardId> {
+  const karten = new Set<SettingsCardId>()
+  for (const entry of index) {
+    if (matches !== null && !matches.has(entry.id)) continue
+    karten.add(cardId(entry.scope, entry.category))
+  }
+  return karten
 }
 
 /**

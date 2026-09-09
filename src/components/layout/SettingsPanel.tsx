@@ -3,12 +3,16 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { selectActiveParamIds, selectActiveScenario, selectProjection } from '../../core/derive'
 import {
   SETTINGS_CATEGORIES,
+  SETTINGS_SCOPE_META,
   buildSettingsIndex,
+  cardId,
   compactIds,
   matchSettings,
-  matchingCategories,
+  matchingCards,
+  type SettingsCardId,
   type SettingsCategoryId,
 } from '../../core/settings'
+import { slotVar } from '../../core/palette'
 import { actions } from '../../core/state'
 import { cn } from '../../lib/cn'
 import { useT } from '../../react/localeContext'
@@ -54,7 +58,7 @@ export function SettingsPanel() {
   const [query, setQuery] = useState('')
   // Aus dem Store, nicht aus lokalem State: das Bottom-Sheet montiert dieses
   // Panel bei jedem Öffnen neu und hätte den Zustand sonst jedes Mal vergessen.
-  const zu = useSelector((s) => s.collapsedCategories)
+  const zu = useSelector((s) => s.collapsedCards)
   const ansicht = useSelector((s) => s.settingsView)
 
   const index = useMemo(() => buildSettingsIndex(), [])
@@ -70,10 +74,7 @@ export function SettingsPanel() {
     () => (suche !== null ? suche : ansicht === 'kompakt' ? compactIds(index) : null),
     [suche, ansicht, index],
   )
-  const sichtbareKategorien = useMemo(
-    () => matchingCategories(index, matches),
-    [index, matches],
-  )
+  const sichtbareKarten = useMemo(() => matchingCards(index, matches), [index, matches])
 
   const setModel = (next: typeof model) => dispatch(actions.setModel(next))
 
@@ -87,24 +88,21 @@ export function SettingsPanel() {
     />
   )
 
-  const inhalte: Record<SettingsCategoryId, ReactNode> = {
-    szenarien:
-      matches === null || matches.has('scenarios') ? (
-        <ScenarioList scenarios={scenarios} activeScenarioId={activeScenarioId} />
-      ) : null,
-    kapital: regler('kapital'),
-    zeit: <TimeAxisControls value={model} onChange={setModel} matches={matches} />,
-    annahmen: (
+  /*
+   * Der Inhalt je Karte, aufgeteilt nach Bereich.
+   *
+   * Was hier nebeneinander steht, gehoert auch zusammen: die Sparrate liegt im
+   * Szenario, die Ansparphase darueber. Frueher standen beide in derselben
+   * Karte, und der Unterschied war nur einem Hinweissatz zu entnehmen.
+   */
+  const inhalte: Partial<Record<SettingsCardId, ReactNode>> = {
+    'scenario:kapital': regler('kapital'),
+    'scenario:einzahlung': regler('einzahlung'),
+    'scenario:auszahlung': regler('auszahlung'),
+    'scenario:annahmen': regler('annahmen'),
+
+    'global:einzahlung': (
       <div className="space-y-5">
-        {regler('annahmen')}
-        <CompoundingControl value={model} onChange={setModel} matches={matches} />
-        <InflationAmountsControl value={model} onChange={setModel} matches={matches} />
-      </div>
-    ),
-    wertpapiere: <MarketPanel matches={matches} />,
-    einzahlung: (
-      <div className="space-y-5">
-        {regler('einzahlung')}
         <TimelineControls
           category="einzahlung"
           value={model}
@@ -114,14 +112,11 @@ export function SettingsPanel() {
         <TimingControl value={model} onChange={setModel} matches={matches} />
       </div>
     ),
-    auszahlung: (
+    'global:auszahlung': (
       <div className="space-y-5">
-        {/* Die Regel steht über den Beträgen: sie entscheidet, welcher der
-            beiden Regler überhaupt zählt. */}
         {matches === null || matches.has('model:withdrawalRule') ? (
           <WithdrawalRuleControl value={model} onChange={setModel} />
         ) : null}
-        {regler('auszahlung')}
         <TimelineControls
           category="auszahlung"
           value={model}
@@ -130,7 +125,15 @@ export function SettingsPanel() {
         />
       </div>
     ),
-    kurven: (
+    'global:annahmen': (
+      <div className="space-y-5">
+        <CompoundingControl value={model} onChange={setModel} matches={matches} />
+        <InflationAmountsControl value={model} onChange={setModel} matches={matches} />
+      </div>
+    ),
+    'global:zeit': <TimeAxisControls value={model} onChange={setModel} matches={matches} />,
+    'global:wertpapiere': <MarketPanel matches={matches} />,
+    'global:kurven': (
       <div className="space-y-5">
         <SeriesPanel
           enabledSeriesIds={enabledSeriesIds}
@@ -147,7 +150,26 @@ export function SettingsPanel() {
     ),
   }
 
-  const leer = sichtbareKategorien.size === 0
+  /*
+   * Die Szenarienliste steht ueber beiden Bereichen statt in einem.
+   *
+   * Sie ist keine Einstellung, sondern der Umschalter, auf den sich das Wort
+   * "dieses" im Bereich darunter bezieht - unter "Fuer alle Szenarien" waere
+   * sie richtig einsortiert und trotzdem am falschen Platz.
+   */
+  const szenarienOben =
+    sichtbareKarten.has('global:szenarien') ? (
+      <ScenarioList scenarios={scenarios} activeScenarioId={activeScenarioId} />
+    ) : null
+
+  const kartenIn = (scope: 'scenario' | 'global') =>
+    SETTINGS_CATEGORIES.filter((k) => {
+      if (k.id === 'szenarien') return false
+      const id = cardId(scope, k.id)
+      return sichtbareKarten.has(id) && inhalte[id] !== undefined
+    })
+
+  const leer = sichtbareKarten.size === 0
 
   return (
     <div className="space-y-3">
@@ -208,44 +230,76 @@ export function SettingsPanel() {
         </p>
       ) : null}
 
-      {SETTINGS_CATEGORIES.map((kategorie) => {
-        if (!sichtbareKategorien.has(kategorie.id)) return null
-        const inhalt = inhalte[kategorie.id]
-        if (!inhalt) return null
-        // Bei aktiver Suche immer offen - sonst müsste man den Treffer erst aufklappen.
-        const offen = suche !== null || !zu.includes(kategorie.id)
+      {szenarienOben ? <Card>{szenarienOben}</Card> : null}
+
+      {SETTINGS_SCOPE_META.map((bereich) => {
+        const karten = kartenIn(bereich.id)
+        if (karten.length === 0) return null
 
         return (
-          <Card key={kategorie.id} padded={false}>
-            <button
-              type="button"
-              onClick={() => dispatch(actions.toggleSettingsCategory(kategorie.id))}
-              aria-expanded={offen}
-              disabled={suche !== null}
-              className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left disabled:cursor-default"
-            >
-              <span>
-                <span className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-                  {t(`category.${kategorie.id}.label`, kategorie.label)}
-                </span>
-                {!offen ? (
-                  <span className="mt-0.5 block text-[11px] text-[var(--text-muted)]">
-                    {t(`category.${kategorie.id}.hint`, kategorie.hint)}
-                  </span>
-                ) : null}
-              </span>
-              <span
-                aria-hidden
-                className={cn(
-                  'shrink-0 text-[var(--text-muted)] transition-transform',
-                  offen ? 'rotate-90' : '',
-                )}
-              >
-                ›
-              </span>
-            </button>
-            {offen ? <div className="px-4 pb-4">{inhalt}</div> : null}
-          </Card>
+          <section key={bereich.id} data-scope={bereich.id} className="space-y-2 pt-1">
+            <div className="flex items-baseline gap-2 px-1">
+              {/* Der Farbpunkt des aktiven Szenarios macht "dieses" konkret -
+                  er ist derselbe wie in der Liste darueber und an der Kurve. */}
+              {bereich.id === 'scenario' ? (
+                <span
+                  aria-hidden
+                  className="size-2 shrink-0 translate-y-[-1px] rounded-full"
+                  style={{ background: slotVar(activeScenario.colorSlot) }}
+                />
+              ) : null}
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+                {bereich.id === 'scenario'
+                  ? t('scope.scenario.labelNamed', `Nur „${activeScenario.label}“`, {
+                      name: activeScenario.label,
+                    })
+                  : t(`scope.${bereich.id}.label`, bereich.label)}
+              </h3>
+            </div>
+            <p className="px-1 text-[11px] leading-snug text-[var(--text-muted)]">
+              {t(`scope.${bereich.id}.hint`, bereich.hint)}
+            </p>
+
+            {karten.map((kategorie) => {
+              const id = cardId(bereich.id, kategorie.id)
+              // Bei aktiver Suche immer offen - sonst muesste man den Treffer
+              // erst aufklappen.
+              const offen = suche !== null || !zu.includes(id)
+
+              return (
+                <Card key={id} padded={false}>
+                  <button
+                    type="button"
+                    onClick={() => dispatch(actions.toggleSettingsCard(id))}
+                    aria-expanded={offen}
+                    disabled={suche !== null}
+                    className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left disabled:cursor-default"
+                  >
+                    <span>
+                      <span className="block text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                        {t(`category.${kategorie.id}.label`, kategorie.label)}
+                      </span>
+                      {!offen ? (
+                        <span className="mt-0.5 block text-[11px] text-[var(--text-muted)]">
+                          {t(`category.${kategorie.id}.hint`, kategorie.hint)}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'shrink-0 text-[var(--text-muted)] transition-transform',
+                        offen ? 'rotate-90' : '',
+                      )}
+                    >
+                      ›
+                    </span>
+                  </button>
+                  {offen ? <div className="px-4 pb-4">{inhalte[id]}</div> : null}
+                </Card>
+              )
+            })}
+          </section>
         )
       })}
     </div>
