@@ -39,6 +39,18 @@ export interface DrawInput {
    * es gibt.
    */
   readonly facts: Readonly<Record<string, string>>
+  /** Ob die mitlaufende Jahreszahl unter der Achse steht. */
+  readonly showYear?: boolean
+  /** Beschriftung der Entnahme-Markierung - übersetzt von der Oberfläche. */
+  readonly retirementLabel?: string
+  /**
+   * Ob der Übergang von Ansparen zu Entnehmen markiert wird.
+   *
+   * Kommt von außen und nicht aus `projection.retirementYear`: das Jahr steht
+   * dort auch dann, wenn gar nicht entnommen wird - dann markiert die Linie
+   * einen Übergang, den es nicht gibt.
+   */
+  readonly hasWithdrawalPhase?: boolean
 }
 
 // Der Punkt gehört dazu: `{{s2.rendite}}` nennt das zweite Szenario. Ohne ihn
@@ -354,6 +366,39 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
     ctx.setLineDash([])
   }
 
+  /* ------------------------------------------------------- Beginn der Entnahme */
+  /*
+   * Dieselbe Markierung wie im Chart - im Video fehlte sie.
+   *
+   * Ohne sie ist der Knick in der Kurve nicht zu deuten: dass ab dort entnommen
+   * wird statt nur eingezahlt, ist die halbe Aussage des Videos.
+   *
+   * Nur innerhalb des Bildes: bei einer Ansparphase, die den ganzen Zeitraum
+   * ausfüllt, läge die Linie genau auf dem Rand und die Beschriftung draußen.
+   */
+  const rentenJahr = projection.retirementYear
+  if (input.hasWithdrawalPhase && rentenJahr > 0 && rentenJahr < lastYear) {
+    const rx = x(rentenJahr)
+    ctx.strokeStyle = theme.axis
+    ctx.lineWidth = 1
+    ctx.setLineDash([])
+    ctx.beginPath()
+    ctx.moveTo(rx, plot.top)
+    ctx.lineTo(rx, plot.bottom)
+    ctx.stroke()
+
+    const beschriftung = input.retirementLabel ?? 'Rentenbeginn'
+    ctx.font = font(style, achsenGroesse)
+    ctx.fillStyle = theme.textMuted
+    // Nach links kippen, wenn rechts kein Platz mehr ist - sonst läuft der Text
+    // aus dem Bild und lässt sich im fertigen Video nicht mehr retten.
+    const breite = ctx.measureText(beschriftung).width
+    const passtRechts = rx + 6 + breite <= plot.right
+    ctx.textAlign = passtRechts ? 'left' : 'right'
+    ctx.fillText(beschriftung, rx + (passtRechts ? 6 : -6), plot.top + achsenGroesse)
+    ctx.textAlign = 'left'
+  }
+
   /* ------------------------------------------------------------------ Achsen */
   if (style.axis.show) {
     ctx.fillStyle = theme.textMuted
@@ -442,12 +487,14 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
    * Weicht sie vom Index ab, ist sie absolut (Alter oder Kalenderjahr) und
    * steht für sich - „Jahr 2007" wäre falsch.
    */
-  const jahrText = projection.yearLabels[frame.year]
-  ctx.fillText(
-    jahrText !== undefined && jahrText !== String(frame.year) ? jahrText : `Jahr ${frame.year}`,
-    pad,
-    plot.bottom + Math.round(footerH * 0.34),
-  )
+  if (input.showYear !== false) {
+    const jahrText = projection.yearLabels[frame.year]
+    ctx.fillText(
+      jahrText !== undefined && jahrText !== String(frame.year) ? jahrText : `Jahr ${frame.year}`,
+      pad,
+      plot.bottom + Math.round(footerH * 0.34),
+    )
+  }
 
   const legendSize = Math.round(bezug * 0.026)
   const legendZeilenH = Math.round(legendSize * 1.5)

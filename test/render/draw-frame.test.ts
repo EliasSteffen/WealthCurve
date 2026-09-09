@@ -287,3 +287,84 @@ describe('Textumbruch', () => {
     expect(maxRechts).toBeLessThanOrEqual(format.width)
   })
 })
+
+/*
+ * Für die Beschriftung reicht der Spion oben nicht - er merkt sich nur die
+ * Namen der Aufrufe, nicht ihre Argumente.
+ */
+function textSpion() {
+  const texte: string[] = []
+  const striche: Array<[number, number]> = []
+  const nichts = () => {}
+  const ctx = {
+    save: nichts, restore: nichts, beginPath: nichts, closePath: nichts,
+    moveTo: (x: number, y: number) => striche.push([x, y]),
+    lineTo: nichts, stroke: nichts, fill: nichts, fillRect: nichts,
+    fillText: (text: string) => texte.push(text),
+    setLineDash: nichts,
+    measureText: vi.fn(() => ({ width: 10 })),
+    fillStyle: '', strokeStyle: '', lineWidth: 0, lineCap: '', lineJoin: '',
+    globalAlpha: 1, font: '', textAlign: '',
+  } as unknown as CanvasRenderingContext2D
+  return { ctx, texte, striche }
+}
+
+const zeichneMit = (extra: Record<string, unknown>, index = 75 + 60) => {
+  const spion = textSpion()
+  drawFrame(spion.ctx, {
+    frame: frameAt(DEFAULT_SPEC, projection, index),
+    projection,
+    style: clean,
+    format: resolveFormat('reel'),
+    theme,
+    colors,
+    title: 'Basis',
+    facts: {},
+    ...extra,
+  })
+  return spion
+}
+
+describe('Beginn der Entnahme', () => {
+  it('markiert den Übergang, wenn es eine Entnahmephase gibt', () => {
+    // Ohne die Linie ist der Knick in der Kurve nicht zu deuten - dass ab dort
+    // entnommen wird, ist die halbe Aussage des Videos.
+    expect(zeichneMit({ hasWithdrawalPhase: true }).texte).toContain('Rentenbeginn')
+  })
+
+  it('markiert nichts, wenn gar nicht entnommen wird', () => {
+    // projection.retirementYear steht auch dann da - die Linie zeigte sonst
+    // einen Übergang an, den es nicht gibt.
+    expect(zeichneMit({}).texte).not.toContain('Rentenbeginn')
+    expect(zeichneMit({ hasWithdrawalPhase: false }).texte).not.toContain('Rentenbeginn')
+  })
+
+  it('übernimmt die Beschriftung der Oberfläche', () => {
+    const texte = zeichneMit({ hasWithdrawalPhase: true, retirementLabel: 'Retirement' }).texte
+    expect(texte).toContain('Retirement')
+  })
+
+  it('zieht die Linie über die volle Höhe der Zeichenfläche', () => {
+    const { striche } = zeichneMit({ hasWithdrawalPhase: true })
+    const senkrecht = striche.filter(([, y]) => y > 0)
+    expect(senkrecht.length).toBeGreaterThan(0)
+  })
+})
+
+describe('Jahreszahl', () => {
+  it('steht standardmäßig unter der Achse', () => {
+    expect(zeichneMit({}).texte.some((t) => t.startsWith('Jahr '))).toBe(true)
+  })
+
+  it('lässt sich abschalten, ohne sonst etwas zu ändern', () => {
+    const mit = zeichneMit({})
+    const ohne = zeichneMit({ showYear: false })
+    expect(ohne.texte.some((t) => t.startsWith('Jahr '))).toBe(false)
+    // Nur diese eine Zeile fällt weg - Kopf, Achse und Legende bleiben.
+    expect(ohne.texte.length).toBe(mit.texte.length - 1)
+  })
+
+  it('zeigt sie bei showYear: true weiterhin', () => {
+    expect(zeichneMit({ showYear: true }).texte.some((t) => t.startsWith('Jahr '))).toBe(true)
+  })
+})

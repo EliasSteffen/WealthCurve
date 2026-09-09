@@ -24,6 +24,7 @@ export const DEFAULT_SPEC: AnimationSpec = {
   formatId: 'reel',
   fps: 30,
   scenes: DEFAULT_SCENES,
+  showYear: true,
 }
 
 /** Sanft an, sanft aus - die Kurve soll nicht ruckartig einsetzen. */

@@ -452,6 +452,10 @@ server.registerTool(
         .min(0)
         .optional()
         .describe('Welches Einzelbild gerendert wird. Ohne Angabe eines aus dem Aufbau.'),
+      showYear: z
+        .boolean()
+        .default(true)
+        .describe('Ob die mitlaufende Jahreszahl unter der Achse steht'),
     },
   },
   async (eingabe) => {
@@ -494,6 +498,8 @@ server.registerTool(
       colors: Object.fromEntries(projection.lines.map((l) => [l.key, colorFallback(l.colorVar)])),
       title: projection.summaries[0]?.label ?? 'Zinseszins',
       facts,
+      showYear: eingabe.showYear,
+      hasWithdrawalPhase: toModel(eingabe.model).withdrawalYears > 0,
     })
 
     return {

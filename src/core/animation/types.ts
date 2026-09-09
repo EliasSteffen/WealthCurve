@@ -26,6 +26,17 @@ export interface AnimationSpec {
   readonly formatId: string
   readonly fps: number
   readonly scenes: readonly Scene[]
+  /**
+   * Ob die Jahreszahl unter der Achse mitläuft.
+   *
+   * Gehört zum Bauplan des Videos und nicht zum Aufruf des Renderers: sonst
+   * sähe der MCP-Server ein anderes Bild als die Vorschau im Browser, obwohl
+   * beide denselben Plan bekommen haben.
+   *
+   * Fehlt der Wert, wird die Zahl gezeigt - das war das Verhalten, bevor es den
+   * Schalter gab, und ein gespeicherter alter Plan soll sich nicht ändern.
+   */
+  readonly showYear?: boolean
 }
 
 /**

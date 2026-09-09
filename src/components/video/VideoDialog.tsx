@@ -16,10 +16,12 @@ import { actions } from '../../core/state'
 import { formatEur, formatPercent, formatYears } from '../../lib/format'
 import { pickRecordingFormat, recordCanvas } from '../../lib/recordCanvas'
 import { transcodeToMp4 } from '../../lib/transcodeToMp4'
+import { useT } from '../../react/localeContext'
 import { useDispatch, useSelector } from '../../react/useSelector'
 import { drawFrame } from '../../render/canvas/drawFrame'
 import { buildFacts, suggestedFactKeys } from '../../render/facts'
 import { readLineColors, readRenderTheme } from '../../render/canvas/readTheme'
+import { Checkbox } from '../ui/Checkbox'
 import { SelectField } from '../ui/SelectField'
 
 type Zustand = 'bereit' | 'laeuft' | 'fertig'
@@ -78,6 +80,7 @@ function VideoDialogInhalt({ onClose }: { readonly onClose: () => void }) {
   const [umwandelFortschritt, setUmwandelFortschritt] = useState(0)
 
   const model = useSelector((s) => s.model)
+  const t = useT()
   const format = useMemo(() => resolveFormat(spec.formatId), [spec.formatId])
   const gesamt = useMemo(() => frameCount(spec), [spec])
   const aufnahmeFormat = useMemo(() => pickRecordingFormat(), [])
@@ -116,9 +119,12 @@ function VideoDialogInhalt({ onClose }: { readonly onClose: () => void }) {
         colors: readLineColors(projection.lines),
         title: titel,
         facts,
+        showYear: spec.showYear !== false,
+        hasWithdrawalPhase: model.withdrawalYears > 0,
+        retirementLabel: t('chart.retirement', 'Rentenbeginn'),
       })
     },
-    [spec, projection, style, format, titel, facts],
+    [spec, projection, style, format, titel, facts, model.withdrawalYears, t],
   )
 
   // Vorschau: einmal durchlaufen lassen, solange nicht aufgenommen wird.
@@ -231,6 +237,16 @@ function VideoDialogInhalt({ onClose }: { readonly onClose: () => void }) {
             value={chartStyleId}
             onChange={(id) => dispatch(actions.setChartStyle(id))}
             options={CHART_STYLES.map((s) => ({ value: s.id, label: s.label }))}
+          />
+
+          <Checkbox
+            checked={spec.showYear !== false}
+            onChange={(showYear) => setSpec((p) => ({ ...p, showYear }))}
+            label={t('video.showYear', 'Jahreszahl einblenden')}
+            description={t(
+              'video.showYear.hint',
+              'Läuft unter der Achse mit. Aus, wenn das Video ohne Zeitbezug wirken soll.',
+            )}
           />
 
           <SzenenEditor

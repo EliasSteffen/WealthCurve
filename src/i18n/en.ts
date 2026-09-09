@@ -59,6 +59,8 @@ export const en: Catalog = {
     'No enabled curve reads these values – add purchasing power or the savings account under “Curves”.',
   'model.withdrawalPhase': 'With withdrawal phase',
   'model.withdrawalPhase.hint': 'Off: only saving, and the capital keeps working afterwards.',
+  'video.showYear': 'Show the year',
+  'video.showYear.hint': 'Runs along under the axis. Off if the video should work without a time reference.',
 
   // Szenarien
   'scenario.add': 'Add scenario',
