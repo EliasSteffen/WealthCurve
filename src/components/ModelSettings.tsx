@@ -7,7 +7,6 @@ import {
 } from '../core/domain/parameters'
 import type { ModelSettings as ModelSettingsValue } from '../core/domain/types'
 import { WITHDRAWAL_STRATEGIES } from '../core/domain/withdrawal'
-import { useId } from 'react'
 import type { SettingsCategoryId } from '../core/settings'
 import {
   MAX_START_AGE,
@@ -16,6 +15,7 @@ import {
   MIN_START_YEAR,
 } from '../core/timeAxis'
 import { useT } from '../react/localeContext'
+import { NumberField } from './ui/NumberField'
 import { SegmentedControl } from './ui/SegmentedControl'
 import { SelectField } from './ui/SelectField'
 import { SliderField } from './ui/SliderField'
@@ -146,52 +146,6 @@ export function TimingControl({ value, onChange, matches = null }: ModelProps) {
         },
       ]}
     />
-  )
-}
-
-/**
- * Optionales Zahlenfeld.
- *
- * Leer bedeutet „nicht gesetzt" und ist ein gültiger Zustand - deshalb `null`
- * statt 0. Ein Regler taugt hier nicht: ein Startjahr tippt man, man schiebt
- * es nicht.
- */
-function NumberField({
-  label,
-  value,
-  min,
-  max,
-  placeholder,
-  onChange,
-}: {
-  readonly label: string
-  readonly value: number | null
-  readonly min: number
-  readonly max: number
-  readonly placeholder: string
-  readonly onChange: (value: number | null) => void
-}) {
-  const id = useId()
-  return (
-    <div>
-      <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-[var(--text-secondary)]">
-        {label}
-      </label>
-      <input
-        id={id}
-        type="number"
-        inputMode="numeric"
-        min={min}
-        max={max}
-        value={value ?? ''}
-        placeholder={placeholder}
-        onChange={(e) => {
-          const wert = Number.parseInt(e.target.value, 10)
-          onChange(Number.isFinite(wert) ? wert : null)
-        }}
-        className="w-full rounded-lg border border-[var(--hairline)] bg-[var(--surface-1)] px-2.5 py-2 text-sm tabular-nums text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--chart-1)] focus:outline-none"
-      />
-    </div>
   )
 }
 
