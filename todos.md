@@ -18,18 +18,25 @@
 - [x] Szenario-Einstellungen getrennt — zwei Bereiche „Nur <Szenario>" und
       „Für alle Szenarien" (`8635e42`)
 - [x] Jahreszahlen im Video optional (`7111e4b`)
+- [x] Logo als Favicon — dazu apple-touch-icon, Web-Manifest und theme-color;
+      alle Symbole entstehen aus `src/render/logo.ts` über `npm run icons`
+      (`b258465`)
+- [x] Sparraten-Dynamik über die Inflation hinaus (`54225db`)
+- [x] Eigene Einstellungsseite — Dialog mit den Reitern Diagramm, Video und
+      Allgemein; die Seitenspalte bleibt der schnelle Zugriff (`7c6ecaf`)
+- [x] Weitere Einstellmöglichkeiten für das Video — Farbschema, Bildrate,
+      Kopfzeile und Legende (`5dc3192`)
+- [x] Tonspur und Untertitel fürs Reel — die Aufnahme legt eine gewählte
+      Audiodatei als zweite Spur dazu, die Szenentexte gibt es als `.srt`
+      (`ebea905`)
 
 ## Offen
-
-- [ ] Sparraten-Dynamik über die Inflation hinaus (z. B. Gehaltssprünge)
-- [ ] Tonspur oder Untertitel fürs Reel — `MediaRecorder` nimmt nur das Canvas
-      auf, Ton bräuchte eine zweite Spur
-- [ ] logo soll außerdem auch für die website im browser angezeigt werden als favicon
-- [ ] weitere einstell möglichkeiten für das video
-- [ ] vermutlich ist eine eigene einstellungsseite für generelle / chart und video einstellungen sinnvoll oder? und trotzdem gibt es die quick access sidebar für den chart.
-
-## Aufgefallen, aber nicht angefasst
 
 - [ ] Die Legende im Video zeigt beim Vergleich einen Eintrag je Serie und nimmt
       dafür die Farbe der zuletzt gebauten Linie — im Bild kann so „Zinseszins"
       orange sein, obwohl die erste Kurve blau ist.
+- [ ] `public/icons.svg` ist ein Rest aus der Projektvorlage (Bluesky- und
+      andere Symbole) und wird von nichts referenziert.
+- [ ] Die Tonspur lässt sich vor der Aufnahme nicht vorhören, und ihre Länge
+      wird nicht mit der des Videos verglichen — sie endet einfach mit der
+      Aufnahme.
