@@ -25,6 +25,9 @@ export const DEFAULT_SPEC: AnimationSpec = {
   fps: 30,
   scenes: DEFAULT_SCENES,
   showYear: true,
+  showHeader: true,
+  showLegend: true,
+  theme: 'app',
 }
 
 /** Sanft an, sanft aus - die Kurve soll nicht ruckartig einsetzen. */

@@ -42,6 +42,19 @@ export function colorFallback(colorVar: string): string {
 }
 
 /**
+ * Die Nummer aus einer Farbvariablen - "var(--chart-2, #eb6834)" ergibt 2.
+ *
+ * Serien und Szenarien halten ihre Farbe als fertige CSS-Variable, weil sie so
+ * direkt als SVG-stroke taugt. Wer die Farbe woanders herholen muss - für ein
+ * Video mit festem Farbschema etwa, oder um einen freien Slot zu finden -,
+ * braucht die Nummer zurück.
+ */
+export function slotFromVar(colorVar: string): ColorSlot | null {
+  const treffer = /--chart-(\d+)/.exec(colorVar)
+  return treffer ? Number(treffer[1]) : null
+}
+
+/**
  * Niedrigster freier Slot.
  *
  * Slots werden vergeben und festgehalten, nie aus dem Array-Index abgeleitet -

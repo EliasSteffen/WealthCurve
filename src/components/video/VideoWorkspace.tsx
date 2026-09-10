@@ -21,6 +21,7 @@ import { useDispatch, useSelector } from '../../react/useSelector'
 import { drawFrame } from '../../render/canvas/drawFrame'
 import { buildFacts, suggestedFactKeys } from '../../render/facts'
 import { readLineColors, readRenderTheme } from '../../render/canvas/readTheme'
+import { RENDER_THEMES, themeLineColors, type ThemeName } from '../../render/canvas/themes'
 import { Checkbox } from '../ui/Checkbox'
 import { SelectField } from '../ui/SelectField'
 
@@ -86,11 +87,19 @@ export function VideoWorkspace() {
         projection,
         style,
         format,
-        theme: readRenderTheme(),
-        colors: readLineColors(projection.lines),
+        // „app" liest die Farben aus dem DOM, ein festes Schema kommt aus der
+        // Tabelle - so lässt sich ein dunkles Reel aufnehmen, ohne die ganze
+        // Anwendung umzuschalten.
+        theme: spec.theme && spec.theme !== 'app' ? RENDER_THEMES[spec.theme] : readRenderTheme(),
+        colors:
+          spec.theme && spec.theme !== 'app'
+            ? themeLineColors(projection.lines, spec.theme)
+            : readLineColors(projection.lines),
         title: titel,
         facts,
         showYear: spec.showYear !== false,
+        showHeader: spec.showHeader !== false,
+        showLegend: spec.showLegend !== false,
         hasWithdrawalPhase: model.withdrawalYears > 0,
         retirementLabel: t('chart.retirement', 'Rentenbeginn'),
       })
@@ -197,15 +206,80 @@ export function VideoWorkspace() {
             options={CHART_STYLES.map((s) => ({ value: s.id, label: s.label }))}
           />
 
-          <Checkbox
-            checked={spec.showYear !== false}
-            onChange={(showYear) => setSpec((p) => ({ ...p, showYear }))}
-            label={t('video.showYear', 'Jahreszahl einblenden')}
-            description={t(
-              'video.showYear.hint',
-              'Läuft unter der Achse mit. Aus, wenn das Video ohne Zeitbezug wirken soll.',
-            )}
+          <SelectField
+            label={t('video.theme', 'Farbschema')}
+            value={spec.theme ?? 'app'}
+            onChange={(theme) =>
+              setSpec((p) => ({ ...p, theme: theme as 'app' | ThemeName }))
+            }
+            options={[
+              {
+                value: 'app',
+                label: t('video.theme.app', 'Wie die Anwendung'),
+                description: t('video.theme.app.hint', 'Folgt dem eingestellten Farbschema.'),
+              },
+              {
+                value: 'light',
+                label: t('video.theme.light', 'Hell'),
+                description: t('video.theme.light.hint', 'Fester heller Grund, unabhängig davon.'),
+              },
+              {
+                value: 'dark',
+                label: t('video.theme.dark', 'Dunkel'),
+                description: t('video.theme.dark.hint', 'Fester dunkler Grund, unabhängig davon.'),
+              },
+            ]}
           />
+
+          <SelectField
+            label={t('video.fps', 'Bilder pro Sekunde')}
+            value={String(spec.fps)}
+            onChange={(fps) => setSpec((p) => ({ ...p, fps: Number(fps) }))}
+            options={[
+              {
+                value: '24',
+                label: '24',
+                description: t('video.fps.24', 'Kinolook, kleinste Datei.'),
+              },
+              {
+                value: '30',
+                label: '30',
+                description: t('video.fps.30', 'Der übliche Wert für Reels.'),
+              },
+              {
+                value: '60',
+                label: '60',
+                description: t('video.fps.60', 'Sehr flüssig, doppelte Datenmenge.'),
+              },
+            ]}
+          />
+
+          <div>
+            <Checkbox
+              checked={spec.showHeader !== false}
+              onChange={(showHeader) => setSpec((p) => ({ ...p, showHeader }))}
+              label={t('video.showHeader', 'Kopfzeile einblenden')}
+              description={t(
+                'video.showHeader.hint',
+                'Name und aktueller Wert je Szenario. Aus, wenn nur die Kurve wirken soll.',
+              )}
+            />
+            <Checkbox
+              checked={spec.showLegend !== false}
+              onChange={(showLegend) => setSpec((p) => ({ ...p, showLegend }))}
+              label={t('video.showLegend', 'Legende einblenden')}
+              description={t('video.showLegend.hint', 'Welche Linie welche Serie ist.')}
+            />
+            <Checkbox
+              checked={spec.showYear !== false}
+              onChange={(showYear) => setSpec((p) => ({ ...p, showYear }))}
+              label={t('video.showYear', 'Jahreszahl einblenden')}
+              description={t(
+                'video.showYear.hint',
+                'Läuft unter der Achse mit. Aus, wenn das Video ohne Zeitbezug wirken soll.',
+              )}
+            />
+          </div>
 
           <SzenenEditor
             scenes={spec.scenes}

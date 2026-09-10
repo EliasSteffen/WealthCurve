@@ -10,7 +10,7 @@ import type {
   SimulationResult,
   YearSnapshot,
 } from './domain/types'
-import { allocateSlot, slotVar } from './palette'
+import { allocateSlot, slotFromVar, slotVar } from './palette'
 import { yearLabels } from './timeAxis'
 
 /**
@@ -149,19 +149,6 @@ interface Linienbauplan {
   readonly colorVar: string
 }
 
-/**
- * Welchen Palette-Slot eine Serie belegt.
- *
- * Serien halten ihre Farbe als fertige CSS-Variable ("var(--chart-2, #eb6834)"),
- * weil sie so direkt als SVG-stroke taugt. Für die Vergabe an Wertpapiere muss
- * die Nummer aber wieder heraus - sonst bekäme ein Kurs dasselbe Orange wie
- * "Ohne Rendite".
- */
-function slotAusColorVar(colorVar: string): number | null {
-  const treffer = /--chart-(\d+)/.exec(colorVar)
-  return treffer ? Number(treffer[1]) : null
-}
-
 function expandiere(
   activeSeries: readonly SeriesDefinition[],
   markets: readonly MarketSeries[],
@@ -170,7 +157,7 @@ function expandiere(
   const vergeben = [...belegteSlots]
   for (const series of activeSeries) {
     if (series.fanOut === 'markets') continue
-    const slot = slotAusColorVar(series.colorVar)
+    const slot = slotFromVar(series.colorVar)
     if (slot !== null) vergeben.push(slot)
   }
   return activeSeries.flatMap((series): Linienbauplan[] => {

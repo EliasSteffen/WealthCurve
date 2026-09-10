@@ -38,12 +38,12 @@ import { SERIES } from '../src/core/domain/series'
 import type { MarketSeries, ModelSettings } from '../src/core/domain/types'
 import { WITHDRAWAL_STRATEGIES } from '../src/core/domain/withdrawal'
 import { ENCODINGS } from '../src/core/encoding'
-import { colorFallback } from '../src/core/palette'
 import { buildProjection, type Projection, type ProjectionScenario } from '../src/core/projection'
 import { SETTINGS_CATEGORIES } from '../src/core/settings'
 import { deserialize, serialize } from '../src/core/state'
 import { drawFrame } from '../src/render/canvas/drawFrame'
 import { buildFacts } from '../src/render/facts'
+import { RENDER_THEMES, themeLineColors } from '../src/render/canvas/themes'
 import { fetchQuotes } from '../server/quotes'
 
 const server = new McpServer({ name: 'zinseszins', version: '2.0.0' })
@@ -461,6 +461,15 @@ server.registerTool(
         .boolean()
         .default(true)
         .describe('Ob die mitlaufende Jahreszahl unter der Achse steht'),
+      showHeader: z
+        .boolean()
+        .default(true)
+        .describe('Ob die Kopfzeile mit Name und Wert je Szenario erscheint'),
+      showLegend: z.boolean().default(true).describe('Ob die Legende unter der Achse erscheint'),
+      theme: z
+        .enum(['light', 'dark'])
+        .default('light')
+        .describe('Farbschema des Bildes'),
     },
   },
   async (eingabe) => {
@@ -493,17 +502,13 @@ server.registerTool(
       projection,
       style,
       format,
-      theme: {
-        surface: '#fcfcfb',
-        text: '#0b0b0b',
-        textMuted: '#898781',
-        grid: '#e1e0d9',
-        axis: '#c3c2b7',
-      },
-      colors: Object.fromEntries(projection.lines.map((l) => [l.key, colorFallback(l.colorVar)])),
+      theme: RENDER_THEMES[eingabe.theme],
+      colors: themeLineColors(projection.lines, eingabe.theme),
       title: projection.summaries[0]?.label ?? 'Zinseszins',
       facts,
       showYear: eingabe.showYear,
+      showHeader: eingabe.showHeader,
+      showLegend: eingabe.showLegend,
       hasWithdrawalPhase: toModel(eingabe.model).withdrawalYears > 0,
     })
 

@@ -37,6 +37,23 @@ export interface AnimationSpec {
    * Schalter gab, und ein gespeicherter alter Plan soll sich nicht ändern.
    */
   readonly showYear?: boolean
+  /**
+   * Ob die Kopfzeile mit Name und Wert je Szenario erscheint.
+   *
+   * Aus ergibt ein Video, das nur die Kurve zeigt - brauchbar, wenn die Zahlen
+   * im Beitragstext danebenstehen und im Bild nur stören würden.
+   */
+  readonly showHeader?: boolean
+  /** Ob die Legende unter der Achse erscheint. */
+  readonly showLegend?: boolean
+  /**
+   * Das Farbschema des Videos.
+   *
+   * „app" folgt der Anwendung. Die beiden festen Werte sind der Grund für diese
+   * Einstellung: ein dunkles Reel lässt sich sonst nur aufnehmen, indem man die
+   * ganze Anwendung umschaltet.
+   */
+  readonly theme?: 'app' | 'light' | 'dark'
 }
 
 /**

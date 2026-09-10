@@ -41,6 +41,10 @@ export interface DrawInput {
   readonly facts: Readonly<Record<string, string>>
   /** Ob die mitlaufende Jahreszahl unter der Achse steht. */
   readonly showYear?: boolean
+  /** Ob die Kopfzeile mit Name und Wert je Szenario erscheint. */
+  readonly showHeader?: boolean
+  /** Ob die Legende unter der Achse erscheint. */
+  readonly showLegend?: boolean
   /** Beschriftung der Entnahme-Markierung - übersetzt von der Oberfläche. */
   readonly retirementLabel?: string
   /**
@@ -207,7 +211,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
       color: colors[line.key] ?? theme.text,
     })
   }
-  const kopfzeilen = [...proSzenario.values()]
+  const kopfzeilen = input.showHeader === false ? [] : [...proSzenario.values()]
   const MAX_ZEILEN = 3
   const gezeigt = kopfzeilen.slice(0, MAX_ZEILEN)
   const weitere = kopfzeilen.length - gezeigt.length
@@ -283,12 +287,18 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
   const untertitelZeilen = kopf.zeilen
   const untertitelAbstand = kopf.abstand
 
-  // Der Kopf darf wachsen, aber nicht schrumpfen: bei einem Szenario beginnt das
-  // Diagramm genau da, wo es immer begann.
-  const headerH = Math.max(
-    Math.round(height * (format.height > format.width ? 0.2 : 0.16)),
-    kopf.hoehe,
-  )
+  /*
+   * Der Kopf darf wachsen, aber nicht schrumpfen: bei einem Szenario beginnt
+   * das Diagramm genau da, wo es immer begann.
+   *
+   * Ohne Kopfzeile fällt diese Untergrenze weg - sonst bliebe ein Fünftel des
+   * Bildes leer, obwohl gerade nichts darin steht.
+   */
+  const mindestKopf =
+    input.showHeader === false
+      ? kopfOben + kopfUnten
+      : Math.round(height * (format.height > format.width ? 0.2 : 0.16))
+  const headerH = Math.max(mindestKopf, kopf.hoehe)
   const footerH = Math.round(height * (format.height > format.width ? 0.13 : 0.15))
   // Die Achsenbeschriftung steht ÜBER ihrer Gitterlinie. Ohne diese Reserve
   // ragte die oberste Zahl in den Kopfbereich und legte sich auf die Kopfzeilen.
@@ -494,6 +504,11 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
       pad,
       plot.bottom + Math.round(footerH * 0.34),
     )
+  }
+
+  if (input.showLegend === false) {
+    ctx.restore()
+    return
   }
 
   const legendSize = Math.round(bezug * 0.026)

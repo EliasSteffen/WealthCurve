@@ -368,3 +368,38 @@ describe('Jahreszahl', () => {
     expect(zeichneMit({ showYear: true }).texte.some((t) => t.startsWith('Jahr '))).toBe(true)
   })
 })
+
+describe('Kopfzeile und Legende abschaltbar', () => {
+  it('zeigt beides standardmäßig', () => {
+    const texte = zeichneMit({}).texte
+    expect(texte).toContain('Basis')
+    expect(texte.some((t) => t.startsWith('Zinseszins'))).toBe(true)
+  })
+
+  it('lässt die Kopfzeile weg, ohne den Szenentext mitzunehmen', () => {
+    // Der Szenentext ist die Aussage des Videos - er gehört nicht zur
+    // Kopfzeile, auch wenn er direkt darunter steht.
+    const texte = zeichneMit({ showHeader: false, facts: {} }).texte
+    expect(texte).not.toContain('Basis')
+    expect(texte.some((t) => t.startsWith('Zinseszins'))).toBe(true)
+  })
+
+  it('gibt den Platz der Kopfzeile an das Diagramm ab', () => {
+    /*
+     * Ohne diese Anpassung bliebe ein Fünftel des Bildes leer: die Untergrenze
+     * für den Kopf galt auch dann, wenn nichts darin steht.
+     */
+    const hoehe = (extra: Record<string, unknown>) => {
+      const { striche } = zeichneMit(extra)
+      return Math.min(...striche.map(([, y]) => y).filter((y) => y > 0))
+    }
+    expect(hoehe({ showHeader: false })).toBeLessThan(hoehe({}))
+  })
+
+  it('lässt die Legende weg', () => {
+    const texte = zeichneMit({ showLegend: false }).texte
+    expect(texte.some((t) => t.startsWith('Zinseszins'))).toBe(false)
+    // Die Jahreszahl steht darüber und bleibt.
+    expect(texte.some((t) => t.startsWith('Jahr '))).toBe(true)
+  })
+})
