@@ -189,22 +189,23 @@ Lücke zeichnet.
 
 | Ziel | Datei | Live-Kursabruf |
 |---|---|---|
+| GitHub Pages | `.github/workflows/pages.yml` | nein — Dateiimport (siehe oben) |
 | Vercel | `vercel.json` + `api/quotes.ts` | ja |
-| GitLab Pages | `.gitlab-ci.yml` | nein — Dateiimport (siehe oben) |
 | Eigener Server | `npm run serve` | ja |
 
-Die GitLab-Pipeline prüft (`typecheck`, `lint`, `test`) und veröffentlicht nur
-den Standardzweig. Zwei Punkte, die dort erklärt sind und leicht übersehen
-werden: Pages liegt unter `/<projekt>/`, weshalb der Build den Basis-Pfad aus
-`CI_PAGES_URL` bekommt — sonst bliebe die Seite weiß. Und Pages liefert den
-Ordner `public` aus, der hier bereits Vites Quellverzeichnis ist; der Auftrag
-schiebt deshalb `dist` an dessen Stelle, nachdem Vite `public/*` ohnehin dorthin
-kopiert hat.
+Der Ablauf prüft (`typecheck`, `lint`, `test`) und veröffentlicht den
+Standardzweig. Einmalig nötig: unter Settings → Pages als Quelle
+**GitHub Actions** wählen.
 
-Die Pfade in `public/site.webmanifest` sind relativ (`favicon.svg`, nicht
-`/favicon.svg`): Vite schreibt `index.html` auf den Basis-Pfad um, das Manifest
-aber nicht — mit absoluten Pfaden liefen die Symbole unter einem Unterpfad ins
-Leere.
+Ein Punkt, der leicht übersehen wird: die Seite liegt unter `/<repo>/` und
+nicht auf der Wurzel. Der Build bekommt den Basis-Pfad deshalb von
+`actions/configure-pages` — ohne ihn schreibt Vite Skript und Stil absolut, und
+die Seite bliebe weiß.
+
+Aus demselben Grund sind die Pfade in `public/site.webmanifest` relativ
+(`favicon.svg`, nicht `/favicon.svg`): Vite schreibt `index.html` auf den
+Basis-Pfad um, das Manifest aber nicht — mit absoluten Pfaden liefen die Symbole
+unter einem Unterpfad ins Leere.
 
 ## Entnahmeplan
 

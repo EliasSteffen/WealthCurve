@@ -1,0 +1,79 @@
+# Prüfen und auf GitHub Pages veröffentlichen.
+#
+# Einmalig nötig: unter Settings → Pages als Quelle „GitHub Actions" wählen.
+# Ohne das läuft der Ablauf durch und der letzte Schritt scheitert.
+#
+# Was auf Pages NICHT läuft: /api/quotes. Pages liefert nur statische Dateien
+# aus, eine Serverfunktion gibt es dort nicht. Die Anwendung merkt das beim
+# Start und bietet statt der Kurssuche einen Dateiimport an - alles andere
+# funktioniert unverändert. Wer den Live-Abruf braucht, veröffentlicht
+# zusätzlich über Vercel (siehe vercel.json) oder `npm run serve`.
+
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  # Damit sich die Seite auch ohne neuen Commit neu bauen lässt.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  # deploy-pages weist sich über OIDC aus - ohne dieses Recht bricht es ab.
+  id-token: write
+
+# Zwei Deploys gleichzeitig würden sich gegenseitig überschreiben. Laufende
+# Läufe werden aber nicht abgebrochen: ein halber Deploy ist schlimmer als ein
+# überflüssiger.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  bauen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Vite 8 verlangt Node 20.19+ oder 22.12+.
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Dieselben drei Befehle wie lokal, vor dem Bauen. Ein Ablauf, der nur
+      # baut, merkt erst im Browser, dass etwas kaputt ist.
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
+      - uses: actions/configure-pages@v5
+        id: pages
+
+      - name: Bauen
+        env:
+          # Für ein Projekt-Repository liefert configure-pages "/WealthCurve",
+          # für eine Nutzerseite (<name>.github.io) einen leeren Wert.
+          BASE_PATH: ${{ steps.pages.outputs.base_path }}
+        # Der Basis-Pfad muss in die Assets hinein: die Seite liegt unter
+        # /<repo>/, nicht auf der Wurzel. Ohne --base schreibt Vite Skript und
+        # Stil absolut ("/assets/index.js"), und die Seite bliebe weiß - ein
+        # Fehler, den man erst nach dem Veröffentlichen sieht.
+        run: npx vite build --base="${BASE_PATH:-/}"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  veroeffentlichen:
+    needs: bauen
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deploy
