@@ -185,6 +185,27 @@ Reicht die Historie nicht über die Laufzeit, endet die Kurve dort, statt
 fortgeschrieben zu werden — Serien dürfen dafür `null` liefern, was der Chart als
 Lücke zeichnet.
 
+### Veröffentlichen
+
+| Ziel | Datei | Live-Kursabruf |
+|---|---|---|
+| Vercel | `vercel.json` + `api/quotes.ts` | ja |
+| GitLab Pages | `.gitlab-ci.yml` | nein — Dateiimport (siehe oben) |
+| Eigener Server | `npm run serve` | ja |
+
+Die GitLab-Pipeline prüft (`typecheck`, `lint`, `test`) und veröffentlicht nur
+den Standardzweig. Zwei Punkte, die dort erklärt sind und leicht übersehen
+werden: Pages liegt unter `/<projekt>/`, weshalb der Build den Basis-Pfad aus
+`CI_PAGES_URL` bekommt — sonst bliebe die Seite weiß. Und Pages liefert den
+Ordner `public` aus, der hier bereits Vites Quellverzeichnis ist; der Auftrag
+schiebt deshalb `dist` an dessen Stelle, nachdem Vite `public/*` ohnehin dorthin
+kopiert hat.
+
+Die Pfade in `public/site.webmanifest` sind relativ (`favicon.svg`, nicht
+`/favicon.svg`): Vite schreibt `index.html` auf den Basis-Pfad um, das Manifest
+aber nicht — mit absoluten Pfaden liefen die Symbole unter einem Unterpfad ins
+Leere.
+
 ## Entnahmeplan
 
 Die Simulation läuft über eine **Phasenfolge**: erst ansparen, dann entnehmen,

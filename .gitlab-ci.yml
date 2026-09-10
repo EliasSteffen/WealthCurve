@@ -1,0 +1,76 @@
+# Prüfen und auf GitLab Pages veröffentlichen.
+#
+# Zwei Eigenheiten dieses Projekts machen die Datei länger als das übliche
+# "bauen und fertig" - beide sind unten an Ort und Stelle erklärt: der
+# Basis-Pfad und der Name des Ausgabeverzeichnisses.
+#
+# Was auf Pages NICHT läuft: /api/quotes. Pages liefert nur statische Dateien
+# aus, eine Serverfunktion gibt es dort nicht. Die Anwendung merkt das beim
+# Start und bietet statt der Kurssuche einen Dateiimport an - alles andere
+# funktioniert unverändert. Wer den Live-Abruf braucht, veröffentlicht
+# zusätzlich über Vercel (siehe vercel.json) oder `npm run serve`.
+
+default:
+  # Vite 8 verlangt Node 20.19+ oder 22.12+. Kein Alpine-Abbild: @napi-rs/canvas
+  # liegt als vorgebautes Binärpaket vor, und für musl ist die Auswahl dünner.
+  image: node:22
+  interruptible: true
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+
+stages:
+  - pruefen
+  - veroeffentlichen
+
+# Dieselben drei Befehle wie lokal. Eine Pipeline, die nur baut, merkt erst im
+# Browser, dass etwas kaputt ist.
+pruefen:
+  stage: pruefen
+  script:
+    - npm run typecheck
+    - npm run lint
+    - npm test
+
+pages:
+  stage: veroeffentlichen
+  script:
+    - |
+      # Der Basis-Pfad muss in die Assets hinein.
+      #
+      # Ein Projekt liegt auf Pages unter https://<gruppe>.gitlab.io/<projekt>/,
+      # nicht auf der Wurzel. Ohne `--base` schreibt Vite Skript und Stil
+      # absolut ("/assets/index.js"), und die Seite bliebe weiß - ein Fehler,
+      # den man erst nach dem Veröffentlichen sieht.
+      #
+      # Der Pfad kommt aus CI_PAGES_URL und nicht aus dem Projektnamen: bei
+      # einer Gruppen- oder Nutzerseite (<gruppe>.gitlab.io) ist er "/", und
+      # der Projektname wäre dort falsch.
+      BASE="$(node -e 'const u = process.env.CI_PAGES_URL; console.log(u ? new URL(u).pathname : "/")')"
+      echo "Basis-Pfad: $BASE"
+      npx vite build --base="$BASE"
+    - |
+      # GitLab Pages veröffentlicht den Ordner `public` - und genau so heißt
+      # hier Vites Quellverzeichnis für statische Dateien.
+      #
+      # Das ist kein Datenverlust: Vite kopiert public/* beim Bauen nach dist/,
+      # dort liegen favicon.svg, die Symbole und das Manifest also bereits.
+      # Gelöscht wird nur im Arbeitsverzeichnis des Auftrags, nie im Repository.
+      #
+      # Ab GitLab 17.9 ginge stattdessen `pages: publish: dist` - dieser Weg
+      # funktioniert auf jeder Version.
+      rm -rf public
+      mv dist public
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 week
+  rules:
+    # Nur der Standardzweig wird veröffentlicht. Ein Zweig, der versehentlich
+    # die öffentliche Seite überschreibt, fällt kaum auf.
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
