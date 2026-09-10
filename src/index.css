@@ -194,8 +194,9 @@ body {
   }
 }
 
-/* Video-Dialog: zentriert, mit derselben Ein-Ausblendung wie das Sheet. */
-.video-dialog {
+/* Großer, zentrierter Dialog - Einstellungen wie Video, mit derselben
+   Ein-Ausblendung wie das Sheet. */
+.app-dialog {
   /* Ohne margin:auto landet der Dialog in der oberen linken Ecke, sobald
      display:flex gesetzt ist. */
   margin: auto;
@@ -224,20 +225,20 @@ body {
 /* Siehe .settings-sheet: ohne display:none lag dieser Dialog geschlossen als
    993x636-Fläche über der Seitenspalte und machte die Szenario-Knöpfe
    unklickbar. */
-.video-dialog:not([open]) {
+.app-dialog:not([open]) {
   display: none;
   opacity: 0;
   scale: 0.97;
 }
 
 @starting-style {
-  .video-dialog[open] {
+  .app-dialog[open] {
     opacity: 0;
     scale: 0.97;
   }
 }
 
-.video-dialog::backdrop {
+.app-dialog::backdrop {
   background: rgb(0 0 0 / 0.5);
 }
 

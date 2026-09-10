@@ -1,19 +1,16 @@
 import { selectChartStyle, selectProjection } from '../core/derive'
-import { actions } from '../core/state'
 import { effectiveMode } from '../core/timeAxis'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTheme } from '../hooks/useTheme'
 import { useT } from '../react/localeContext'
-import { useDispatch, useSelector } from '../react/useSelector'
+import { useSelector } from '../react/useSelector'
 import { ChartLegend } from './chart/ChartLegend'
 import { GrowthChart } from './chart/GrowthChart'
 import { DataTable } from './DataTable'
+import { SettingsDialog } from './layout/SettingsDialog'
 import { SettingsSheet } from './layout/SettingsSheet'
 import { Sidebar } from './layout/Sidebar'
-import { LocaleToggle } from './LocaleToggle'
 import { SummaryStats } from './SummaryStats'
-import { VideoDialog } from './video/VideoDialog'
-import { ThemeToggle } from './ThemeToggle'
 import { Card } from './ui/Card'
 import { Logo } from './ui/Logo'
 
@@ -31,7 +28,6 @@ const DESKTOP = '(min-width: 1024px)'
  */
 export function Dashboard() {
   const { theme, setTheme } = useTheme()
-  const dispatch = useDispatch()
   const isDesktop = useMediaQuery(DESKTOP)
   const t = useT()
 
@@ -73,17 +69,11 @@ export function Dashboard() {
             </p>
           </div>
         </div>
+        {/* Zwei Knöpfe statt vier Bedienelementen: Sprache, Farbschema und das
+            Zurücksetzen wohnen jetzt im Reiter „Allgemein". Die Kopfzeile ist
+            kein Ablageort für alles, was sonst nirgends passte. */}
         <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={() => dispatch(actions.reset())}
-            className="rounded-lg border border-[var(--hairline)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--grid)]"
-          >
-            {t('app.reset', 'Zurücksetzen')}
-          </button>
-          <VideoDialog />
-          <LocaleToggle />
-          <ThemeToggle theme={theme} onChange={setTheme} />
+          <SettingsDialog theme={theme} onThemeChange={setTheme} />
         </div>
       </header>
 

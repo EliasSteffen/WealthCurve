@@ -1,5 +1,6 @@
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { actions } from '../../core/state'
+import { useT } from '../../react/localeContext'
 import { useDispatch, useSelector } from '../../react/useSelector'
 import { SettingsPanel } from './SettingsPanel'
 
@@ -14,15 +15,18 @@ import { SettingsPanel } from './SettingsPanel'
 export function Sidebar() {
   const collapsed = useSelector((s) => s.sidebarCollapsed)
   const dispatch = useDispatch()
+  const t = useT()
+  const einblenden = t('settings.open', 'Einstellungen einblenden')
+  const ausblenden = t('settings.close', 'Einstellungen ausblenden')
 
   if (collapsed) {
     return (
       <button
         type="button"
         onClick={() => dispatch(actions.setSidebarCollapsed(false))}
-        aria-label="Einstellungen einblenden"
+        aria-label={einblenden}
         aria-expanded={false}
-        title="Einstellungen einblenden"
+        title={einblenden}
         className="my-4 ml-4 flex h-24 w-9 shrink-0 items-center justify-center self-start rounded-lg border border-[var(--hairline)] bg-[var(--surface-1)] text-[var(--text-muted)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--text-primary)]"
       >
         <PanelLeftOpen size={16} aria-hidden />
@@ -36,9 +40,9 @@ export function Sidebar() {
         <button
           type="button"
           onClick={() => dispatch(actions.setSidebarCollapsed(true))}
-          aria-label="Einstellungen ausblenden"
+          aria-label={ausblenden}
           aria-expanded
-          title="Einstellungen ausblenden"
+          title={ausblenden}
           className="flex size-9 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--text-primary)]"
         >
           <PanelLeftClose size={16} aria-hidden />

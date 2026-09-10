@@ -1,4 +1,4 @@
-import { Download, Film, Repeat, X } from 'lucide-react'
+import { Download, Repeat } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DEFAULT_SPEC,
@@ -26,44 +26,15 @@ import { SelectField } from '../ui/SelectField'
 
 type Zustand = 'bereit' | 'laeuft' | 'fertig'
 
-export function VideoDialog() {
-  const [open, setOpen] = useState(false)
-  const dialogRef = useRef<HTMLDialogElement>(null)
-
-  useEffect(() => {
-    const dialog = dialogRef.current
-    if (!dialog) return
-    if (open && !dialog.open) dialog.showModal()
-    if (!open && dialog.open) dialog.close()
-  }, [open])
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 rounded-lg border border-[var(--hairline)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--grid)]"
-      >
-        <Film size={14} aria-hidden />
-        Video
-      </button>
-
-      <dialog
-        ref={dialogRef}
-        onClose={() => setOpen(false)}
-        onClick={(e) => {
-          if (e.target === dialogRef.current) setOpen(false)
-        }}
-        className="video-dialog"
-        aria-label="Video erstellen"
-      >
-        {open ? <VideoDialogInhalt onClose={() => setOpen(false)} /> : null}
-      </dialog>
-    </>
-  )
-}
-
-function VideoDialogInhalt({ onClose }: { readonly onClose: () => void }) {
+/**
+ * Vorschau und Aufnahme, samt aller Einstellungen des Videos.
+ *
+ * Ohne eigene Dialoghülle: der Arbeitsbereich sitzt als Reiter in der
+ * Einstellungsseite. Zwei Dialoge nebeneinander hätten bedeutet, dass Video-
+ * und Diagramm-Einstellungen an verschiedenen Orten wohnen, obwohl sie
+ * dieselbe Frage beantworten - wie das Ergebnis aussehen soll.
+ */
+export function VideoWorkspace() {
   const dispatch = useDispatch()
   const projection = useSelector(selectProjection)
   const style = useSelector(selectChartStyle)
@@ -192,20 +163,7 @@ function VideoDialogInhalt({ onClose }: { readonly onClose: () => void }) {
   const sekunden = Math.round(totalSeconds(spec))
 
   return (
-    <>
-      <div className="flex shrink-0 items-center justify-between border-b border-[var(--hairline)] px-4 py-3">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Video erstellen</h2>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Schließen"
-          className="flex size-10 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--text-primary)]"
-        >
-          <X size={16} aria-hidden />
-        </button>
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 lg:flex-row">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
         {/* Die Vorschau bekommt den ganzen freien Platz - man muss beurteilen
             können, was aufgenommen wird. */}
         <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center rounded-lg bg-[var(--surface-1)] p-3">
@@ -330,7 +288,6 @@ function VideoDialogInhalt({ onClose }: { readonly onClose: () => void }) {
           </p>
         </div>
       </div>
-    </>
   )
 }
 

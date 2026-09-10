@@ -44,7 +44,18 @@ import { SegmentedControl } from '../ui/SegmentedControl'
  * Registries (siehe core/settings), nicht aus einer Handpflege - eine neue
  * Serie oder ein neuer Parameter ist damit sofort auffindbar.
  */
-export function SettingsPanel() {
+export interface SettingsPanelProps {
+  /**
+   * „schmal" ist die Seitenspalte und das Sheet, „breit" der Einstellungsdialog.
+   *
+   * Nur dort liegen die beiden Bereiche wirklich nebeneinander - in 320 px
+   * Breite wären zwei Spalten je 150 px, und darin steht kein Regler mehr
+   * lesbar.
+   */
+  readonly layout?: 'schmal' | 'breit'
+}
+
+export function SettingsPanel({ layout = 'schmal' }: SettingsPanelProps = {}) {
   const dispatch = useDispatch()
   const scenarios = useSelector((s) => s.scenarios)
   const activeScenarioId = useSelector((s) => s.activeScenarioId)
@@ -266,6 +277,7 @@ export function SettingsPanel() {
 
       {szenarienOben ? <Card>{szenarienOben}</Card> : null}
 
+      <div className={cn(layout === 'breit' ? 'grid gap-4 lg:grid-cols-2 lg:items-start' : '')}>
       {SETTINGS_SCOPE_META.map((bereich) => {
         const karten = kartenIn(bereich.id)
         if (karten.length === 0) return null
@@ -336,6 +348,7 @@ export function SettingsPanel() {
           </section>
         )
       })}
+      </div>
     </div>
   )
 }
