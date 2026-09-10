@@ -20,7 +20,7 @@ export const contributionsSeries = defineSeries({
   colorVar: 'var(--chart-2, #eb6834)',
   unit: 'currency',
   defaultEnabled: true,
-  requiredParams: ['monthlyContribution', 'initialCapital'],
+  requiredParams: ['monthlyContribution', 'contributionGrowth', 'initialCapital'],
   compute: ({ base, params, model }) =>
     simulate({
       annualRatePercent: 0,

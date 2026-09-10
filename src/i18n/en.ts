@@ -77,6 +77,9 @@ export const en: Catalog = {
 
   // Parameter
   'param.monthlyContribution.label': 'Monthly contribution',
+  'param.contributionGrowth.label': 'Contribution growth',
+  'param.contributionGrowth.hint':
+    'Annual increase, e.g. with your salary. Comes on top of the inflation adjustment.',
   'param.annualRate.label': 'Return p. a.',
   'param.annualRate.hint': 'Effective annual return after costs.',
   'param.initialCapital.label': 'Initial capital',

@@ -371,3 +371,74 @@ describe('rateAt (variable Renditen)', () => {
     expect(new Set(gesehen).size).toBe(24)
   })
 })
+
+describe('Dynamik der Sparrate', () => {
+  const lauf = (contributionGrowth: number, over: Partial<typeof DEFAULT_MODEL> = {}) =>
+    simulate({
+      annualRatePercent: 5,
+      monthlyContribution: 100,
+      initialCapital: 0,
+      params: { ...DEFAULT_PARAMS, contributionGrowth, inflationRate: 2 },
+      model: { ...DEFAULT_MODEL, accumulationYears: 10, withdrawalYears: 0, ...over },
+    })
+
+  it('ändert ohne Dynamik keine einzige Zahl', () => {
+    // Der Vorgabewert ist 0 - jeder gespeicherte Zustand von vorher muss
+    // exakt dasselbe Ergebnis liefern wie zuvor.
+    expect(lauf(0).years).toEqual(
+      simulate({
+        annualRatePercent: 5,
+        monthlyContribution: 100,
+        initialCapital: 0,
+        params: DEFAULT_PARAMS,
+        model: { ...DEFAULT_MODEL, accumulationYears: 10, withdrawalYears: 0 },
+      }).years,
+    )
+  })
+
+  it('zahlt im ersten Jahr noch die eingetragene Rate', () => {
+    // Die Steigerung greift ab dem zweiten Jahr - sonst wäre der eingetragene
+    // Betrag nie derjenige, der tatsächlich fließt.
+    expect(lauf(5).years[1].contributions).toBeCloseTo(1_200, 6)
+  })
+
+  it('steigert die Einzahlung Jahr für Jahr', () => {
+    // 1200 + 1200 * 1,05 = 2460
+    expect(lauf(5).years[2].contributions).toBeCloseTo(2_460, 6)
+  })
+
+  it('bringt mehr ein als eine gleichbleibende Rate', () => {
+    expect(lauf(5).years.at(-1)!.balance).toBeGreaterThan(lauf(0).years.at(-1)!.balance)
+  })
+
+  it('kommt zur Inflationsanpassung hinzu, statt sie zu ersetzen', () => {
+    // Beide Faktoren wirken: 2 % Kaufkraftausgleich und 5 % echte Steigerung.
+    const mitBeidem = lauf(5, { amountsInflationAdjusted: true })
+    const nurInflation = lauf(0, { amountsInflationAdjusted: true })
+    expect(mitBeidem.years[2].contributions).toBeCloseTo(1_200 + 1_200 * 1.02 * 1.05, 6)
+    expect(mitBeidem.years[2].contributions).toBeGreaterThan(nurInflation.years[2].contributions)
+  })
+
+  it('lässt die Entnahme unberührt', () => {
+    /*
+     * Eine Gehaltserhöhung ist ein Grund, mehr zu sparen - keiner, später mehr
+     * zu entnehmen. Bei fester Entnahme muss der Betrag deshalb derselbe
+     * bleiben, egal wie dynamisch eingezahlt wurde.
+     */
+    const mit = simulate({
+      annualRatePercent: 5,
+      monthlyContribution: 100,
+      initialCapital: 0,
+      monthlyWithdrawalOverride: 500,
+      params: { ...DEFAULT_PARAMS, contributionGrowth: 8 },
+      model: { ...DEFAULT_MODEL, accumulationYears: 10, withdrawalYears: 5 },
+    })
+    const entnommenImErstenJahr = mit.years[11].withdrawals
+    expect(entnommenImErstenJahr).toBeCloseTo(500 * 12, 6)
+  })
+
+  it('ignoriert unsinnige Werte, statt zu rechnen', () => {
+    expect(lauf(Number.NaN).years.at(-1)!.balance).toBeCloseTo(lauf(0).years.at(-1)!.balance, 6)
+    expect(lauf(-10).years.at(-1)!.balance).toBeCloseTo(lauf(0).years.at(-1)!.balance, 6)
+  })
+})

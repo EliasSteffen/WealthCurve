@@ -8,6 +8,6 @@ export const compoundSeries = defineSeries({
   colorVar: 'var(--chart-1, #2a78d6)',
   unit: 'currency',
   defaultEnabled: true,
-  requiredParams: ['annualRate', 'monthlyContribution', 'initialCapital'],
+  requiredParams: ['annualRate', 'monthlyContribution', 'contributionGrowth', 'initialCapital'],
   compute: ({ base }) => base.years.map((y) => y.balance),
 })

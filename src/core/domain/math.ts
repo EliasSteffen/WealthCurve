@@ -169,6 +169,17 @@ export function simulate(config: SimulationConfig): SimulationResult {
     ? 1 + finite(config.params.inflationRate) / 100
     : 1
 
+  /*
+   * Die Dynamik steigert nur die Einzahlung, nicht die Entnahme.
+   *
+   * Sie bildet eine Gehaltserhöhung ab - ein Grund, mehr zu sparen, aber keiner,
+   * später mehr zu entnehmen. Der Faktor kommt zur Inflationsanpassung hinzu,
+   * statt sie zu ersetzen: die eine hält die Kaufkraft der Rate, die andere ist
+   * die Steigerung darüber hinaus.
+   */
+  const contributionGrowth =
+    amountGrowth * (1 + Math.max(0, finite(config.params.contributionGrowth)) / 100)
+
   const state: RunState = {
     balance: finite(config.initialCapital),
     contributions: finite(config.initialCapital),
@@ -191,7 +202,16 @@ export function simulate(config: SimulationConfig): SimulationResult {
   const [accumulation] = buildPhases(model, config.monthlyContribution, 0)
   let year = 0
   if (accumulation?.kind === 'accumulate') {
-    year = runPhase(accumulation, state, model, growth, year, years, amountGrowth, config.rateAt)
+    year = runPhase(
+      accumulation,
+      state,
+      model,
+      growth,
+      year,
+      years,
+      contributionGrowth,
+      config.rateAt,
+    )
   }
   const capitalAtRetirement = state.balance
 

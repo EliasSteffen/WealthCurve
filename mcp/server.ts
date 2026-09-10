@@ -85,6 +85,10 @@ const schriftFuer = (fontFamily: string | null): string => {
 const szenarioSchema = z.object({
   label: z.string().describe('Anzeigename, z. B. "Basis" oder "Aggressiv"'),
   monthlyContribution: z.number().describe('Monatliche Sparrate in Euro'),
+  contributionGrowth: z
+    .number()
+    .default(0)
+    .describe('Jährliche Steigerung der Sparrate in Prozent; 0 = gleichbleibend'),
   annualRate: z.number().describe('Erwartete Rendite in Prozent pro Jahr, z. B. 7'),
   initialCapital: z.number().default(0).describe('Startkapital in Euro'),
   inflationRate: z.number().default(2).describe('Inflation in Prozent p. a.'),
@@ -191,6 +195,7 @@ const toScenarios = (list: readonly z.infer<typeof szenarioSchema>[]): Projectio
     params: {
       ...DEFAULT_PARAMS,
       monthlyContribution: s.monthlyContribution,
+      contributionGrowth: s.contributionGrowth,
       annualRate: s.annualRate,
       initialCapital: s.initialCapital,
       inflationRate: s.inflationRate,

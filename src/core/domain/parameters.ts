@@ -47,6 +47,19 @@ export const PARAMETERS = {
     group: 'basis',
     category: 'einzahlung',
   },
+  contributionGrowth: {
+    label: 'Dynamik der Sparrate',
+    hint: 'Jährliche Erhöhung, etwa mit dem Gehalt. Kommt zur Inflationsanpassung hinzu.',
+    unit: 'percent',
+    min: 0,
+    max: 10,
+    step: 0.5,
+    // 0 heißt „gleichbleibende Rate" - der Stand, den jeder bisher gespeicherte
+    // Zustand beschreibt.
+    defaultValue: 0,
+    group: 'basis',
+    category: 'einzahlung',
+  },
   annualRate: {
     label: 'Rendite p. a.',
     hint: 'Effektive Jahresrendite nach Kosten.',

@@ -16,7 +16,7 @@ export const marketReturnSeries = defineSeries({
   colorVar: 'var(--chart-7, #4a3aa7)',
   unit: 'currency',
   defaultEnabled: false,
-  requiredParams: ['monthlyContribution', 'initialCapital'],
+  requiredParams: ['monthlyContribution', 'contributionGrowth', 'initialCapital'],
   // Mehrere geladene Wertpapiere ergeben mehrere Kurven - jede rechnet mit
   // ihrem eigenen Verlauf, das Sparverhalten bleibt dasselbe.
   fanOut: 'markets',

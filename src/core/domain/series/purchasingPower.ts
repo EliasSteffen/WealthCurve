@@ -12,7 +12,13 @@ export const purchasingPowerSeries = defineSeries({
   colorVar: 'var(--chart-3, #1baf7a)',
   unit: 'currency',
   defaultEnabled: false,
-  requiredParams: ['annualRate', 'monthlyContribution', 'initialCapital', 'inflationRate'],
+  requiredParams: [
+    'annualRate',
+    'monthlyContribution',
+    'contributionGrowth',
+    'initialCapital',
+    'inflationRate',
+  ],
   compute: ({ base, params }) => {
     const factor = 1 + params.inflationRate / 100
     return base.years.map((y) => y.balance / factor ** y.year)

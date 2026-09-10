@@ -15,7 +15,7 @@ export const savingsAccountSeries = defineSeries({
   colorVar: 'var(--chart-4, #eda100)',
   unit: 'currency',
   defaultEnabled: false,
-  requiredParams: ['savingsRate', 'monthlyContribution', 'initialCapital'],
+  requiredParams: ['savingsRate', 'monthlyContribution', 'contributionGrowth', 'initialCapital'],
   compute: ({ params, model }) =>
     simulate({
       annualRatePercent: params.savingsRate,

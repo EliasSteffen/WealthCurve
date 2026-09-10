@@ -31,6 +31,7 @@ const einmalig = buildProjection({
       colorSlot: 1,
       params: {
         monthlyContribution: 500,
+        contributionGrowth: 0,
         annualRate: 7,
         initialCapital: 0,
         inflationRate: 2,
