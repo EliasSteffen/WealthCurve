@@ -1,4 +1,4 @@
-import { Download, Repeat } from 'lucide-react'
+import { Download, Music, Repeat, Subtitles, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DEFAULT_SPEC,
@@ -14,12 +14,14 @@ import { CHART_STYLES } from '../../core/chart-style'
 import { selectChartStyle, selectProjection } from '../../core/derive'
 import { actions } from '../../core/state'
 import { formatEur, formatPercent, formatYears } from '../../lib/format'
+import { ladeTonspur, type Tonspur } from '../../lib/audioTrack'
 import { pickRecordingFormat, recordCanvas } from '../../lib/recordCanvas'
 import { transcodeToMp4 } from '../../lib/transcodeToMp4'
 import { useT } from '../../react/localeContext'
 import { useDispatch, useSelector } from '../../react/useSelector'
 import { drawFrame } from '../../render/canvas/drawFrame'
 import { buildFacts, suggestedFactKeys } from '../../render/facts'
+import { toSrt } from '../../render/subtitles'
 import { readLineColors, readRenderTheme } from '../../render/canvas/readTheme'
 import { RENDER_THEMES, themeLineColors, type ThemeName } from '../../render/canvas/themes'
 import { Checkbox } from '../ui/Checkbox'
@@ -49,6 +51,10 @@ export function VideoWorkspace() {
   const [ergebnis, setErgebnis] = useState<{ url: string; endung: string; blob: Blob } | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
   const [wandeltUm, setWandeltUm] = useState(false)
+  // Die Datei, nicht die fertige Spur: ein AudioContext je Aufnahme, sonst
+  // liefe nach dem zweiten Anlauf ein verbrauchter Puffer mit.
+  const [tonDatei, setTonDatei] = useState<File | null>(null)
+  const tonRef = useRef<HTMLInputElement>(null)
   const [umwandelFortschritt, setUmwandelFortschritt] = useState(0)
 
   const model = useSelector((s) => s.model)
@@ -132,12 +138,17 @@ export function VideoWorkspace() {
     setFehler(null)
     setZustand('laeuft')
     setFortschritt(0)
+    let ton: Tonspur | null = null
     try {
+      if (tonDatei) ton = await ladeTonspur(tonDatei)
       const aufnahme = await recordCanvas(canvas, {
         frameCount: gesamt,
         fps: spec.fps,
         draw: zeichne,
         onProgress: (done, total) => setFortschritt(done / total),
+        audioTrack: ton?.track,
+        // Erst wenn der Recorder läuft - alles davor fehlt am Anfang.
+        onStart: () => ton?.start(),
       })
       setErgebnis({
         url: URL.createObjectURL(aufnahme.blob),
@@ -148,7 +159,20 @@ export function VideoWorkspace() {
     } catch (e) {
       setFehler(e instanceof Error ? e.message : 'Unbekannter Fehler')
       setZustand('bereit')
+    } finally {
+      await ton?.dispose()
     }
+  }
+
+  /** Die Szenentexte als Datei - im Bild stehen sie ohnehin. */
+  const untertitelLaden = () => {
+    const blob = new Blob([toSrt(spec, facts)], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'zinseszins.srt'
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const umwandeln = async () => {
@@ -170,6 +194,7 @@ export function VideoWorkspace() {
   }
 
   const sekunden = Math.round(totalSeconds(spec))
+  const hatUntertitel = toSrt(spec, facts).length > 0
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
@@ -287,6 +312,55 @@ export function VideoWorkspace() {
             platzhalter={suggestedFactKeys(facts, projection.summaries.length)}
           />
 
+          {/* Die Datei bleibt im Browser - gelesen wird sie über die Datei-API,
+              hochgeladen wird nichts. */}
+          <div>
+            <div className="mb-1.5 text-xs font-medium text-[var(--text-secondary)]">
+              {t('video.audio', 'Tonspur')}
+            </div>
+            <input
+              ref={tonRef}
+              type="file"
+              accept="audio/*"
+              className="hidden"
+              onChange={(e) => {
+                setTonDatei(e.target.files?.[0] ?? null)
+                setFehler(null)
+              }}
+            />
+            {tonDatei ? (
+              <div className="flex items-center justify-between gap-2 rounded-lg border border-[var(--hairline)] px-2.5 py-2">
+                <span className="min-w-0 truncate text-[11px] text-[var(--text-secondary)]">
+                  {tonDatei.name}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setTonDatei(null)}
+                  aria-label={t('video.audio.remove', 'Tonspur entfernen')}
+                  className="flex size-8 shrink-0 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--text-primary)]"
+                >
+                  <Trash2 size={14} aria-hidden />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => tonRef.current?.click()}
+                className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[var(--hairline)] px-2.5 py-2 text-[11px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--grid)]"
+              >
+                <Music size={13} aria-hidden />
+                {t('video.audio.pick', 'Audiodatei wählen')}
+              </button>
+            )}
+            <p className="mt-1.5 text-[11px] leading-snug text-[var(--text-muted)]">
+              {t(
+                'video.audio.hint',
+                `Läuft ab Sekunde 0 und endet mit dem Video (${sekunden} s). Während der Aufnahme bleibt sie stumm – zu hören ist sie in der fertigen Datei.`,
+                { sekunden: String(sekunden) },
+              )}
+            </p>
+          </div>
+
           {zustand === 'laeuft' ? (
             <div>
               <div className="h-1.5 overflow-hidden rounded-full bg-[var(--grid)]">
@@ -320,6 +394,23 @@ export function VideoWorkspace() {
                 <Download size={15} aria-hidden />
                 Herunterladen (.{ergebnis.endung})
               </a>
+
+              {/*
+                Erst neben dem fertigen Video, nicht davor: eine Untertitelspur
+                ohne die Aufnahme, zu der sie gehört, hilft niemandem - und
+                nach der Aufnahme steht fest, welche Texte tatsächlich im Bild
+                standen.
+              */}
+              {hatUntertitel ? (
+                <button
+                  type="button"
+                  onClick={untertitelLaden}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--hairline)] px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--grid)]"
+                >
+                  <Subtitles size={15} aria-hidden />
+                  {t('video.subtitles', 'Untertitel (.srt)')}
+                </button>
+              ) : null}
 
               {/* Nur wenn die Aufnahme WebM geworden ist - wer MP4 direkt
                   aufnehmen kann, braucht die 30 MB ffmpeg.wasm nie. */}

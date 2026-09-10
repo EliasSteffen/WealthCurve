@@ -85,6 +85,12 @@ export const en: Catalog = {
   'video.showHeader.hint': 'Name and current value per scenario. Off if only the curve should speak.',
   'video.showLegend': 'Show the legend',
   'video.showLegend.hint': 'Which line is which series.',
+  'video.audio': 'Audio track',
+  'video.audio.pick': 'Choose an audio file',
+  'video.audio.remove': 'Remove the audio track',
+  'video.audio.hint':
+    'Starts at second 0 and ends with the video ({sekunden} s). It stays silent while recording – you hear it in the finished file.',
+  'video.subtitles': 'Subtitles (.srt)',
   'scenario.color': 'Change the colour of {name}',
   'scenario.color.slot': 'Colour {slot}',
   'scenario.color.taken': 'Taken by another scenario',

@@ -22,9 +22,25 @@ const KANDIDATEN: readonly RecordingFormat[] = [
   { mimeType: 'video/webm', extension: 'webm' },
 ]
 
-export function pickRecordingFormat(): RecordingFormat | null {
+/**
+ * Dieselbe Reihenfolge, aber mit Tonspur im Typ.
+ *
+ * Ein mimeType, der nur einen Videocodec nennt, nimmt die Tonspur zwar
+ * entgegen - manche Browser lassen sie dann still weg. Das Ergebnis wäre ein
+ * stummes Video ohne jede Fehlermeldung.
+ */
+const KANDIDATEN_MIT_TON: readonly RecordingFormat[] = [
+  { mimeType: 'video/mp4;codecs=avc1.42E01E,mp4a.40.2', extension: 'mp4' },
+  { mimeType: 'video/mp4', extension: 'mp4' },
+  { mimeType: 'video/webm;codecs=vp9,opus', extension: 'webm' },
+  { mimeType: 'video/webm;codecs=vp8,opus', extension: 'webm' },
+  { mimeType: 'video/webm', extension: 'webm' },
+]
+
+export function pickRecordingFormat(mitTon = false): RecordingFormat | null {
   if (typeof MediaRecorder === 'undefined') return null
-  return KANDIDATEN.find((k) => MediaRecorder.isTypeSupported(k.mimeType)) ?? null
+  const kandidaten = mitTon ? KANDIDATEN_MIT_TON : KANDIDATEN
+  return kandidaten.find((k) => MediaRecorder.isTypeSupported(k.mimeType)) ?? null
 }
 
 export interface RecordOptions {
@@ -33,6 +49,21 @@ export interface RecordOptions {
   readonly draw: (index: number) => void
   readonly onProgress?: (done: number, total: number) => void
   readonly signal?: AbortSignal
+  /**
+   * Tonspur, die mit aufgenommen wird.
+   *
+   * Kommt fertig von außen: das Aufbauen des Audio-Graphen gehört zur
+   * Oberfläche, die die Datei kennt - hier geht es nur darum, die Spur in
+   * denselben Strom zu legen wie das Bild.
+   */
+  readonly audioTrack?: MediaStreamTrack
+  /**
+   * Läuft, sobald der Recorder aufzeichnet.
+   *
+   * Der Ton muss genau dann anfangen und nicht davor: alles, was vor
+   * `recorder.start()` erklingt, fehlt am Anfang der Aufnahme.
+   */
+  readonly onStart?: () => void
 }
 
 export interface Recording {
@@ -48,7 +79,7 @@ export async function recordCanvas(
   canvas: HTMLCanvasElement,
   options: RecordOptions,
 ): Promise<Recording> {
-  const format = pickRecordingFormat()
+  const format = pickRecordingFormat(options.audioTrack !== undefined)
   if (!format) throw new Error('Dieser Browser kann keine Videos aufnehmen.')
 
   // Schriften müssen geladen sein, bevor das erste Bild entsteht - sonst
@@ -60,6 +91,7 @@ export async function recordCanvas(
   // schnell der Rechner zeichnet.
   const stream = canvas.captureStream(0)
   const track = stream.getVideoTracks()[0] as FrameTrack
+  if (options.audioTrack) stream.addTrack(options.audioTrack)
   const recorder = new MediaRecorder(stream, {
     mimeType: format.mimeType,
     videoBitsPerSecond: 8_000_000,
@@ -76,6 +108,7 @@ export async function recordCanvas(
   })
 
   recorder.start()
+  options.onStart?.()
   const abstand = 1000 / options.fps
 
   try {
