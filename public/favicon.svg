@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none">
   <!--
-    Dieselbe Marke wie in der Kopfzeile (src/components/ui/Logo.tsx), nur mit
-    festen Farben: ein Favicon wird ausserhalb der Seite gezeichnet und kennt
-    deren CSS-Variablen nicht. Die Werte sind die Ersatzfarben der Palette; das
-    Grau traegt auf hellem wie auf dunklem Tab-Hintergrund.
+    Erzeugt aus src/render/logo.ts - nicht von Hand aendern, sondern
+    dort und danach `npm run icons`. Feste Farben, weil ein Favicon
+    ausserhalb der Seite gezeichnet wird und deren CSS-Variablen nicht
+    kennt; die Variante "kompakt" hat die Strichstaerke fuer 16 px.
   -->
-  <path d="M3.5 20.5H20.5" stroke="#8a8a8a" stroke-width="1.5" stroke-linecap="round"/>
-  <path d="M3.5 17.5C9.5 17.2 13.5 14.5 17.5 5.5" stroke="#2a78d6" stroke-width="2.4" stroke-linecap="round"/>
-  <circle cx="17.5" cy="5.5" r="2.4" fill="#2a78d6"/>
+  <path d="M3.5 20.5H20.5" stroke="#8a8a8a" stroke-width="2" stroke-linecap="round"/>
+  <path d="M3.5 17.5C9.5 17.2 13.5 14.5 17.5 5.5" stroke="#2a78d6" stroke-width="3.2" stroke-linecap="round"/>
+  <circle cx="17.5" cy="5.5" r="3" fill="#2a78d6"/>
 </svg>

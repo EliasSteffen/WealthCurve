@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b --noEmit",
     "demo": "tsx scripts/headless-demo.ts",
+    "icons": "tsx scripts/icons.ts",
     "serve": "tsx scripts/serve.ts",
     "mcp": "tsx mcp/server.ts"
   },

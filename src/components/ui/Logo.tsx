@@ -1,3 +1,5 @@
+import { LOGO_AXIS, LOGO_CURVE, LOGO_DOT, LOGO_STROKE, LOGO_VIEWBOX } from '../../render/logo'
+
 /**
  * Die Bildmarke: Achse, wachsende Kurve, Endpunkt.
  *
@@ -7,27 +9,36 @@
  * nicht trennen: bei 26 px blieb ein blauer Haken übrig. Was klein nicht mehr
  * lesbar ist, gehört nicht in ein Logo.
  *
- * Inline und nicht als Datei, damit `currentColor` und die Palette greifen: die
- * Marke trägt im hellen wie im dunklen Thema und braucht keine zweite Fassung.
+ * Die Geometrie kommt aus `render/logo`, damit Kopfzeile, Favicon und die
+ * Symbole für den Startbildschirm dieselbe Marke zeigen. Die Farben stehen
+ * dagegen hier: im Browser gibt es CSS-Variablen, und die Marke soll dem Thema
+ * folgen. Die festen Werte im Modul gelten nur für alles außerhalb der Seite.
  */
 export function Logo({ size = 26 }: { readonly size?: number }) {
+  const strich = LOGO_STROKE.normal
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden className="shrink-0">
-      {/* Die Achse - ohne sie schwebte die Kurve im Nichts. */}
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${LOGO_VIEWBOX} ${LOGO_VIEWBOX}`}
+      fill="none"
+      aria-hidden
+      className="shrink-0"
+    >
       <path
-        d="M3.5 20.5H20.5"
+        d={LOGO_AXIS}
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth={strich.axis}
         strokeLinecap="round"
         opacity="0.3"
       />
       <path
-        d="M3.5 17.5C9.5 17.2 13.5 14.5 17.5 5.5"
+        d={LOGO_CURVE}
         stroke="var(--chart-1, #2a78d6)"
-        strokeWidth="2.4"
+        strokeWidth={strich.curve}
         strokeLinecap="round"
       />
-      <circle cx="17.5" cy="5.5" r="2.4" fill="var(--chart-1, #2a78d6)" />
+      <circle cx={LOGO_DOT.cx} cy={LOGO_DOT.cy} r={strich.dot} fill="var(--chart-1, #2a78d6)" />
     </svg>
   )
 }

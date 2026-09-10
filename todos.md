@@ -21,15 +21,12 @@
 
 ## Offen
 
-- [ ] Szenarien speichern / per Link teilen — `serialize()` und `deserialize()`
-      sind vorhanden und getestet, es fehlt nur die Anbindung. Das MCP-Werkzeug
-      `zustand` benutzt beide bereits.
-- [ ] Steuern (Abgeltungsteuer, Vorabpauschale) als weitere Serie — die
-      Vorabpauschale braucht den Basiszins je Jahr, also eine Datenquelle
 - [ ] Sparraten-Dynamik über die Inflation hinaus (z. B. Gehaltssprünge)
 - [ ] Tonspur oder Untertitel fürs Reel — `MediaRecorder` nimmt nur das Canvas
       auf, Ton bräuchte eine zweite Spur
-- [ ] Weitere Sprachen — der Katalog ist dafür vorbereitet
+- [ ] logo soll außerdem auch für die website im browser angezeigt werden als favicon
+- [ ] weitere einstell möglichkeiten für das video
+- [ ] vermutlich ist eine eigene einstellungsseite für generelle / chart und video einstellungen sinnvoll oder? und trotzdem gibt es die quick access sidebar für den chart.
 
 ## Aufgefallen, aber nicht angefasst
 
