@@ -5,8 +5,8 @@ import type {
   SimulationConfig,
   SimulationResult,
   YearSnapshot,
-} from './types'
-import { DEFAULT_WITHDRAWAL_STRATEGY_ID, resolveWithdrawalStrategy } from './withdrawal'
+} from './types.ts'
+import { DEFAULT_WITHDRAWAL_STRATEGY_ID, resolveWithdrawalStrategy } from './withdrawal/index.ts'
 
 export const MONTHS_PER_YEAR = 12
 
@@ -22,6 +22,7 @@ export const DEFAULT_MODEL: ModelSettings = {
   timeAxis: 'relative',
   startAge: null,
   startYear: null,
+  startMonth: 1,
 }
 
 const finite = (value: number, fallback = 0): number => (Number.isFinite(value) ? value : fallback)

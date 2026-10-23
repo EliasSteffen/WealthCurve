@@ -1,4 +1,4 @@
-import { defineChartStyle } from './types'
+import { defineChartStyle } from './types.ts'
 
 /**
  * Mit Fläche unter der Kurve. Der Abstand zwischen Zinseszins und Eingezahltem

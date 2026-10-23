@@ -1,4 +1,4 @@
-import { defineSeries } from '../types'
+import { defineSeries } from '../types.ts'
 
 /** Die Hauptkurve: Depotwert mit Zinseszins. */
 export const compoundSeries = defineSeries({

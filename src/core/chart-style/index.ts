@@ -1,9 +1,9 @@
-import { bold } from './bold'
-import { clean } from './clean'
-import { minimal } from './minimal'
-import { presentation } from './presentation'
-import { sketch } from './sketch'
-import type { ChartStyle } from './types'
+import { bold } from './bold.ts'
+import { clean } from './clean.ts'
+import { minimal } from './minimal.ts'
+import { presentation } from './presentation.ts'
+import { sketch } from './sketch.ts'
+import type { ChartStyle } from './types.ts'
 
 /** Registry - ein neuer Stil ist eine Datei plus eine Zeile hier. */
 export const CHART_STYLES: readonly ChartStyle[] = [clean, sketch, minimal, bold, presentation]
@@ -15,5 +15,5 @@ export function resolveChartStyle(id: string): ChartStyle {
 }
 
 export { bold, clean, minimal, presentation, sketch }
-export type { ChartStyle } from './types'
-export { defineChartStyle } from './types'
+export type { ChartStyle } from './types.ts'
+export { defineChartStyle } from './types.ts'

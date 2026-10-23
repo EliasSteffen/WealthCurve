@@ -84,11 +84,40 @@ describe('marketFromPrices', () => {
     const reihe = marketFromPrices(punkte([null, null, ...Array(20).fill(100)]), { symbol: 'X' })
     expect(reihe!.start).toBe('2000-03-01')
   })
+
+  it('zählt Yahoos angehängte Zeile für heute nicht als eigenen Monat', () => {
+    // Nach der Monatszeile kommt eine für den aktuellen Tag, im selben Monat.
+    const monate = punkte(Array.from({ length: 24 }, (_, i) => 100 + i))
+    const letzter = monate[monate.length - 1]!
+    const mitHeute = [...monate, { date: `${letzter.date.slice(0, 8)}22`, price: 130 }]
+    const reihe = marketFromPrices(mitHeute, { symbol: 'X' })
+    expect(reihe!.monthlyReturns).toHaveLength(23)
+    // Der spätere Kurs zählt: von 122 im Vormonat auf 130.
+    expect(reihe!.monthlyReturns.at(-1)).toBeCloseTo(130 / 122 - 1)
+  })
+
+  it('macht aus mehreren Kursen im Monat einen Monatskurs', () => {
+    // Zwei Zeilen je Monat, am 1. und am 15. - es zählt die vom 15.
+    const zeilen = Array.from({ length: 14 }, (_, m) => {
+      const monat = `${2020 + Math.floor(m / 12)}-${String((m % 12) + 1).padStart(2, '0')}`
+      return [
+        { date: `${monat}-01`, price: 100 + m },
+        { date: `${monat}-15`, price: 200 + m },
+      ]
+    }).flat()
+    const reihe = marketFromPrices(zeilen, { symbol: 'X' })
+    expect(reihe!.monthlyReturns).toHaveLength(13)
+    expect(reihe!.monthlyReturns[0]).toBeCloseTo(201 / 200 - 1)
+  })
 })
 
 describe('parseMarketFile', () => {
+  // Fortlaufende Monate: mehrere Zeilen im selben Monat ergeben einen Monatskurs.
+  const monat = (i: number) =>
+    `${2000 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, '0')}-01`
+
   it('liest CSV mit Komma', () => {
-    const zeilen = Array.from({ length: 20 }, (_, i) => `2000-01-01,${100 + i}`).join('\n')
+    const zeilen = Array.from({ length: 20 }, (_, i) => `${monat(i)},${100 + i}`).join('\n')
     const reihe = parseMarketFile(`date,close\n${zeilen}`, 'AAPL.csv')
     expect(reihe).not.toBeNull()
     expect(reihe!.symbol).toBe('AAPL')
@@ -98,7 +127,7 @@ describe('parseMarketFile', () => {
   it('liest CSV mit Semikolon und deutschem Dezimalkomma', () => {
     // Genau das Format, das die eigene CSV-Ausgabe erzeugt - ein Export soll
     // wieder importierbar sein.
-    const zeilen = Array.from({ length: 20 }, (_, i) => `2000-01-01;${100 + i},50`).join('\n')
+    const zeilen = Array.from({ length: 20 }, (_, i) => `${monat(i)};${100 + i},50`).join('\n')
     const reihe = parseMarketFile(`Datum;Kurs\n${zeilen}`, 'dax.csv')
     expect(reihe).not.toBeNull()
     expect(reihe!.monthlyReturns).toHaveLength(19)
@@ -120,7 +149,7 @@ describe('parseMarketFile', () => {
 
   it('liest ein JSON-Array von Kurspunkten', () => {
     const roh = JSON.stringify(
-      Array.from({ length: 20 }, (_, i) => ({ date: '2000-01-01', close: 100 + i })),
+      Array.from({ length: 20 }, (_, i) => ({ date: monat(i), close: 100 + i })),
     )
     expect(parseMarketFile(roh, 'x.json')!.monthlyReturns).toHaveLength(19)
   })

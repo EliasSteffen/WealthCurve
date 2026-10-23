@@ -1,8 +1,13 @@
 {
-  "name": "finance-visualization",
+  "name": "wealthcurve",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "exports": {
+    ".": "./src/core/index.ts",
+    "./quotes": "./server/quotes.ts",
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

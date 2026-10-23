@@ -1,4 +1,4 @@
-import type { VideoFormat } from './types'
+import type { VideoFormat } from './types.ts'
 
 /** Ein neues Format ist eine Zeile hier. */
 export const VIDEO_FORMATS: readonly VideoFormat[] = [

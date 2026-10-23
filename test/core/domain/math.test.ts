@@ -37,6 +37,7 @@ const config = (o: Overrides = {}): SimulationConfig => ({
     timeAxis: 'relative',
     startAge: null,
     startYear: null,
+    startMonth: 1,
   },
 })
 

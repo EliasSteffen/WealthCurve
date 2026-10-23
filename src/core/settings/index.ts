@@ -1,15 +1,15 @@
-import { CHART_STYLES } from '../chart-style'
-import type { ParamDefinition } from '../domain/parameters'
-import { PARAMETERS, PARAM_IDS, TIMELINE_FIELDS, TIMELINE_FIELD_IDS } from '../domain/parameters'
-import { SERIES } from '../domain/series'
-import { WITHDRAWAL_STRATEGIES } from '../domain/withdrawal'
+import { CHART_STYLES } from '../chart-style/index.ts'
+import type { ParamDefinition } from '../domain/parameters.ts'
+import { PARAMETERS, PARAM_IDS, TIMELINE_FIELDS, TIMELINE_FIELD_IDS } from '../domain/parameters.ts'
+import { SERIES } from '../domain/series/index.ts'
+import { WITHDRAWAL_STRATEGIES } from '../domain/withdrawal/index.ts'
 import {
   SETTINGS_CATEGORIES,
   cardId,
   type SettingsCardId,
   type SettingsCategoryId,
   type SettingsScope,
-} from './categories'
+} from './categories.ts'
 
 /**
  * Suchindex über alle Einstellungen.
@@ -26,14 +26,14 @@ export {
   SETTINGS_SCOPES,
   SETTINGS_SCOPE_META,
   cardId,
-} from './categories'
+} from './categories.ts'
 export type {
   SettingsCardId,
   SettingsCategory,
   SettingsCategoryId,
   SettingsScope,
   SettingsScopeMeta,
-} from './categories'
+} from './categories.ts'
 
 export interface SettingsEntry {
   /** Stabile ID, nach der die Oberfläche filtert. */
@@ -101,10 +101,12 @@ const STATISCH: readonly SettingsEntry[] = [
     category: 'zeit',
     scope: 'global',
     advanced: true,
-    label: 'Zeitachse, Alter und Startjahr',
+    label: 'Zeitachse, Alter, Startjahr und -monat',
     keywords: [
       'alter',
       'startjahr',
+      'startmonat',
+      'monat',
       'kalender',
       'jahreszahl',
       'achse',

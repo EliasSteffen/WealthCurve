@@ -1,4 +1,4 @@
-import type { ParamId, SimulationParams } from './parameters'
+import type { ParamId, SimulationParams } from './parameters.ts'
 
 /** Wie der Jahreszins auf die Perioden verteilt wird. */
 export type Compounding = 'monthly-effective' | 'monthly-nominal' | 'annual'
@@ -63,6 +63,13 @@ export interface ModelSettings {
    * Kursserie deshalb nichts.
    */
   readonly startYear: number | null
+  /**
+   * Monat (1-12), in dem die Ansparphase im Startjahr beginnt; 1 = Januar.
+   *
+   * Zählt nur für den Kursverlauf: „vor genau zehn Jahren" heißt selten
+   * Januar. Die Achse bleibt in ganzen Jahren ab diesem Monat.
+   */
+  readonly startMonth: number
 }
 
 export interface SimulationConfig {

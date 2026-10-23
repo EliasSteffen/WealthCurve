@@ -1,4 +1,4 @@
-import { defineSeries } from '../types'
+import { defineSeries } from '../types.ts'
 
 /**
  * Kaufkraft: derselbe Depotwert, abgezinst auf heutiges Geld.

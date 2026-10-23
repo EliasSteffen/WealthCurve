@@ -47,6 +47,42 @@ Der Store erfüllt den Vertrag von Reacts `useSyncExternalStore`
 Vanilla – ohne Zustand oder Redux als Abhängigkeit. `npm run demo` führt beide
 Wege in einem echten Node-Prozess vor.
 
+### Aus einem anderen Projekt
+
+Das Paket heißt `wealthcurve` und hat zwei Einstiege, beide als TypeScript-Quelle
+ohne Build:
+
+| Import | Datei | Inhalt |
+|---|---|---|
+| `wealthcurve` | `src/core/index.ts` | Rechnung, Zustand, Registries, Kursreihen (`marketFromPrices`, `parseMarketFile`) |
+| `wealthcurve/quotes` | `server/quotes.ts` | `fetchQuotes(symbol)` – Kurse von Yahoo, bereinigt um Splits und Dividenden |
+
+```ts
+import { buildProjection, DEFAULT_MODEL, DEFAULT_PARAMS } from 'wealthcurve'
+import { fetchQuotes } from 'wealthcurve/quotes'
+
+const kurs = await fetchQuotes('NVDA')
+if (!kurs.ok) throw new Error(kurs.fehler.error)
+const p = buildProjection({
+  scenarios: [{ id: 'a', label: '100 $', colorSlot: 1,
+    params: { ...DEFAULT_PARAMS, initialCapital: 100, monthlyContribution: 0 } }],
+  seriesIds: ['marketReturn'],
+  model: { ...DEFAULT_MODEL, accumulationYears: 10, withdrawalYears: 0,
+           startYear: 2015, startMonth: 10 },
+  markets: [kurs.daten],
+})
+```
+
+Reines Node ab 23.6 führt das direkt aus – es entfernt die Typen selbst. Dafür
+trägt jeder relative Import in `src/core` die Endung `.ts`; `node-import.test.ts`
+prüft das und lädt beide Einstiege in einem eigenen Node-Prozess.
+
+Node entfernt Typen allerdings nicht innerhalb von `node_modules`. Ein
+`npm install github:…` scheitert deshalb beim Start; eingebunden wird das Projekt
+als Verweis auf eine Arbeitskopie (`"wealthcurve": "file:../finance-visualization"`,
+Workspace oder Git-Submodul). npm legt dann einen Symlink an, Node folgt ihm aus
+`node_modules` heraus, und alles läuft.
+
 ## Eine neue Serie hinzufügen
 
 Das ist der Zweck der Architektur: **eine neue Datei, eine neue Zeile.** Chart, Regler, Legende,
@@ -184,6 +220,10 @@ importierte Reihe exakt so gerechnet wird wie eine abgerufene.
 Reicht die Historie nicht über die Laufzeit, endet die Kurve dort, statt
 fortgeschrieben zu werden — Serien dürfen dafür `null` liefern, was der Chart als
 Lücke zeichnet.
+
+Ab wann gehalten wird, legen Startjahr und Startmonat fest (Einstellungen →
+Zeit). Ohne Monat gilt der Januar; „vor genau zehn Jahren" braucht ihn. Die
+Achse zählt danach ganze Jahre ab diesem Monat.
 
 ### Veröffentlichen
 

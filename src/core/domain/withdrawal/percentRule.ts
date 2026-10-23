@@ -1,4 +1,4 @@
-import { defineWithdrawal } from './types'
+import { defineWithdrawal } from './types.ts'
 
 /**
  * Prozentregel: ein fester Anteil des Depotwerts bei Rentenbeginn, auf Monate

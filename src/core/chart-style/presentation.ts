@@ -1,4 +1,4 @@
-import { defineChartStyle } from './types'
+import { defineChartStyle } from './types.ts'
 
 /** Gleiche Geometrie wie der Standard, aber aus zehn Metern Entfernung lesbar. */
 export const presentation = defineChartStyle({

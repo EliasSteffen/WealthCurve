@@ -183,6 +183,7 @@ export const en: Catalog = {
   'model.timeAxis.calendar': 'Calendar year',
   'model.startAge': 'Age at start',
   'model.startYear': 'Start year',
+  'model.startMonth': 'Start month',
   'model.noAnchor': 'none',
   'model.startYear.needed':
     'Without a start year the price curve stays empty: real returns are tied to real months, and no price can be projected forward.',

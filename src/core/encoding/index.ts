@@ -1,6 +1,6 @@
-import { colorByScenario } from './colorByScenario'
-import { colorBySeries } from './colorBySeries'
-import type { EncodingInput, EncodingStrategy } from './types'
+import { colorByScenario } from './colorByScenario.ts'
+import { colorBySeries } from './colorBySeries.ts'
+import type { EncodingInput, EncodingStrategy } from './types.ts'
 
 /** Registry - eine neue Kodierung ist eine Datei plus eine Zeile hier. */
 export const ENCODINGS: readonly EncodingStrategy[] = [colorBySeries, colorByScenario]
@@ -20,4 +20,4 @@ export function resolveEncoding(preference: string, input: EncodingInput): Encod
 }
 
 export { colorByScenario, colorBySeries }
-export * from './types'
+export * from './types.ts'

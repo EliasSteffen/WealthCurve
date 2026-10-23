@@ -42,7 +42,7 @@ export const SETTINGS_CATEGORIES: readonly SettingsCategory[] = [
   { id: 'einzahlung', label: 'Einzahlung', hint: 'Sparrate und Ansparphase' },
   { id: 'auszahlung', label: 'Auszahlung', hint: 'Entnahme und Entnahmephase' },
   { id: 'kurven', label: 'Kurven', hint: 'Welche Serien, welcher Stil' },
-  { id: 'zeit', label: 'Zeit', hint: 'Alter, Startjahr, Achsenbeschriftung', advanced: true },
+  { id: 'zeit', label: 'Zeit', hint: 'Alter, Startjahr und -monat, Achsenbeschriftung', advanced: true },
   { id: 'wertpapiere', label: 'Wertpapiere', hint: 'Echte Kursverläufe laden', advanced: true },
   { id: 'annahmen', label: 'Annahmen', hint: 'Inflation, Tagesgeld, Rechenweise', advanced: true },
 ]

@@ -1,4 +1,4 @@
-import type { Projection } from './projection'
+import type { Projection } from './projection.ts'
 
 /**
  * CSV-Export einer Projektion.

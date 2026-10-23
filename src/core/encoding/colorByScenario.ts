@@ -1,5 +1,5 @@
-import { slotVar } from '../palette'
-import { dashFor, defineEncoding, reportCapacity } from './types'
+import { slotVar } from '../palette.ts'
+import { dashFor, defineEncoding, reportCapacity } from './types.ts'
 
 /**
  * Farbe trägt das Szenario, der Linienstil die Serie.

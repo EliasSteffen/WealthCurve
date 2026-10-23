@@ -1,4 +1,4 @@
-import { defineChartStyle } from './types'
+import { defineChartStyle } from './types.ts'
 
 /**
  * Handgezeichnet: Linien und Gitter wackeln leicht, Beschriftung in

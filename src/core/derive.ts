@@ -1,10 +1,10 @@
-import { resolveChartStyle } from './chart-style'
-import { SERIES } from './domain/series'
-import type { ParamId } from './domain/parameters'
-import { resolveWithdrawalStrategy } from './domain/withdrawal'
-import { buildProjection, type Projection } from './projection'
-import { createSelectorFactory } from './selectors'
-import type { AppState } from './state'
+import { resolveChartStyle } from './chart-style/index.ts'
+import { SERIES } from './domain/series/index.ts'
+import type { ParamId } from './domain/parameters.ts'
+import { resolveWithdrawalStrategy } from './domain/withdrawal/index.ts'
+import { buildProjection, type Projection } from './projection.ts'
+import { createSelectorFactory } from './selectors.ts'
+import type { AppState } from './state.ts'
 
 const createSelector = createSelectorFactory<AppState>()
 

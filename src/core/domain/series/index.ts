@@ -1,10 +1,10 @@
-import type { SeriesDefinition } from '../types'
-import { compoundSeries } from './compound'
-import { contributionsSeries } from './contributions'
-import { marketReturnSeries } from './marketReturn'
-import { purchasingPowerSeries } from './purchasingPower'
-import { savingsAccountSeries } from './savingsAccount'
-import { withdrawnSeries } from './withdrawn'
+import type { SeriesDefinition } from '../types.ts'
+import { compoundSeries } from './compound.ts'
+import { contributionsSeries } from './contributions.ts'
+import { marketReturnSeries } from './marketReturn.ts'
+import { purchasingPowerSeries } from './purchasingPower.ts'
+import { savingsAccountSeries } from './savingsAccount.ts'
+import { withdrawnSeries } from './withdrawn.ts'
 
 /**
  * Das Series-Registry - der einzige Ort, den eine neue Serie anfassen muss.

@@ -1,7 +1,7 @@
-import { AUTO_ENCODING, resolveEncoding, type CapacityReport } from './encoding'
-import { simulate } from './domain/math'
-import type { SimulationParams } from './domain/parameters'
-import { SERIES } from './domain/series'
+import { AUTO_ENCODING, resolveEncoding, type CapacityReport } from './encoding/index.ts'
+import { simulate } from './domain/math.ts'
+import type { SimulationParams } from './domain/parameters.ts'
+import { SERIES } from './domain/series/index.ts'
 import type {
   MarketSeries,
   ModelSettings,
@@ -9,9 +9,9 @@ import type {
   SeriesDefinition,
   SimulationResult,
   YearSnapshot,
-} from './domain/types'
-import { allocateSlot, slotFromVar, slotVar } from './palette'
-import { yearLabels } from './timeAxis'
+} from './domain/types.ts'
+import { allocateSlot, slotFromVar, slotVar } from './palette.ts'
+import { yearLabels } from './timeAxis.ts'
 
 /**
  * Die reine Rechenschicht zwischen Domäne und UI.

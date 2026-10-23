@@ -1,4 +1,4 @@
-import { defineWithdrawal } from './types'
+import { defineWithdrawal } from './types.ts'
 
 /** Fester Monatsbetrag - unabhängig davon, wie viel angespart wurde. */
 export const fixedAmount = defineWithdrawal({

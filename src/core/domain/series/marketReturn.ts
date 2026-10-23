@@ -1,6 +1,6 @@
-import { marketMonthOffset } from '../../timeAxis'
-import { simulate } from '../math'
-import { defineSeries } from '../types'
+import { marketMonthOffset } from '../../timeAxis.ts'
+import { simulate } from '../math.ts'
+import { defineSeries } from '../types.ts'
 
 /**
  * Dasselbe Sparverhalten, aber mit dem tatsaechlichen Verlauf eines Wertpapiers
@@ -37,8 +37,8 @@ export const marketReturnSeries = defineSeries({
      */
     if (model.startYear === null) return leer()
 
-    const versatz = marketMonthOffset(market.start, model.startYear)
-    // Negativ heisst: das Papier gab es im Startjahr noch nicht.
+    const versatz = marketMonthOffset(market.start, model.startYear, model.startMonth)
+    // Negativ heisst: das Papier gab es zum Start noch nicht.
     if (versatz === null || versatz < 0) return leer()
 
     const renditen = market.monthlyReturns

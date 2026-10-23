@@ -6,6 +6,7 @@ import {
   effectiveMode,
   marketMonthOffset,
   sanitizeStartAge,
+  sanitizeStartMonth,
   sanitizeStartYear,
   yearLabel,
   yearLabels,
@@ -63,6 +64,17 @@ describe('Grenzen der Anker', () => {
     expect(sanitizeStartAge(Number.NaN)).toBeNull()
     expect(sanitizeStartYear(Number.NaN)).toBeNull()
   })
+
+  it('macht aus einem fehlenden oder unsinnigen Monat den Januar', () => {
+    // Gespeicherte Zustände von vor dem Feld haben keinen Monat - sie müssen
+    // genau so weiterrechnen wie bisher.
+    expect(sanitizeStartMonth(undefined)).toBe(1)
+    expect(sanitizeStartMonth(null)).toBe(1)
+    expect(sanitizeStartMonth(Number.NaN)).toBe(1)
+    expect(sanitizeStartMonth(0)).toBe(1)
+    expect(sanitizeStartMonth(13)).toBe(12)
+    expect(sanitizeStartMonth(6.6)).toBe(7)
+  })
 })
 
 describe('marketMonthOffset', () => {
@@ -78,6 +90,18 @@ describe('marketMonthOffset', () => {
 
   it('lehnt unbrauchbare Daten ab', () => {
     expect(marketMonthOffset('unbekannt', 1990)).toBeNull()
+  })
+
+  it('rechnet den Startmonat mit ein', () => {
+    // Historie ab Januar 2000, Start Oktober 2015: 15 Jahre und 9 Monate.
+    expect(marketMonthOffset('2000-01-01', 2015, 10)).toBe(189)
+    // Ohne Monat bleibt es beim Januar - der Stand vor dem Feld.
+    expect(marketMonthOffset('2000-01-01', 2015)).toBe(180)
+  })
+
+  it('wird negativ, wenn das Papier erst später im Startjahr beginnt', () => {
+    expect(marketMonthOffset('2015-03-01', 2015, 1)).toBe(-2)
+    expect(marketMonthOffset('2015-03-01', 2015, 3)).toBe(0)
   })
 })
 
@@ -124,6 +148,30 @@ describe('Kursverlauf braucht ein Startjahr', () => {
     const letztesJahr = (p: ReturnType<typeof bauen>) =>
       p.rows.map((row) => row[p.lines[0].key]).filter((v) => typeof v === 'number').length
     expect(letztesJahr(spaet)).toBeLessThan(letztesJahr(frueh))
+  })
+
+  it('steigt im Startmonat ein, nicht im Januar', () => {
+    // Neun ruhige Monate, danach jeden Monat 1 %. Wer im Oktober einsteigt, hat
+    // im ersten Jahr zwölf gute Monate, wer im Januar einsteigt nur drei.
+    const renditen = [...Array(9).fill(0), ...Array(360).fill(0.01)] as number[]
+    const nachEinemJahr = (startMonth: number) => {
+      const p = buildProjection({
+        scenarios: [
+          {
+            id: 'a',
+            label: 'Basis',
+            colorSlot: 1,
+            params: { ...DEFAULT_PARAMS, initialCapital: 100, monthlyContribution: 0 },
+          },
+        ],
+        seriesIds: ['marketReturn'],
+        model: model({ startYear: 1990, startMonth }),
+        markets: [{ ...kurs('1990-01-01'), monthlyReturns: renditen }],
+      })
+      return p.rows[1][p.lines[0].key] as number
+    }
+    expect(nachEinemJahr(1)).toBeCloseTo(100 * 1.01 ** 3, 1)
+    expect(nachEinemJahr(10)).toBeCloseTo(100 * 1.01 ** 12, 1)
   })
 })
 

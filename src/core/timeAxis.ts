@@ -5,13 +5,15 @@
  * „2007" wird, entscheidet sich hier und nirgends sonst; damit ändert ein
  * Umschalten der Anzeige garantiert keine Zahl.
  */
-import type { ModelSettings, TimeAxisMode } from './domain/types'
+import type { ModelSettings, TimeAxisMode } from './domain/types.ts'
 
 export const MIN_START_AGE = 0
 export const MAX_START_AGE = 100
 /** Weiter zurück reicht keine brauchbare Kurshistorie. */
 export const MIN_START_YEAR = 1900
 export const MAX_START_YEAR = 2100
+export const MIN_START_MONTH = 1
+export const MAX_START_MONTH = 12
 
 /** Grenzen einhalten und ganzzahlig machen; null bleibt null. */
 export function sanitizeStartAge(value: number | null): number | null {
@@ -22,6 +24,15 @@ export function sanitizeStartAge(value: number | null): number | null {
 export function sanitizeStartYear(value: number | null): number | null {
   if (value === null || !Number.isFinite(value)) return null
   return Math.round(Math.min(MAX_START_YEAR, Math.max(MIN_START_YEAR, value)))
+}
+
+/**
+ * Anders als Alter und Jahr nie null: ein Monat ohne Jahr ist kein Anker, und
+ * ohne Angabe gilt der Januar - der Stand vor diesem Feld.
+ */
+export function sanitizeStartMonth(value: number | null | undefined): number {
+  if (value === null || value === undefined || !Number.isFinite(value)) return MIN_START_MONTH
+  return Math.round(Math.min(MAX_START_MONTH, Math.max(MIN_START_MONTH, value)))
 }
 
 /**
@@ -53,17 +64,21 @@ export function yearLabels(count: number, model: ModelSettings): string[] {
 
 /**
  * Um wie viele Monate in die Kurshistorie gesprungen werden muss, damit ihr
- * Monat 0 auf den Januar des Startjahres fällt.
+ * Monat 0 auf den Startmonat des Startjahres fällt.
  *
  * `null` bei unbrauchbarem Datum. Ein negativer Wert heißt: das Papier gab es
- * im Startjahr noch nicht - dann gibt es nichts zu zeigen, statt heimlich
+ * zum Start noch nicht - dann gibt es nichts zu zeigen, statt heimlich
  * woanders anzufangen.
  */
-export function marketMonthOffset(marketStart: string, startYear: number): number | null {
+export function marketMonthOffset(
+  marketStart: string,
+  startYear: number,
+  startMonth = MIN_START_MONTH,
+): number | null {
   const treffer = /^(\d{4})-(\d{2})/.exec(marketStart)
   if (!treffer) return null
   const jahr = Number(treffer[1])
   const monatIndex = Number(treffer[2]) - 1
   if (!Number.isFinite(jahr) || !Number.isFinite(monatIndex)) return null
-  return (startYear - jahr) * 12 - monatIndex
+  return (startYear - jahr) * 12 + (sanitizeStartMonth(startMonth) - 1) - monatIndex
 }

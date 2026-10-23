@@ -1,4 +1,4 @@
-import { defineChartStyle } from './types'
+import { defineChartStyle } from './types.ts'
 
 /**
  * Nur die Kurven. Ohne Gitter und Achsenlinien bleibt die Form übrig - der

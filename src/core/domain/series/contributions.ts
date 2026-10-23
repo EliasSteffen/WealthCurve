@@ -1,5 +1,5 @@
-import { simulate } from '../math'
-import { defineSeries } from '../types'
+import { simulate } from '../math.ts'
+import { defineSeries } from '../types.ts'
 
 /**
  * Dasselbe Szenario ohne jede Rendite.

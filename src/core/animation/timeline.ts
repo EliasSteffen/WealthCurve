@@ -1,5 +1,5 @@
-import type { Projection } from '../projection'
-import type { AnimationSpec, FrameState, Scene } from './types'
+import type { Projection } from '../projection.ts'
+import type { AnimationSpec, FrameState, Scene } from './types.ts'
 
 /**
  * Vorgabe im Reel-Aufbau: Aufhänger, Aufbau, Pointe.

@@ -1,4 +1,4 @@
-import { defineChartStyle } from './types'
+import { defineChartStyle } from './types.ts'
 
 /** Der Standard: dünne Linien, zurückhaltendes Gitter, nichts drängt sich vor. */
 export const clean = defineChartStyle({

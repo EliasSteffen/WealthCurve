@@ -1,4 +1,4 @@
-import type { ParamId, SimulationParams } from '../parameters'
+import type { ParamId, SimulationParams } from '../parameters.ts'
 
 /**
  * Wie hoch die monatliche Entnahme ausfällt.

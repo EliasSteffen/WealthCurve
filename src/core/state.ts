@@ -1,5 +1,5 @@
-import { DEFAULT_CHART_STYLE_ID } from './chart-style'
-import { DEFAULT_MODEL } from './domain/math'
+import { DEFAULT_CHART_STYLE_ID } from './chart-style/index.ts'
+import { DEFAULT_MODEL } from './domain/math.ts'
 import {
   DEFAULT_PARAMS,
   sanitizeParam,
@@ -7,17 +7,17 @@ import {
   type ParamId,
   type SimulationParams,
   type TimelineFieldId,
-} from './domain/parameters'
-import { DEFAULT_ENABLED_SERIES, SERIES } from './domain/series'
-import type { MarketSeries, ModelSettings, TimeAxisMode } from './domain/types'
-import { sanitizeStartAge, sanitizeStartYear } from './timeAxis'
-import { SLOT_COUNT, allocateSlot, type ColorSlot } from './palette'
+} from './domain/parameters.ts'
+import { DEFAULT_ENABLED_SERIES, SERIES } from './domain/series/index.ts'
+import type { MarketSeries, ModelSettings, TimeAxisMode } from './domain/types.ts'
+import { sanitizeStartAge, sanitizeStartMonth, sanitizeStartYear } from './timeAxis.ts'
+import { SLOT_COUNT, allocateSlot, type ColorSlot } from './palette.ts'
 import {
   SETTINGS_CARD_IDS,
   SETTINGS_VIEWS,
   type SettingsCardId,
   type SettingsView,
-} from './settings/categories'
+} from './settings/categories.ts'
 
 export interface Scenario {
   readonly id: string
@@ -321,6 +321,7 @@ export function reducer(state: AppState, action: Action): AppState {
           // "kein Anker" - genau das, was das Leeren bedeuten soll.
           startAge: sanitizeStartAge(action.model.startAge),
           startYear: sanitizeStartYear(action.model.startYear),
+          startMonth: sanitizeStartMonth(action.model.startMonth),
         },
       }
 
@@ -430,6 +431,8 @@ export function deserialize(raw: string): AppState | null {
           : base.model.timeAxis,
         startAge: sanitizeStartAge(parsed.model?.startAge ?? null),
         startYear: sanitizeStartYear(parsed.model?.startYear ?? null),
+        // Gespeicherte Zustände von vor diesem Feld kennen keinen Monat: Januar.
+        startMonth: sanitizeStartMonth(parsed.model?.startMonth),
       },
       // Nur bekannte Karten uebernehmen - eine erfundene ID bliebe sonst fuer
       // immer im Zustand stehen und liesse sich durch nichts mehr loesen. Das

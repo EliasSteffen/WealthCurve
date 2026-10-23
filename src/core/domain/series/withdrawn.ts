@@ -1,4 +1,4 @@
-import { defineSeries } from '../types'
+import { defineSeries } from '../types.ts'
 
 /**
  * Kumuliert entnommenes Geld. Macht die Entnahmephase im Chart lesbar: die

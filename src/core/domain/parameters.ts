@@ -9,7 +9,7 @@
  * automatisch nach, weil das ParameterPanel über dieses Objekt iteriert.
  */
 
-import type { SettingsCategoryId } from '../settings/categories'
+import type { SettingsCategoryId } from '../settings/categories.ts'
 
 export type ParamUnit = 'currency' | 'percent' | 'years'
 /** Basis = immer relevant. Annahmen = modellabhängig, nur für manche Serien. */

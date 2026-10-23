@@ -149,6 +149,16 @@ const modellSchema = z.object({
         'echte Monatsrenditen hängen an echten Monaten, und ohne Anker gäbe es keinen ' +
         'ehrlichen Vergleich. Ohne Startjahr bleibt die Kurve leer.',
     ),
+  startMonth: z
+    .number()
+    .int()
+    .min(1)
+    .max(12)
+    .default(1)
+    .describe(
+      'Monat (1-12), in dem die Ansparphase im Startjahr beginnt. Zählt nur für ' +
+        '"marketReturn": "vor genau zehn Jahren" heißt selten Januar.',
+    ),
 })
 
 /** Die gemeinsame Eingabe aller rechnenden Werkzeuge. */

@@ -1,4 +1,4 @@
-import { defineEncoding, reportCapacity } from './types'
+import { defineEncoding, reportCapacity } from './types.ts'
 
 /**
  * Farbe trägt die Serie, alle Linien durchgezogen.

@@ -52,6 +52,7 @@ const einmalig = buildProjection({
     timeAxis: 'relative',
     startAge: null,
     startYear: null,
+    startMonth: 1,
   },
 })
 

@@ -10,8 +10,10 @@ import { WITHDRAWAL_STRATEGIES } from '../core/domain/withdrawal'
 import type { SettingsCategoryId } from '../core/settings'
 import {
   MAX_START_AGE,
+  MAX_START_MONTH,
   MAX_START_YEAR,
   MIN_START_AGE,
+  MIN_START_MONTH,
   MIN_START_YEAR,
 } from '../core/timeAxis'
 import { useState } from 'react'
@@ -245,6 +247,21 @@ export function TimeAxisControls({ value, onChange, matches = null }: ModelProps
           placeholder={t('model.noAnchor', 'ohne')}
           onChange={(startYear) => onChange({ ...value, startYear })}
         />
+        {/* Ein Monat ohne Jahr ist kein Anker - das Feld erscheint erst mit dem Jahr. */}
+        {value.startYear !== null ? (
+          <div className="col-start-2">
+            <NumberField
+              label={t('model.startMonth', 'Startmonat')}
+              value={value.startMonth}
+              min={MIN_START_MONTH}
+              max={MAX_START_MONTH}
+              placeholder="1"
+              onChange={(startMonth) =>
+                onChange({ ...value, startMonth: startMonth ?? MIN_START_MONTH })
+              }
+            />
+          </div>
+        ) : null}
       </div>
 
       <p className="text-[11px] leading-snug text-[var(--text-muted)]">

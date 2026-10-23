@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { MarketSeries } from '../core/domain/types'
 import { parseMarketFile } from '../core/market'
 import { MAX_MARKETS, actions } from '../core/state'
+import { marketMonthOffset } from '../core/timeAxis'
 import { cn } from '../lib/cn'
 import { useT } from '../react/localeContext'
 import { useDispatch, useSelector } from '../react/useSelector'
@@ -39,6 +40,7 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
   const markets = useSelector((s) => s.markets)
   const enabledSeriesIds = useSelector((s) => s.enabledSeriesIds)
   const startYear = useSelector((s) => s.model.startYear)
+  const startMonth = useSelector((s) => s.model.startMonth)
   const [symbol, setSymbol] = useState('')
   const [laedt, setLaedt] = useState(false)
   const [fehler, setFehler] = useState<string | null>(null)
@@ -237,7 +239,9 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
               <span className="min-w-0 text-[11px] leading-snug text-[var(--text-muted)]">
                 <span className="block truncate text-[var(--text-primary)]">{m.name}</span>
                 {m.symbol} · seit {m.start} · {Math.floor(m.monthlyReturns.length / 12)} Jahre
-                {startYear !== null && Number(m.start.slice(0, 4)) > startYear ? (
+                {/* Monatsgenau wie die Rechnung - ein Papier ab März fehlt auch im Januar desselben Jahres. */}
+                {startYear !== null &&
+                (marketMonthOffset(m.start, startYear, startMonth) ?? 0) < 0 ? (
                   <span className="mt-0.5 block text-[var(--chart-8)]">
                     {t('market.startsLater', `Erst ab ${m.start.slice(0, 4)} handelbar – keine Kurve vor diesem Jahr.`, { jahr: m.start.slice(0, 4) })}
                   </span>

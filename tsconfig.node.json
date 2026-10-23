@@ -6,9 +6,10 @@
     "types": ["node"],
     "skipLibCheck": true,
 
-    /* Bundler mode - vite.config.ts, server/ und scripts/ werden von esbuild
-       bzw. tsx geladen, nicht von Node direkt. `nodenext` verlangte dafür
-       Dateiendungen in jedem Import, bis hinunter in src/core. */
+    /* Bundler mode - vite.config.ts und scripts/ werden von esbuild bzw. tsx
+       geladen, nicht von Node direkt. src/core und server/quotes.ts tragen ihre
+       Endungen trotzdem, weil andere Projekte sie mit reinem Node laden (siehe
+       node-import.test.ts); im übrigen Code bleiben sie weg. */
     "module": "esnext",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,

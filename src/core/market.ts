@@ -50,10 +50,39 @@ export interface MarketMeta {
   readonly currency?: string
 }
 
+const MONAT = /^(\d{4}-\d{2})/
+const brauchbar = (kurs: number | null): boolean =>
+  typeof kurs === 'number' && Number.isFinite(kurs) && kurs > 0
+
+/**
+ * Ein Kurs pro Kalendermonat - der letzte brauchbare.
+ *
+ * Yahoo hängt an die Monatszeilen eine für heute an, im selben Monat wie die
+ * letzte (`…-10-01` und `…-10-22`). Doppelt gezählt wäre das ein Monat mit 0 %
+ * Rendite, und jede Kurve liefe einen Monat zu lang. Tageskurse aus einer Datei
+ * werden so ebenfalls zu Monatskursen. Zeilen ohne lesbares Datum bleiben, wie
+ * sie sind.
+ */
+export function einKursProMonat(punkte: readonly PreisPunkt[]): PreisPunkt[] {
+  const ergebnis: PreisPunkt[] = []
+  for (const punkt of punkte) {
+    const monat = MONAT.exec(punkt.date)?.[1]
+    const vorher = ergebnis[ergebnis.length - 1]
+    if (monat === undefined || vorher === undefined || MONAT.exec(vorher.date)?.[1] !== monat) {
+      ergebnis.push(punkt)
+    } else if (brauchbar(punkt.price)) {
+      // Ein späterer Kurs ersetzt den früheren, eine spätere Lücke nicht.
+      ergebnis[ergebnis.length - 1] = punkt
+    }
+  }
+  return ergebnis
+}
+
 export function marketFromPrices(
-  punkte: readonly PreisPunkt[],
+  roh: readonly PreisPunkt[],
   meta: MarketMeta,
 ): MarketSeries | null {
+  const punkte = einKursProMonat(roh)
   const monthlyReturns = toMonthlyReturns(punkte.map((p) => p.price))
   if (monthlyReturns.length < MIN_MONATE) return null
 
