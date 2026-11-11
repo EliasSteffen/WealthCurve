@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { selectChartStyle, selectProjection } from '../core/derive'
 import { effectiveMode } from '../core/timeAxis'
 import { useMediaQuery } from '../hooks/useMediaQuery'
@@ -5,7 +6,6 @@ import { useTheme } from '../hooks/useTheme'
 import { useT } from '../react/localeContext'
 import { useSelector } from '../react/useSelector'
 import { ChartLegend } from './chart/ChartLegend'
-import { GrowthChart } from './chart/GrowthChart'
 import { DataTable } from './DataTable'
 import { SettingsDialog } from './layout/SettingsDialog'
 import { SettingsSheet } from './layout/SettingsSheet'
@@ -13,6 +13,12 @@ import { Sidebar } from './layout/Sidebar'
 import { SummaryStats } from './SummaryStats'
 import { Card } from './ui/Card'
 import { Logo } from './ui/Logo'
+
+/*
+ * Recharts ist der größte Brocken des Bündels. Der Chart lädt als eigener
+ * Chunk nach; die Karte hat feste Höhe, es springt also nichts, wenn er kommt.
+ */
+const GrowthChart = lazy(() => import('./chart/GrowthChart').then((m) => ({ default: m.GrowthChart })))
 
 /** Ab hier ist Platz für eine dauerhaft sichtbare Seitenspalte. */
 const DESKTOP = '(min-width: 1024px)'
@@ -95,15 +101,17 @@ export function Dashboard() {
           <Card className="flex h-[400px] shrink-0 flex-col sm:h-[460px] lg:h-auto lg:min-h-0 lg:flex-1">
             {projection.lines.length > 0 ? (
               <figure className="m-0 flex min-h-0 flex-1 flex-col">
-                <GrowthChart
-                  rows={projection.rows}
-                  series={projection.lines}
-                  style={chartStyle}
-                  primaryKey={projection.lines[0]?.key}
-                  retirementYear={projection.retirementYear}
-                  yearLabels={projection.yearLabels}
-                  axisTitle={achsenTitel}
-                />
+                <Suspense fallback={<div className="min-h-0 flex-1" />}>
+                  <GrowthChart
+                    rows={projection.rows}
+                    series={projection.lines}
+                    style={chartStyle}
+                    primaryKey={projection.lines[0]?.key}
+                    retirementYear={projection.retirementYear}
+                    yearLabels={projection.yearLabels}
+                    axisTitle={achsenTitel}
+                  />
+                </Suspense>
                 <figcaption className="shrink-0">
                   <ChartLegend
                     series={projection.lines}

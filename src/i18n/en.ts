@@ -279,4 +279,15 @@ export const en: Catalog = {
   'stat.hiddenActive':
     '“{name}” is hidden – the sliders edit it, but the figures show another scenario.',
   'stat.showActive': 'Show it',
+
+  // Speichern, Teilen, Export
+  'share.label': 'Share',
+  'share.hint': 'Copies a link with scenarios and settings. Market data is not included.',
+  'share.copy': 'Copy share link',
+  'share.copied': 'Link copied',
+  'share.manual': 'Copying is not possible – please copy the link by hand:',
+  'app.reset.confirm': 'Really reset?',
+  'app.reset.yes': 'Yes, reset',
+  'app.reset.cancel': 'Cancel',
+  'table.download': 'Download CSV',
 }

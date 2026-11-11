@@ -1,16 +1,19 @@
-import { Film, RotateCcw, Settings2, X } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { actions } from '../../core/state'
+import { Film, Settings2, X } from 'lucide-react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { ThemePreference } from '../../hooks/useTheme'
 import { cn } from '../../lib/cn'
 import { useT } from '../../react/localeContext'
-import { useDispatch } from '../../react/useSelector'
-import { LocaleToggle } from '../LocaleToggle'
-import { ThemeToggle } from '../ThemeToggle'
-import { VideoWorkspace } from '../video/VideoWorkspace'
-import { SettingsPanel } from './SettingsPanel'
+import { preloadVideoWorkspace } from '../../lib/lazyVideo'
+import type { Reiter } from './SettingsDialogContent'
 
-type Reiter = 'diagramm' | 'video' | 'allgemein'
+/*
+ * Der Inhalt (samt Video-Werkzeug) ist ein eigener Chunk. Geladen wird er
+ * schon bei Hover/Fokus auf einen Öffnen-Knopf und sonst im Leerlauf nach dem
+ * Start - so ist er beim Klick fast immer da und der Dialog öffnet ohne Flackern.
+ */
+const loadInhalt = () => import('./SettingsDialogContent')
+const SettingsDialogContent = lazy(loadInhalt)
+const vorladen = () => void loadInhalt()
 
 /**
  * Alle Einstellungen an einem Ort, in drei Reitern.
@@ -42,6 +45,11 @@ export function SettingsDialog({
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
+    const id = window.setTimeout(vorladen, 2000)
+    return () => window.clearTimeout(id)
+  }, [])
+
+  useEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
     if (offen && !dialog.open) dialog.showModal()
@@ -65,11 +73,29 @@ export function SettingsDialog({
 
   return (
     <>
-      <button type="button" onClick={() => oeffnen('diagramm')} className={kopfKnopf}>
+      <button
+        type="button"
+        onClick={() => oeffnen('diagramm')}
+        onPointerEnter={vorladen}
+        onFocus={vorladen}
+        className={kopfKnopf}
+      >
         <Settings2 size={14} aria-hidden />
         {t('settings.title', 'Einstellungen')}
       </button>
-      <button type="button" onClick={() => oeffnen('video')} className={kopfKnopf}>
+      <button
+        type="button"
+        onClick={() => oeffnen('video')}
+        onPointerEnter={() => {
+          vorladen()
+          preloadVideoWorkspace()
+        }}
+        onFocus={() => {
+          vorladen()
+          preloadVideoWorkspace()
+        }}
+        className={kopfKnopf}
+      >
         <Film size={14} aria-hidden />
         {t('video.open', 'Video')}
       </button>
@@ -84,11 +110,7 @@ export function SettingsDialog({
         aria-label={t('settings.title', 'Einstellungen')}
       >
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--hairline)] px-4 py-2.5">
-          <div
-            role="tablist"
-            aria-label={t('settings.title', 'Einstellungen')}
-            className="flex gap-0.5"
-          >
+          <div role="tablist" aria-label={t('settings.title', 'Einstellungen')} className="flex gap-0.5">
             {reiterListe.map(({ id, label }) => (
               <button
                 key={id}
@@ -122,78 +144,13 @@ export function SettingsDialog({
           Schleife. Sie soll nicht mitlaufen, während der Dialog zu ist.
         */}
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-4">
-          {offen && reiter === 'diagramm' ? <SettingsPanel layout="breit" /> : null}
-          {offen && reiter === 'video' ? <VideoWorkspace /> : null}
-          {offen && reiter === 'allgemein' ? (
-            <AllgemeinReiter theme={theme} onThemeChange={onThemeChange} />
+          {offen ? (
+            <Suspense fallback={null}>
+              <SettingsDialogContent reiter={reiter} theme={theme} onThemeChange={onThemeChange} />
+            </Suspense>
           ) : null}
         </div>
       </dialog>
     </>
-  )
-}
-
-/** Was weder das Diagramm noch das Video betrifft, sondern die Anwendung. */
-function AllgemeinReiter({
-  theme,
-  onThemeChange,
-}: {
-  readonly theme: ThemePreference
-  readonly onThemeChange: (value: ThemePreference) => void
-}) {
-  const t = useT()
-  const dispatch = useDispatch()
-
-  return (
-    <div className="max-w-md space-y-6">
-      <Feld
-        label={t('locale.label', 'Sprache')}
-        hint={t('locale.hint', 'Beschriftungen und Zahlenformat.')}
-      >
-        <LocaleToggle />
-      </Feld>
-
-      <Feld
-        label={t('theme.label', 'Farbschema')}
-        hint={t('theme.hint', '„System" folgt der Einstellung des Betriebssystems.')}
-      >
-        <ThemeToggle theme={theme} onChange={onThemeChange} />
-      </Feld>
-
-      <Feld
-        label={t('app.reset', 'Zurücksetzen')}
-        hint={t(
-          'app.reset.hint',
-          'Setzt Szenarien, Kurven und alle Einstellungen auf den Ausgangszustand zurück.',
-        )}
-      >
-        <button
-          type="button"
-          onClick={() => dispatch(actions.reset())}
-          className="flex items-center gap-1.5 rounded-lg border border-[var(--hairline)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--grid)]"
-        >
-          <RotateCcw size={14} aria-hidden />
-          {t('app.reset', 'Zurücksetzen')}
-        </button>
-      </Feld>
-    </div>
-  )
-}
-
-function Feld({
-  label,
-  hint,
-  children,
-}: {
-  readonly label: string
-  readonly hint: string
-  readonly children: ReactNode
-}) {
-  return (
-    <div>
-      <div className="mb-1.5 text-xs font-medium text-[var(--text-secondary)]">{label}</div>
-      {children}
-      <p className="mt-1.5 text-[11px] leading-snug text-[var(--text-muted)]">{hint}</p>
-    </div>
   )
 }
