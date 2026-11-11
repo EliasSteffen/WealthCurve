@@ -594,10 +594,14 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
     ctx.setLineDash([])
 
     // Das " · Szenario" am Ende weglassen - es benennt hier nur eines von
-    // mehreren und führte damit in die Irre.
+    // mehreren und führte damit in die Irre. Abgeschnitten wird am letzten
+    // Trenner statt am Szenarionamen: eine übersetzte Beschriftung kann für
+    // ein leeres Szenario einen Ersatznamen tragen ("Szenario 2"), der in
+    // `scenarioLabel` gar nicht vorkommt.
     const roh = input.lineLabel ? input.lineLabel(line) : line.label
+    const trenner = roh.lastIndexOf(' · ')
     const beschriftung =
-      vergleich && line.scenarioLabel ? roh.replace(` · ${line.scenarioLabel}`, '') : roh
+      vergleich && line.scenarioLabel !== null && trenner !== -1 ? roh.slice(0, trenner) : roh
 
     ctx.fillStyle = theme.text
     ctx.fillText(kuerzen(ctx, beschriftung, textBreite), textLinks, ly)

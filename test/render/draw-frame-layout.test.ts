@@ -182,6 +182,25 @@ describe('Legende', () => {
     })
     expect(texte.some((t) => t.text === 'EN compound')).toBe(true)
   })
+
+  it('kürzt auch einen Ersatznamen für ein unbenanntes Szenario weg', () => {
+    // Leerer Name: die Oberfläche setzt "Szenario 1" ein, der im
+    // `scenarioLabel` der Linie gar nicht steht.
+    const ohneNamen = buildProjection({
+      scenarios: szenarien(2).map((s) => ({ ...s, label: '' })),
+      seriesIds: ['compound', 'contributions'],
+      model: DEFAULT_MODEL,
+      encoding: 'colorBySeries',
+    })
+    const { texte } = zeichnen(ohneNamen, 'reel', BUILD, {
+      lineLabel: (l) => `EN ${l.seriesId} · Scenario 1`,
+    })
+    expect(texte.some((t) => t.text === 'EN compound')).toBe(true)
+    expect(texte.some((t) => t.text.includes(' · '))).toBe(false)
+    // Ohne Übersetzung bleibt vom Kern-Label "Zinseszins · " kein Trenner übrig.
+    const de = zeichnen(ohneNamen, 'reel', BUILD).texte
+    expect(de.some((t) => t.text === 'Zinseszins')).toBe(true)
+  })
 })
 
 describe('Übersetzung der festen Texte', () => {
