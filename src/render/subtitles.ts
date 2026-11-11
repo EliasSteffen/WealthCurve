@@ -43,7 +43,9 @@ export function toSrt(spec: AnimationSpec, facts: Readonly<Record<string, string
 
   spec.scenes.forEach((scene, i) => {
     const dauer = bilder[i] / spec.fps
-    const text = resolveText(scene.text, facts).trim()
+    // Eine Leerzeile beendet in SRT den Block: der Rest stünde als verwaister
+    // Block ohne Nummer in der Datei. Das Bild überspringt leere Absätze ohnehin.
+    const text = resolveText(scene.text, facts).trim().replace(/\n\s*\n+/g, '\n')
     if (dauer > 0 && text) {
       bloecke.push(
         [String(bloecke.length + 1), `${srtZeit(start)} --> ${srtZeit(start + dauer)}`, text, ''].join(

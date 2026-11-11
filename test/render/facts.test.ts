@@ -23,6 +23,19 @@ const bauen = (...renditen: number[]) =>
     model: DEFAULT_MODEL,
   })
 
+describe('buildFacts: Übersetzung', () => {
+  it('nennt "reicht" ohne t auf Deutsch und mit t in der Zielsprache', () => {
+    const p = bauen(7)
+    const leer = { ...p, summaries: [{ ...p.summaries[0], depletedAtYear: 42 }] }
+    expect(buildFacts(p, DEFAULT_MODEL, fmt).reicht).toBe('reicht durch')
+    expect(buildFacts(leer, DEFAULT_MODEL, fmt).reicht).toBe('bis Jahr 42')
+    const t = (k: string, fb: string, v?: Record<string, string | number>) =>
+      k === 'facts.untilYear' ? `until year ${v?.year}` : k === 'facts.lastsThrough' ? 'lasts' : fb
+    expect(buildFacts(p, DEFAULT_MODEL, fmt, t).reicht).toBe('lasts')
+    expect(buildFacts(leer, DEFAULT_MODEL, fmt, t).reicht).toBe('until year 42')
+  })
+})
+
 describe('buildFacts', () => {
   it('nennt jedes Szenario einzeln', () => {
     // Der Kern: {{rendite}} nannte bei einem Vergleich nur die erste - und

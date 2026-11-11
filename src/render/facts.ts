@@ -1,5 +1,7 @@
 import type { ModelSettings } from '../core/domain/types'
 import type { Projection, ProjectionSummary } from '../core/projection'
+import type { Translate } from '../i18n'
+import { deutsch } from './translate'
 
 /**
  * Die Werte hinter den Platzhaltern im Szenentext.
@@ -20,7 +22,11 @@ export function scenarioKey(index: number): string {
   return `s${index + 1}`
 }
 
-function fuerSzenario(s: ProjectionSummary, fmt: FactFormat): Record<string, string> {
+function fuerSzenario(
+  s: ProjectionSummary,
+  fmt: FactFormat,
+  t: Translate,
+): Record<string, string> {
   return {
     name: s.label,
     endkapital: fmt.eur(s.final.balance),
@@ -30,7 +36,10 @@ function fuerSzenario(s: ProjectionSummary, fmt: FactFormat): Record<string, str
     entnahme: fmt.eur(s.monthlyWithdrawal),
     rate: fmt.eur(s.params.monthlyContribution),
     rendite: fmt.percent(s.params.annualRate),
-    reicht: s.depletedAtYear == null ? 'reicht durch' : `bis Jahr ${s.depletedAtYear}`,
+    reicht:
+      s.depletedAtYear == null
+        ? t('facts.lastsThrough', 'reicht durch')
+        : t('facts.untilYear', 'bis Jahr {year}', { year: s.depletedAtYear }),
   }
 }
 
@@ -50,6 +59,7 @@ export function buildFacts(
   projection: Projection,
   model: ModelSettings,
   fmt: FactFormat,
+  t: Translate = deutsch,
 ): Record<string, string> {
   const erstes = projection.summaries[0]
   const facts: Record<string, string> = {
@@ -63,9 +73,9 @@ export function buildFacts(
       .join(' · '),
   }
 
-  if (erstes) Object.assign(facts, fuerSzenario(erstes, fmt))
+  if (erstes) Object.assign(facts, fuerSzenario(erstes, fmt, t))
   projection.summaries.forEach((s, i) => {
-    for (const [k, v] of Object.entries(fuerSzenario(s, fmt))) {
+    for (const [k, v] of Object.entries(fuerSzenario(s, fmt, t))) {
       facts[`${scenarioKey(i)}.${k}`] = v
     }
   })

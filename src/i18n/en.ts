@@ -258,6 +258,12 @@ export const en: Catalog = {
   'video.error.convert.plain': 'Conversion failed',
   'video.realtime': 'Recording runs in real time, so it takes as long as the video.',
 
+  // Video-Bild
+  'video.frame.year': 'Year {year}',
+  'video.frame.more': '+ {count} more',
+  'facts.lastsThrough': 'lasts throughout',
+  'facts.untilYear': 'until year {year}',
+
   // Theme
   'theme.label': 'Colour scheme',
   'theme.light': 'Light',
