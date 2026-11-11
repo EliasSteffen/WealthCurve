@@ -38,9 +38,62 @@ const yahoo = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
  */
 export const CACHE_HEADER = 's-maxage=86400, stale-while-revalidate=604800'
 
+/*
+ * Prozess-interner Cache.
+ *
+ * Der Edge-Cache greift nur auf Vercel; `npm run dev`, `npm run serve` und der
+ * MCP-Server träfen Yahoo sonst bei jeder Anfrage. Nur Erfolge werden
+ * gemerkt (Fehler wie 429 sollen sich erholen dürfen), parallele Anfragen auf
+ * dasselbe Symbol teilen sich einen Abruf.
+ */
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000
+const CACHE_MAX = 200
+
+const gemerkt = new Map<string, { readonly bis: number; readonly daten: MarketSeries }>()
+const laufend = new Map<string, Promise<QuoteErgebnis>>()
+
+function ausCache(symbol: string): MarketSeries | undefined {
+  const eintrag = gemerkt.get(symbol)
+  if (!eintrag) return undefined
+  if (eintrag.bis <= Date.now()) {
+    gemerkt.delete(symbol)
+    return undefined
+  }
+  return eintrag.daten
+}
+
+function inCache(symbol: string, daten: MarketSeries): void {
+  // Erneut einfügen, damit die Map-Reihenfolge der Alterung entspricht.
+  gemerkt.delete(symbol)
+  gemerkt.set(symbol, { bis: Date.now() + CACHE_TTL_MS, daten })
+  while (gemerkt.size > CACHE_MAX) {
+    const aeltester = gemerkt.keys().next().value
+    if (aeltester === undefined) break
+    gemerkt.delete(aeltester)
+  }
+}
+
 export async function fetchQuotes(rohSymbol: unknown): Promise<QuoteErgebnis> {
   const symbol = normalizeSymbol(rohSymbol)
   if (!symbol) return { ok: false, fehler: { status: 400, error: 'Ungültiges Symbol.' } }
+
+  const treffer = ausCache(symbol)
+  if (treffer) return { ok: true, daten: treffer }
+
+  const unterwegs = laufend.get(symbol)
+  if (unterwegs) return unterwegs
+
+  const abruf = ladeQuotes(symbol)
+    .then((ergebnis) => {
+      if (ergebnis.ok) inCache(symbol, ergebnis.daten)
+      return ergebnis
+    })
+    .finally(() => laufend.delete(symbol))
+  laufend.set(symbol, abruf)
+  return abruf
+}
+
+async function ladeQuotes(symbol: string): Promise<QuoteErgebnis> {
 
   const von = new Date()
   von.setFullYear(von.getFullYear() - JAHRE)
