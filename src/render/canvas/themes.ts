@@ -19,7 +19,7 @@ export const RENDER_THEMES: Record<ThemeName, RenderTheme> = {
   light: {
     surface: '#fcfcfb',
     text: '#0b0b0b',
-    textMuted: '#898781',
+    textMuted: '#73716b',
     grid: '#e1e0d9',
     axis: '#c3c2b7',
   },

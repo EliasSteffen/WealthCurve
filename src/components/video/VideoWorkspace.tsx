@@ -488,7 +488,7 @@ export function VideoWorkspace() {
               type="button"
               onClick={aufnehmen}
               disabled={!aufnahmeFormat || projection.lines.length === 0 || besetzt}
-              className="w-full rounded-xl bg-[var(--chart-1)] px-4 py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-full rounded-xl bg-[var(--accent-fill)] px-4 py-2.5 text-sm font-semibold text-[var(--on-accent)] transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Aufnehmen ({sekunden} s)
             </button>

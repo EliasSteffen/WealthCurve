@@ -1,5 +1,6 @@
 import { Monitor, Moon, Sun } from 'lucide-react'
 import type { ThemePreference } from '../hooks/useTheme'
+import { rovingKeyHandler } from '../lib/rovingKeys'
 import { cn } from '../lib/cn'
 import { useT } from '../react/localeContext'
 
@@ -8,6 +9,8 @@ const OPTIONS: readonly { value: ThemePreference; label: string; Icon: typeof Su
   { value: 'dark', label: 'Dunkel', Icon: Moon },
   { value: 'system', label: 'System', Icon: Monitor },
 ]
+
+const onKeyDown = rovingKeyHandler('[role="radio"]')
 
 export function ThemeToggle({
   theme,
@@ -21,6 +24,7 @@ export function ThemeToggle({
     <div
       role="radiogroup"
       aria-label={t('theme.label', 'Farbschema')}
+      onKeyDown={onKeyDown}
       className="flex gap-0.5 rounded-lg border border-[var(--hairline)] p-0.5"
     >
       {OPTIONS.map(({ value, label, Icon }) => (
@@ -29,13 +33,14 @@ export function ThemeToggle({
           type="button"
           role="radio"
           aria-checked={theme === value}
+          tabIndex={theme === value ? 0 : -1}
           aria-label={t(`theme.${value}`, label)}
           title={t(`theme.${value}`, label)}
           onClick={() => onChange(value)}
           className={cn(
             'rounded-md p-1.5 transition-colors',
             theme === value
-              ? 'bg-[var(--chart-1)] text-white'
+              ? 'bg-[var(--accent-fill)] text-[var(--on-accent)]'
               : 'text-[var(--text-secondary)] hover:bg-[var(--grid)]',
           )}
         >

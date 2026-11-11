@@ -1,4 +1,5 @@
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import { actions } from '../../core/state'
 import { useT } from '../../react/localeContext'
 import { useDispatch, useSelector } from '../../react/useSelector'
@@ -19,11 +20,29 @@ export function Sidebar() {
   const einblenden = t('settings.open', 'Einstellungen einblenden')
   const ausblenden = t('settings.close', 'Einstellungen ausblenden')
 
+  /*
+   * Beim Umschalten wird der gedrückte Knopf durch den jeweils anderen ersetzt
+   * (anderes DOM-Element) - der Fokus ginge verloren. Nur nach einem Klick
+   * verschieben, nicht beim ersten Rendern, sonst klaut die Spalte den Fokus.
+   */
+  const toggleRef = useRef<HTMLButtonElement>(null)
+  const fokusFolgt = useRef(false)
+  useEffect(() => {
+    if (!fokusFolgt.current) return
+    fokusFolgt.current = false
+    toggleRef.current?.focus()
+  }, [collapsed])
+  const umschalten = (value: boolean) => {
+    fokusFolgt.current = true
+    dispatch(actions.setSidebarCollapsed(value))
+  }
+
   if (collapsed) {
     return (
       <button
+        ref={toggleRef}
         type="button"
-        onClick={() => dispatch(actions.setSidebarCollapsed(false))}
+        onClick={() => umschalten(false)}
         aria-label={einblenden}
         aria-expanded={false}
         title={einblenden}
@@ -38,8 +57,9 @@ export function Sidebar() {
     <aside className="w-80 shrink-0 overflow-y-auto overscroll-contain border-r border-[var(--hairline)] p-4">
       <div className="mb-3 flex justify-end">
         <button
+          ref={toggleRef}
           type="button"
-          onClick={() => dispatch(actions.setSidebarCollapsed(true))}
+          onClick={() => umschalten(true)}
           aria-label={ausblenden}
           aria-expanded
           title={ausblenden}

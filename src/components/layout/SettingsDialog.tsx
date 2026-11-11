@@ -1,7 +1,9 @@
 import { Film, Settings2, X } from 'lucide-react'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { ThemePreference } from '../../hooks/useTheme'
+import { useBackdropClose } from '../../lib/backdropClose'
 import { cn } from '../../lib/cn'
+import { rovingKeyHandler } from '../../lib/rovingKeys'
 import { useT } from '../../react/localeContext'
 import { preloadVideoWorkspace } from '../../lib/lazyVideo'
 import type { Reiter } from './SettingsDialogContent'
@@ -14,6 +16,11 @@ import type { Reiter } from './SettingsDialogContent'
 const loadInhalt = () => import('./SettingsDialogContent')
 const SettingsDialogContent = lazy(loadInhalt)
 const vorladen = () => void loadInhalt()
+
+// Automatische Aktivierung: der Fokus-Wechsel löst per click() die Auswahl aus.
+const onTabKeyDown = rovingKeyHandler('[role="tab"]', true)
+const PANEL_ID = 'settings-tabpanel'
+const tabId = (id: Reiter) => `settings-tab-${id}`
 
 /**
  * Alle Einstellungen an einem Ort, in drei Reitern.
@@ -55,6 +62,8 @@ export function SettingsDialog({
     if (offen && !dialog.open) dialog.showModal()
     if (!offen && dialog.open) dialog.close()
   }, [offen])
+
+  const backdrop = useBackdropClose(dialogRef, () => setOffen(false))
 
   const oeffnen = (ziel: Reiter) => {
     setReiter(ziel)
@@ -103,20 +112,21 @@ export function SettingsDialog({
       <dialog
         ref={dialogRef}
         onClose={() => setOffen(false)}
-        onClick={(e) => {
-          if (e.target === dialogRef.current) setOffen(false)
-        }}
+        {...backdrop}
         className="app-dialog"
         aria-label={t('settings.title', 'Einstellungen')}
       >
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--hairline)] px-4 py-2.5">
-          <div role="tablist" aria-label={t('settings.title', 'Einstellungen')} className="flex gap-0.5">
+          <div role="tablist" aria-label={t('settings.title', 'Einstellungen')} className="flex gap-0.5" onKeyDown={onTabKeyDown}>
             {reiterListe.map(({ id, label }) => (
               <button
                 key={id}
                 type="button"
                 role="tab"
+                id={tabId(id)}
                 aria-selected={reiter === id}
+                aria-controls={PANEL_ID}
+                tabIndex={reiter === id ? 0 : -1}
                 onClick={() => setReiter(id)}
                 className={cn(
                   'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
@@ -143,7 +153,12 @@ export function SettingsDialog({
           Erst beim Öffnen montieren: die Vorschau des Videos zeichnet in einer
           Schleife. Sie soll nicht mitlaufen, während der Dialog zu ist.
         */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-4">
+        <div
+          role="tabpanel"
+          id={PANEL_ID}
+          aria-labelledby={tabId(reiter)}
+          className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain p-4"
+        >
           {offen ? (
             <Suspense fallback={null}>
               <SettingsDialogContent reiter={reiter} theme={theme} onThemeChange={onThemeChange} />
