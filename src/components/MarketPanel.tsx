@@ -124,10 +124,18 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
       }
 
       const daten = (await antwort.json()) as MarketSeries & { error?: string }
-      if (!antwort.ok) throw new Error(daten.error ?? `Fehler ${antwort.status}`)
+      if (!antwort.ok) {
+        throw new Error(
+          // Die Meldung des Servers bleibt, wie sie ist - nur der Rückfall ist übersetzbar.
+          daten.error ??
+            t('market.error.status', `Fehler ${antwort.status}`, { status: antwort.status }),
+        )
+      }
       uebernehmen(daten)
     } catch (e) {
-      setFehler(e instanceof Error ? e.message : 'Abruf fehlgeschlagen')
+      setFehler(
+        e instanceof Error ? e.message : t('market.error.fetch', 'Abruf fehlgeschlagen'),
+      )
     } finally {
       setLaedt(false)
     }
@@ -264,7 +272,11 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
             >
               <span className="min-w-0 text-[11px] leading-snug text-[var(--text-muted)]">
                 <span className="block truncate text-[var(--text-primary)]">{m.name}</span>
-                {m.symbol} · seit {m.start} · {Math.floor(m.monthlyReturns.length / 12)} Jahre
+                {m.symbol} ·{' '}
+                {t('market.history', 'seit {start} · {years} Jahre', {
+                  start: m.start,
+                  years: Math.floor(m.monthlyReturns.length / 12),
+                })}
                 {/* Monatsgenau wie die Rechnung - ein Papier ab März fehlt auch im Januar desselben Jahres. */}
                 {startYear !== null &&
                 (marketMonthOffset(m.start, startYear, startMonth) ?? 0) < 0 ? (

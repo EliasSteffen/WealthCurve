@@ -20,7 +20,7 @@ import { useState } from 'react'
 import { useT } from '../react/localeContext'
 import { Checkbox } from './ui/Checkbox'
 import { NumberField } from './ui/NumberField'
-import { SegmentedControl } from './ui/SegmentedControl'
+import { SegmentedWithHint } from './ui/SegmentedWithHint'
 import { SelectField } from './ui/SelectField'
 import { SliderField } from './ui/SliderField'
 
@@ -38,7 +38,7 @@ const zeigt = (matches: ReadonlySet<string> | null | undefined, id: string) =>
 export function WithdrawalRuleControl({ value, onChange }: ModelProps) {
   const t = useT()
   return (
-    <SegmentedControl
+    <SegmentedWithHint
       label={t('withdrawal.rule', 'Regel')}
       value={value.withdrawalStrategyId}
       onChange={(withdrawalStrategyId) => onChange({ ...value, withdrawalStrategyId })}
@@ -161,7 +161,7 @@ export function CompoundingControl({ value, onChange, matches = null }: ModelPro
   const t = useT()
   if (!zeigt(matches, 'model:compounding')) return null
   return (
-    <SegmentedControl
+    <SegmentedWithHint
       label={t('model.compounding', 'Zinsmodus')}
       value={value.compounding}
       onChange={(compounding) => onChange({ ...value, compounding })}
@@ -169,17 +169,26 @@ export function CompoundingControl({ value, onChange, matches = null }: ModelPro
         {
           value: 'monthly-effective',
           label: t('model.compounding.monthly-effective', 'Effektiv'),
-          hint: 'Zwölf Monatsschritte ergeben exakt den Jahreszins (ETF-Konvention).',
+          hint: t(
+            'model.compounding.monthly-effective.hint',
+            'Zwölf Monatsschritte ergeben exakt den Jahreszins (ETF-Konvention).',
+          ),
         },
         {
           value: 'monthly-nominal',
           label: t('model.compounding.monthly-nominal', 'Nominal'),
-          hint: 'Zins/12 – Bankkonvention. Ergibt mehr als den eingegebenen Jahreszins.',
+          hint: t(
+            'model.compounding.monthly-nominal.hint',
+            'Zins/12 – Bankkonvention. Ergibt mehr als den eingegebenen Jahreszins.',
+          ),
         },
         {
           value: 'annual',
           label: t('model.compounding.annual', 'Jährlich'),
-          hint: 'Einmal pro Jahr verzinst, Raten sammeln sich unverzinst.',
+          hint: t(
+            'model.compounding.annual.hint',
+            'Einmal pro Jahr verzinst, Raten sammeln sich unverzinst.',
+          ),
         },
       ]}
     />
@@ -191,7 +200,7 @@ export function TimingControl({ value, onChange, matches = null }: ModelProps) {
   const t = useT()
   if (!zeigt(matches, 'model:timing')) return null
   return (
-    <SegmentedControl
+    <SegmentedWithHint
       label={t('model.timing', 'Sparrate')}
       value={value.timing}
       onChange={(timing) => onChange({ ...value, timing })}
@@ -199,12 +208,18 @@ export function TimingControl({ value, onChange, matches = null }: ModelProps) {
         {
           value: 'end',
           label: t('model.timing.end', 'Nachschüssig'),
-          hint: 'Einzahlung am Monatsende.',
+          hint: t(
+            'model.timing.end.hint',
+            'Einzahlung am Monatsende.',
+          ),
         },
         {
           value: 'start',
           label: t('model.timing.start', 'Vorschüssig'),
-          hint: 'Einzahlung am Monatsanfang.',
+          hint: t(
+            'model.timing.start.hint',
+            'Einzahlung am Monatsanfang.',
+          ),
         },
       ]}
     />
@@ -224,7 +239,7 @@ export function TimeAxisControls({ value, onChange, matches = null }: ModelProps
 
   return (
     <div className="space-y-4">
-      <SegmentedControl
+      <SegmentedWithHint
         label={t('model.timeAxis', 'Zeitachse')}
         value={value.timeAxis}
         onChange={(timeAxis) => onChange({ ...value, timeAxis })}
@@ -232,17 +247,26 @@ export function TimeAxisControls({ value, onChange, matches = null }: ModelProps
           {
             value: 'relative' as const,
             label: t('model.timeAxis.relative', 'Jahre ab 0'),
-            hint: 'Zählt die Laufzeit, unabhängig von Alter und Kalender.',
+            hint: t(
+            'model.timeAxis.relative.hint',
+            'Zählt die Laufzeit, unabhängig von Alter und Kalender.',
+          ),
           },
           {
             value: 'age' as const,
             label: t('model.timeAxis.age', 'Alter'),
-            hint: 'Beschriftet mit dem Lebensalter – „mit 65" statt „Jahr 35".',
+            hint: t(
+            'model.timeAxis.age.hint',
+            'Beschriftet mit dem Lebensalter – „mit 65" statt „Jahr 35".',
+          ),
           },
           {
             value: 'calendar' as const,
             label: t('model.timeAxis.calendar', 'Kalenderjahr'),
-            hint: 'Beschriftet mit Jahreszahlen. Nötig für echte Kursverläufe.',
+            hint: t(
+              'model.timeAxis.calendar.hint',
+              'Beschriftet mit Jahreszahlen. Nötig für echte Kursverläufe.',
+            ),
           },
         ]}
       />
@@ -298,7 +322,7 @@ export function InflationAmountsControl({ value, onChange, matches = null }: Mod
   const t = useT()
   if (!zeigt(matches, 'model:amountsInflationAdjusted')) return null
   return (
-    <SegmentedControl
+    <SegmentedWithHint
       label={t('model.amounts', 'Beträge')}
       value={value.amountsInflationAdjusted ? 'real' : 'nominal'}
       onChange={(v) => onChange({ ...value, amountsInflationAdjusted: v === 'real' })}
@@ -306,14 +330,19 @@ export function InflationAmountsControl({ value, onChange, matches = null }: Mod
         {
           value: 'nominal',
           label: t('model.amounts.nominal', 'Nominal'),
-          hint: 'Spar- und Auszahlbetrag bleiben über die Jahre unverändert.',
+          hint: t(
+            'model.amounts.nominal.hint',
+            'Spar- und Auszahlbetrag bleiben über die Jahre unverändert.',
+          ),
         },
         {
           value: 'real',
           label: t('model.amounts.real', 'Inflationsbereinigt'),
-          hint:
+          hint: t(
+            'model.amounts.real.hint',
             'Der eingetragene Betrag gilt als heutige Kaufkraft; nominal steigt er ' +
-            'jährlich mit der Inflation, damit sein realer Wert konstant bleibt.',
+              'jährlich mit der Inflation, damit sein realer Wert konstant bleibt.',
+          ),
         },
       ]}
     />

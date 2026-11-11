@@ -5,6 +5,7 @@ import { useMediaQuery } from '../hooks/useMediaQuery'
 import { useTheme } from '../hooks/useTheme'
 import { useT } from '../react/localeContext'
 import { useSelector } from '../react/useSelector'
+import { seriesCountOf } from '../react/projectionText'
 import { ChartLegend } from './chart/ChartLegend'
 import { DataTable } from './DataTable'
 import { SettingsDialog } from './layout/SettingsDialog'
@@ -116,7 +117,9 @@ export function Dashboard() {
                   <ChartLegend
                     series={projection.lines}
                     rows={projection.rows}
+                    encodingId={projection.encodingId}
                     encodingDescription={projection.encodingDescription}
+                    seriesCount={seriesCountOf(projection.lines)}
                     showEncodingHint={visibleCount > 1 || enabledSeriesIds.length > 1}
                   />
                 </figcaption>

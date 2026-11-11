@@ -103,7 +103,7 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
               {/* Direkt im Feld umbenennbar - kein Dialog für einen Namen. */}
               <input
                 value={scenario.label}
-                aria-label={`Name von ${scenario.label}`}
+                aria-label={t('scenario.name', `Name von ${scenario.label}`, { name: scenario.label })}
                 data-scenario-id={scenario.id}
                 onFocus={() => dispatch(actions.selectScenario(scenario.id))}
                 onChange={(e) => dispatch(actions.renameScenario(scenario.id, e.target.value))}
@@ -135,7 +135,12 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
                   disabledReason={t('scenario.limitShort', `Maximal ${MAX_SCENARIOS} Szenarien`, {
                     max: MAX_SCENARIOS,
                   })}
-                  onClick={() => dispatch(actions.duplicateScenario(scenario.id))}
+                  onClick={() => dispatch(
+                      actions.duplicateScenario(
+                        scenario.id,
+                        t('scenario.copyName', `${scenario.label} (Kopie)`, { name: scenario.label }),
+                      ),
+                    )}
                 >
                   <Copy size={15} />
                 </IconButton>
@@ -173,7 +178,16 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
         ref={addRef}
         type="button"
         disabled={atLimit}
-        onClick={() => dispatch(actions.addScenario())}
+        onClick={() =>
+          dispatch(
+            actions.addScenario(
+              // Derselbe Standardname wie im Reducer, nur in der Sprache der Oberfläche.
+              t('scenario.fallbackName', `Szenario ${scenarios.length + 1}`, {
+                n: String(scenarios.length + 1),
+              }),
+            ),
+          )
+        }
         className={cn(
           'mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed px-3 py-2 text-xs font-medium transition-colors',
           atLimit

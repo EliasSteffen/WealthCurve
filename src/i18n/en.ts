@@ -290,4 +290,58 @@ export const en: Catalog = {
   'app.reset.yes': 'Yes, reset',
   'app.reset.cancel': 'Cancel',
   'table.download': 'Download CSV',
+
+  // Mobiles Einstellungs-Sheet, Tooltip, Szenario-Namen
+  'settings.sheet.open': 'Open settings',
+  'chart.tooltip.year': 'Year {year}',
+  'scenario.name': 'Name of {name}',
+  'scenario.copyName': '{name} (copy)',
+  'scenario.color.seriesEncoding':
+    'While only one scenario is visible, the chart colours by series – the colour is shown here and in the settings header.',
+
+  // Wertpapier: Hinweise und Fehler
+  'market.full':
+    'More than {max} securities can no longer be told apart. Remove one first.',
+  'market.remove': 'Remove {symbol}',
+  'market.error.status': 'Error {status}',
+  'market.error.fetch': 'Request failed',
+
+  // Hinweise zur gewählten Option (stehen sichtbar unter dem Schalter)
+  'settings.view.kompakt.hint': 'Only the settings you change often.',
+  'settings.view.alles.hint': 'Also time, securities and calculation assumptions.',
+  'model.compounding.monthly-effective.hint':
+    'Twelve monthly steps add up to exactly the annual rate (ETF convention).',
+  'model.compounding.monthly-nominal.hint':
+    'Rate/12 – bank convention. Yields more than the annual rate you entered.',
+  'model.compounding.annual.hint': 'Interest is paid once a year; contributions pile up without interest.',
+  'model.timing.end.hint': 'Contribution at the end of the month.',
+  'model.timing.start.hint': 'Contribution at the start of the month.',
+  'model.timeAxis.relative.hint': 'Counts the duration, independent of age and calendar.',
+  'model.timeAxis.age.hint': 'Labelled with your age – “at 65” instead of “year 35”.',
+  'model.timeAxis.calendar.hint': 'Labelled with calendar years. Needed for real price histories.',
+  'model.amounts.nominal.hint': 'Saving and withdrawal amounts stay the same over the years.',
+  'model.amounts.real.hint':
+    'The amount you enter counts as today’s purchasing power; nominally it rises with inflation every year so that its real value stays constant.',
+
+  // Suche: Beschriftungen und Stichwörter der Einträge ohne eigene Registry
+  'settings.index.scenarios.label': 'Scenarios',
+  'settings.index.scenarios.keywords': 'scenario comparison variant duplicate colour color',
+  'settings.index.market.label': 'Security',
+  'settings.index.market.keywords': 'stock share etf price yahoo symbol ticker index history',
+  'settings.index.style.label': 'Appearance',
+  'settings.index.style.keywords': 'style look design sketched minimal',
+  'settings.index.model.compounding.label': 'Compounding',
+  'settings.index.model.compounding.keywords':
+    'interest effective nominal annual yearly convention',
+  'settings.index.model.timing.label': 'Contribution timing',
+  'settings.index.model.timing.keywords': 'in advance in arrears start end of month timing',
+  'settings.index.model.timeAxis.label': 'Time axis, age, start year and month',
+  'settings.index.model.timeAxis.keywords':
+    'age start year start month month calendar axis time retirement birth year',
+  'settings.index.model.amountsInflationAdjusted.label': 'Inflation-adjusted amounts',
+  'settings.index.model.amountsInflationAdjusted.keywords':
+    'inflation purchasing power real nominal amount',
+  'settings.index.model.withdrawalRule.label': 'Withdrawal rule',
+  'settings.index.model.withdrawalRule.keywords':
+    'withdrawal rule percentage rule fixed amount 4 percent pension',
 }

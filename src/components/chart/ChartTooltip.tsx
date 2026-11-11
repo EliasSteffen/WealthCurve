@@ -1,5 +1,6 @@
 import type { ProjectionLine } from '../../core/projection'
 import { formatEur } from '../../lib/format'
+import { useT } from '../../react/localeContext'
 import { useSeriesLabel } from '../../react/useSeriesLabel'
 
 interface TooltipPayloadEntry {
@@ -23,6 +24,7 @@ interface ChartTooltipProps {
  */
 export function ChartTooltip({ active, label, payload, series, yearLabels }: ChartTooltipProps) {
   const labelOf = useSeriesLabel()
+  const t = useT()
   if (!active || !payload?.length) return null
 
   const byKey = new Map(payload.map((entry) => [String(entry.dataKey), entry.value]))
@@ -37,7 +39,7 @@ export function ChartTooltip({ active, label, payload, series, yearLabels }: Cha
   const kopfzeile =
     beschriftung !== undefined && beschriftung !== String(label)
       ? beschriftung
-      : `Jahr ${String(label)}`
+      : t('chart.tooltip.year', 'Jahr {year}', { year: String(label) })
 
   return (
     <div className="rounded-lg border border-[var(--hairline)] bg-[var(--surface-1)] px-3 py-2 shadow-lg">

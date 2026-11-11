@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  currentFormatterLocale,
+  setFormatterLocale,
   formatDraftNumber,
   formatEur,
   formatEurCompact,
@@ -64,6 +66,19 @@ describe('Formatierung', () => {
     // Deutsches Compact lässt Tausender ausgeschrieben - das ist Absicht.
     expect(normalize(formatEurCompact(609_985))).toBe('609.985 €')
     expect(normalize(formatEurCompact(1_234_567))).toBe('1,2 Mio. €')
+  })
+
+  it('setzt das Währungszeichen im Englischen vor die Zahl', () => {
+    // Vorher wurde " €" angehängt und ergab "610K €".
+    const vorher = currentFormatterLocale()
+    setFormatterLocale('en-US')
+    try {
+      expect(formatEurCompact(609_985)).toBe('€610K')
+      expect(formatEurCompact(1_234_567)).toBe('€1.2M')
+      expect(formatEurCompact(0)).toBe('€0')
+    } finally {
+      setFormatterLocale(vorher)
+    }
   })
 
   it('formatiert Prozentpunkte', () => {

@@ -18,6 +18,7 @@ import { ladeTonspur, type Tonspur } from '../../lib/audioTrack'
 import { isAbortError, pickRecordingFormat, recordCanvas, TabHiddenError } from '../../lib/recordCanvas'
 import { transcodeToMp4 } from '../../lib/transcodeToMp4'
 import { useT } from '../../react/localeContext'
+import { useSeriesLabel } from '../../react/useSeriesLabel'
 import { useDispatch, useSelector } from '../../react/useSelector'
 import { drawFrame } from '../../render/canvas/drawFrame'
 import { buildFacts, suggestedFactKeys } from '../../render/facts'
@@ -78,11 +79,13 @@ export function VideoWorkspace() {
 
   const model = useSelector((s) => s.model)
   const t = useT()
+  // Dieselbe Beschriftung wie im Chart - inklusive „ · Szenario“, das die Legende abschneidet.
+  const lineLabel = useSeriesLabel()
   const format = useMemo(() => resolveFormat(spec.formatId), [spec.formatId])
   const gesamt = useMemo(() => frameCount(spec), [spec])
   const aufnahmeFormat = useMemo(() => pickRecordingFormat(), [])
   const aktiv = scenarios.find((s) => s.visible)
-  const titel = aktiv?.label ?? 'Zinseszins'
+  const titel = aktiv?.label ?? t('app.title', 'Zinseszins')
 
   /**
    * Werte für die Platzhalter im Szenentext - hier fertig formatiert, damit der
@@ -98,8 +101,8 @@ export function VideoWorkspace() {
         eur: formatEur,
         percent: formatPercent,
         years: formatYears,
-      }),
-    [projection, model],
+      }, t),
+    [projection, model, t],
   )
 
   const zeichne = useCallback(
@@ -127,9 +130,11 @@ export function VideoWorkspace() {
         showLegend: spec.showLegend !== false,
         hasWithdrawalPhase: model.withdrawalYears > 0,
         retirementLabel: t('chart.retirement', 'Rentenbeginn'),
+        t,
+        lineLabel,
       })
     },
-    [spec, projection, style, format, titel, facts, model.withdrawalYears, t],
+    [spec, projection, style, format, titel, facts, model.withdrawalYears, t, lineLabel],
   )
 
   // Vorschau: einmal durchlaufen lassen, solange nicht aufgenommen wird.

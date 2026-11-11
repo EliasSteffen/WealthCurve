@@ -1,12 +1,18 @@
 import type { ProjectionRow, ProjectionLine } from '../../core/projection'
 import { formatEur } from '../../lib/format'
+import { useT } from '../../react/localeContext'
+import { encodingText } from '../../react/projectionText'
 import { useSeriesLabel } from '../../react/useSeriesLabel'
 
 interface ChartLegendProps {
   readonly series: readonly ProjectionLine[]
   readonly rows: readonly ProjectionRow[]
-  /** Was Farbe und Strich bedeuten - kommt aus der aktiven Kodierung. */
+  /** Die aktive Kodierung (`projection.encodingId`) - den Text setzt die Legende selbst zusammen. */
+  readonly encodingId: string
+  /** Deutscher Text des Kerns - nur Rückfall für eine Kodierung ohne Übersetzung. */
   readonly encodingDescription: string
+  /** Anzahl aktiver Serien; mit mehreren trägt bei Szenario-Farbe der Strich die Serie. */
+  readonly seriesCount: number
   readonly showEncodingHint: boolean
 }
 
@@ -19,8 +25,16 @@ interface ChartLegendProps {
  * Hover erreichbar - nötig, weil Aqua und Gelb auf heller Fläche unter 3:1
  * Kontrast liegen.
  */
-export function ChartLegend({ series, rows, encodingDescription, showEncodingHint }: ChartLegendProps) {
+export function ChartLegend({
+  series,
+  rows,
+  encodingId,
+  encodingDescription,
+  seriesCount,
+  showEncodingHint,
+}: ChartLegendProps) {
   const labelOf = useSeriesLabel()
+  const t = useT()
   const finalValueOf = (key: string): number | null => {
     for (let i = rows.length - 1; i >= 0; i -= 1) {
       const value = rows[i][key]
@@ -58,7 +72,7 @@ export function ChartLegend({ series, rows, encodingDescription, showEncodingHin
         })}
       </ul>
       {showEncodingHint ? (
-        <p className="mt-2 text-[11px] text-[var(--text-muted)]">{encodingDescription}</p>
+        <p className="mt-2 text-[11px] text-[var(--text-muted)]">{encodingText(t, encodingId, seriesCount, encodingDescription)}</p>
       ) : null}
     </div>
   )

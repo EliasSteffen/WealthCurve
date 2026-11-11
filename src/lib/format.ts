@@ -39,10 +39,18 @@ function build(locale: string): Formatter {
      * Erst ab Millionen greift es: 1234567 -> "1,2 Mio.". Englisch kuerzt
      * dagegen schon ab Tausendern ("610K") - beides ist korrekt fuer die
      * jeweilige Sprache.
+     *
+     * Das Waehrungszeichen setzt Intl selbst, damit es an der Stelle der Sprache
+     * steht: "610 Tsd. €" bzw. "609.985 €" auf Deutsch, "€610K" auf Englisch.
+     * Ein angehaengtes " €" gaebe im Englischen "610K €".
      */
     compact: new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: waehrung,
       notation: 'compact',
       compactDisplay: 'short',
+      // Ohne das Minimum haengt die Waehrung ihre zwei Cent-Stellen an: "€610.0K".
+      minimumFractionDigits: 0,
       maximumFractionDigits: 1,
     }),
     percent: new Intl.NumberFormat(locale, {
@@ -75,7 +83,7 @@ export function currentFormatterLocale(): string {
 
 export const formatEur = (value: number) => f().eur.format(value)
 export const formatEurCents = (value: number) => f().eurCents.format(value)
-export const formatEurCompact = (value: number) => `${f().compact.format(value)} €`
+export const formatEurCompact = (value: number) => f().compact.format(value)
 
 /** Erwartet Prozentpunkte: 7.25 -> "7,25 %". */
 export const formatPercent = (percentPoints: number) => f().percent.format(percentPoints / 100)

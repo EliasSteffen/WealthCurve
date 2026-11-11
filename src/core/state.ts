@@ -132,7 +132,7 @@ export { TIME_AXIS_MODES }
 
 export type Action =
   | { type: 'scenario/add'; label?: string; params?: Partial<SimulationParams> }
-  | { type: 'scenario/duplicate'; id: string }
+  | { type: 'scenario/duplicate'; id: string; label?: string }
   | { type: 'scenario/remove'; id: string }
   | { type: 'scenario/rename'; id: string; label: string }
   | { type: 'scenario/setVisible'; id: string; visible: boolean }
@@ -159,7 +159,12 @@ export const actions = {
     label,
     params,
   }),
-  duplicateScenario: (id: string): Action => ({ type: 'scenario/duplicate', id }),
+  // `label` kommt aus der Oberfläche (übersetzt); ohne ihn bleibt es beim deutschen Standard.
+  duplicateScenario: (id: string, label?: string): Action => ({
+    type: 'scenario/duplicate',
+    id,
+    label,
+  }),
   removeScenario: (id: string): Action => ({ type: 'scenario/remove', id }),
   renameScenario: (id: string, label: string): Action => ({ type: 'scenario/rename', id, label }),
   setScenarioVisible: (id: string, visible: boolean): Action => ({
@@ -248,7 +253,7 @@ export function reducer(state: AppState, action: Action): AppState {
       const slot = allocateSlot(state.scenarios.map((s) => s.colorSlot))
       if (slot === null) return state
       const copy = createScenario({
-        label: `${source.label} (Kopie)`,
+        label: action.label ?? `${source.label} (Kopie)`,
         params: source.params,
         visible: source.visible,
         colorSlot: slot,

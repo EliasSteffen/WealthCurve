@@ -27,12 +27,13 @@ import {
   WithdrawalPhaseToggle,
   WithdrawalRuleControl,
 } from '../ModelSettings'
+import { translatedSearchText } from './settingsSearchText'
 import { MarketPanel } from '../MarketPanel'
 import { ParameterPanel } from '../ParameterPanel'
 import { ScenarioList } from '../ScenarioList'
 import { SeriesPanel } from '../SeriesPanel'
 import { Card } from '../ui/Card'
-import { SegmentedControl } from '../ui/SegmentedControl'
+import { SegmentedWithHint } from '../ui/SegmentedWithHint'
 
 /**
  * Der komplette Einstellungsbereich - genau einmal definiert.
@@ -74,7 +75,10 @@ export function SettingsPanel({ layout = 'schmal' }: SettingsPanelProps = {}) {
   const ansicht = useSelector((s) => s.settingsView)
 
   const index = useMemo(() => buildSettingsIndex(), [])
-  const suche = useMemo(() => matchSettings(index, query), [index, query])
+  const suche = useMemo(
+    () => matchSettings(index, query, (entry) => translatedSearchText(entry, t)),
+    [index, query, t],
+  )
   /*
    * Die kompakte Ansicht laeuft durch dieselbe Filterung wie die Suche.
    *
@@ -250,7 +254,7 @@ export function SettingsPanel({ layout = 'schmal' }: SettingsPanelProps = {}) {
         der nichts tut, ist schlimmer als keiner.
       */}
       {suche === null ? (
-        <SegmentedControl
+        <SegmentedWithHint
           label={t('settings.view', 'Ansicht')}
           value={ansicht}
           onChange={(view) => dispatch(actions.setSettingsView(view))}
@@ -258,12 +262,12 @@ export function SettingsPanel({ layout = 'schmal' }: SettingsPanelProps = {}) {
             {
               value: 'kompakt' as const,
               label: t('settings.view.kompakt', 'Kompakt'),
-              hint: 'Nur die Einstellungen, die man häufig anfasst.',
+              hint: t('settings.view.kompakt.hint', 'Nur die Einstellungen, die man häufig anfasst.'),
             },
             {
               value: 'alles' as const,
               label: t('settings.view.alles', 'Alles'),
-              hint: 'Zusätzlich Zeit, Wertpapiere und Rechenannahmen.',
+              hint: t('settings.view.alles.hint', 'Zusätzlich Zeit, Wertpapiere und Rechenannahmen.'),
             },
           ]}
         />

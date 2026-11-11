@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { SERIES_BY_ID } from '../core/domain/series'
 import type { ProjectionLine } from '../core/projection'
 import { useT } from './localeContext'
@@ -13,7 +14,9 @@ import { useSelector } from './useSelector'
 export function useSeriesLabel(): (line: ProjectionLine) => string {
   const t = useT()
   const scenarios = useSelector((s) => s.scenarios)
-  return (line) => {
+  // Stabile Identität: der Video-Renderer hängt seine Zeichenfunktion daran, und
+  // eine bei jedem Render neue Funktion startete die Vorschau jedes Mal neu.
+  return useCallback((line) => {
     const series = SERIES_BY_ID.get(line.seriesId)
     const uebersetzt = series ? t(`series.${line.seriesId}.label`, series.label) : line.label
     // Das Tickersymbol bleibt unübersetzt - es IST der Name des Papiers.
@@ -27,5 +30,5 @@ export function useSeriesLabel(): (line: ProjectionLine) => string {
       szenario = t('scenario.fallbackName', `Szenario ${position}`, { n: String(position) })
     }
     return `${name} · ${szenario}`
-  }
+  }, [t, scenarios])
 }
