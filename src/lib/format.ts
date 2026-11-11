@@ -12,7 +12,6 @@
 
 interface Formatter {
   readonly eur: Intl.NumberFormat
-  readonly eurCents: Intl.NumberFormat
   readonly compact: Intl.NumberFormat
   readonly percent: Intl.NumberFormat
 }
@@ -20,19 +19,12 @@ interface Formatter {
 const cache = new Map<string, Formatter>()
 
 function build(locale: string): Formatter {
-  const waehrung = locale.startsWith('de') ? 'EUR' : 'EUR'
   return {
     eur: new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: waehrung,
+      currency: 'EUR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }),
-    eurCents: new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: waehrung,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
     }),
     /*
      * Deutsches Compact kuerzt Tausender NICHT ab: 609985 -> "609.985".
@@ -46,7 +38,7 @@ function build(locale: string): Formatter {
      */
     compact: new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: waehrung,
+      currency: 'EUR',
       notation: 'compact',
       compactDisplay: 'short',
       // Ohne das Minimum haengt die Waehrung ihre zwei Cent-Stellen an: "€610.0K".
@@ -82,7 +74,6 @@ export function currentFormatterLocale(): string {
 }
 
 export const formatEur = (value: number) => f().eur.format(value)
-export const formatEurCents = (value: number) => f().eurCents.format(value)
 export const formatEurCompact = (value: number) => f().compact.format(value)
 
 /** Erwartet Prozentpunkte: 7.25 -> "7,25 %". */

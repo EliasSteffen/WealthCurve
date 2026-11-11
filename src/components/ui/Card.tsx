@@ -29,11 +29,3 @@ export function Card({ children, className, padded = true }: CardProps) {
     </section>
   )
 }
-
-export function CardTitle({ children }: { readonly children: ReactNode }) {
-  return (
-    <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-      {children}
-    </h2>
-  )
-}
