@@ -28,12 +28,12 @@
   --on-accent: #ffffff;
 
   --chart-1: #2a78d6; /* blau    - Zinseszins */
-  --chart-2: #eb6834; /* orange  - Eingezahlt */
+  --chart-2: #eb6834; /* orange  - Ohne Rendite */
   --chart-3: #1baf7a; /* aqua    - Kaufkraft */
   --chart-4: #eda100; /* gelb    - Tagesgeld */
-  --chart-5: #e87ba4; /* magenta - frei */
+  --chart-5: #e87ba4; /* magenta - Entnommen */
   --chart-6: #008300; /* gruen   - frei */
-  --chart-7: #4a3aa7; /* violett - frei */
+  --chart-7: #4a3aa7; /* violett - Kursverlauf */
   --chart-8: #e34948; /* rot     - frei */
 }
 

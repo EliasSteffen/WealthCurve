@@ -5,7 +5,7 @@ import { defineSeries } from '../types.ts'
  * Tagesgeld: gleiche Sparrate, aber eigener (niedrigerer) Zins.
  *
  * Keine Projektion von `base`, sondern eine eigene Simulation - der Notausgang
- * für Serien mit abweichender Dynamik. `simulateMonthly` steht jeder Serie offen;
+ * für Serien mit abweichender Dynamik. `simulate` steht jeder Serie offen;
  * nur der Standardweg ist die Projektion.
  */
 export const savingsAccountSeries = defineSeries({
