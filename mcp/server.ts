@@ -28,6 +28,7 @@ import {
 import { CHART_STYLES, resolveChartStyle } from '../src/core/chart-style'
 import { projectionToCsv } from '../src/core/csv'
 import { DEFAULT_MODEL } from '../src/core/domain/math'
+import { sanitizeModel } from '../src/core/domain/model'
 import {
   DEFAULT_PARAMS,
   PARAMETERS,
@@ -41,6 +42,12 @@ import { ENCODINGS } from '../src/core/encoding'
 import { buildProjection, type Projection, type ProjectionScenario } from '../src/core/projection'
 import { SETTINGS_CATEGORIES } from '../src/core/settings'
 import { deserialize, serialize } from '../src/core/state'
+import {
+  MAX_START_AGE,
+  MAX_START_YEAR,
+  MIN_START_AGE,
+  MIN_START_YEAR,
+} from '../src/core/timeAxis'
 import { drawFrame } from '../src/render/canvas/drawFrame'
 import { buildFacts } from '../src/render/facts'
 import { RENDER_THEMES, themeLineColors } from '../src/render/canvas/themes'
@@ -82,6 +89,12 @@ const schriftFuer = (fontFamily: string | null): string => {
 
 /* ------------------------------------------------------------------ Schemas */
 
+/*
+ * Zahlen bewusst nicht auf die Regler-Bereiche der Oberflaeche begrenzt: wer
+ * ueber MCP 5.000 EUR im Monat durchrechnet, soll das duerfen. Nur endlich
+ * muss alles sein - `z.number()` weist in Zod 4 Infinity von selbst ab, und NaN
+ * kann durch JSON gar nicht erst ankommen.
+ */
 const szenarioSchema = z.object({
   label: z.string().describe('Anzeigename, z. B. "Basis" oder "Aggressiv"'),
   monthlyContribution: z.number().describe('Monatliche Sparrate in Euro'),
@@ -104,8 +117,21 @@ const szenarioSchema = z.object({
 })
 
 const modellSchema = z.object({
-  accumulationYears: z.number().default(30).describe('Jahre, in denen eingezahlt wird'),
-  withdrawalYears: z.number().default(0).describe('Jahre, in denen entnommen wird; 0 = keine'),
+  // Die Grenzen kommen aus dem Kern: 1e7 Jahre froeren die Simulation ein.
+  accumulationYears: z
+    .number()
+    .int()
+    .min(TIMELINE_FIELDS.accumulationYears.min)
+    .max(TIMELINE_FIELDS.accumulationYears.max)
+    .default(30)
+    .describe('Jahre, in denen eingezahlt wird'),
+  withdrawalYears: z
+    .number()
+    .int()
+    .min(TIMELINE_FIELDS.withdrawalYears.min)
+    .max(TIMELINE_FIELDS.withdrawalYears.max)
+    .default(0)
+    .describe('Jahre, in denen entnommen wird; 0 = keine'),
   compounding: z
     .enum(['monthly-effective', 'monthly-nominal', 'annual'])
     .default('monthly-effective')
@@ -137,11 +163,17 @@ const modellSchema = z.object({
     ),
   startAge: z
     .number()
+    .int()
+    .min(MIN_START_AGE)
+    .max(MAX_START_AGE)
     .nullable()
     .default(null)
     .describe('Alter zu Beginn der Ansparphase; null = keine Altersangabe.'),
   startYear: z
     .number()
+    .int()
+    .min(MIN_START_YEAR)
+    .max(MAX_START_YEAR)
     .nullable()
     .default(null)
     .describe(
@@ -192,10 +224,8 @@ const rechenEingabe = {
  * selbst verlangt in Zod 4 ein vollstaendiges Objekt und waere hier nur
  * scheinbar richtig.
  */
-const toModel = (m?: unknown): ModelSettings => ({
-  ...DEFAULT_MODEL,
-  ...modellSchema.parse(m ?? {}),
-})
+const toModel = (m?: unknown): ModelSettings =>
+  sanitizeModel({ ...DEFAULT_MODEL, ...modellSchema.parse(m ?? {}) })
 
 const toScenarios = (list: readonly z.infer<typeof szenarioSchema>[]): ProjectionScenario[] =>
   list.map((s, i) => ({
@@ -219,13 +249,16 @@ const toScenarios = (list: readonly z.infer<typeof szenarioSchema>[]): Projectio
 async function ladeMaerkte(
   symbols: readonly string[],
 ): Promise<{ markets: MarketSeries[]; fehler: string[] }> {
+  // Parallel statt nacheinander: bei vier Symbolen waeren das vier Wartezeiten.
+  // Promise.all haelt die Reihenfolge der Eingabe, auch wenn die Antworten
+  // in anderer eintreffen.
+  const ergebnisse = await Promise.all(symbols.map((symbol) => fetchQuotes(symbol)))
   const markets: MarketSeries[] = []
   const fehler: string[] = []
-  for (const symbol of symbols) {
-    const ergebnis = await fetchQuotes(symbol)
+  ergebnisse.forEach((ergebnis, i) => {
     if (ergebnis.ok) markets.push(ergebnis.daten)
-    else fehler.push(`${symbol}: ${ergebnis.fehler.error}`)
-  }
+    else fehler.push(`${symbols[i]}: ${ergebnis.fehler.error}`)
+  })
   return { markets, fehler }
 }
 
