@@ -26,7 +26,8 @@ export const DEFAULT_MODEL: ModelSettings = {
 }
 
 const finite = (value: number, fallback = 0): number => (Number.isFinite(value) ? value : fallback)
-const wholeYears = (value: number): number => Math.max(0, Math.floor(finite(value)))
+/** Ganze Jahre wie in der Simulation - Aufrufer außerhalb sollen dieselbe Zahl nutzen. */
+export const wholeYears = (value: number): number => Math.max(0, Math.floor(finite(value)))
 
 /**
  * Jahreszins (in Prozentpunkten) -> Zins pro Periode.
@@ -225,10 +226,33 @@ export function simulate(config: SimulationConfig): SimulationResult {
    * zwei verschiedene Auszahlpläne statt zweier Renditen.
    */
   const strategy = resolveWithdrawalStrategy(model.withdrawalStrategyId)
+
+  /*
+   * Die Strategie bekommt das Kapital in der Währung, in der ihr Ergebnis
+   * gelten soll. Bei inflationsbereinigter Eingabe wächst die Zahlung in
+   * `runPhase` ab Jahr 0 mit der Inflation, ihr Ergebnis muss also in heutiger
+   * Kaufkraft vorliegen. Das nominale Kapital bei Rentenbeginn trägt die
+   * Inflation der Ansparjahre schon in sich - ohne dieses Zurückrechnen würde sie
+   * doppelt gezählt (die 4-%-Regel entnähme dann rund 7 %). So zahlt das erste
+   * Entnahmejahr nominal genau Satz x Kapital. Zurückgegeben wird weiter das
+   * nominale Kapital.
+   */
+  const capitalForStrategy =
+    amountGrowth === 1
+      ? capitalAtRetirement
+      : capitalAtRetirement / Math.pow(amountGrowth, wholeYears(model.accumulationYears))
   const monthlyWithdrawal =
     config.monthlyWithdrawalOverride !== undefined
       ? Math.max(0, finite(config.monthlyWithdrawalOverride))
-      : Math.max(0, finite(strategy.monthlyAmount({ params: config.params, capitalAtRetirement })))
+      : Math.max(
+          0,
+          finite(
+            strategy.monthlyAmount({
+              params: config.params,
+              capitalAtRetirement: capitalForStrategy,
+            }),
+          ),
+        )
 
   const withdrawal = buildPhases(model, 0, monthlyWithdrawal).find((p) => p.kind === 'withdraw')
   if (withdrawal) {

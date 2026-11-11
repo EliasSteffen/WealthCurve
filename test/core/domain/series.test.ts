@@ -170,3 +170,94 @@ describe('einzelne Serien', () => {
     expect(series.compute(noInflation).at(-1)!).toBeCloseTo(valuesOf('compound').at(-1)!, 6)
   })
 })
+
+describe('Tagesgeld und Prozentregel', () => {
+  it('entnimmt im ersten Jahr denselben Betrag wie das Hauptszenario', () => {
+    const model = { ...DEFAULT_MODEL, withdrawalStrategyId: 'percentRule' }
+    const hauptszenario = simulate({
+      annualRatePercent: DEFAULT_PARAMS.annualRate,
+      monthlyContribution: DEFAULT_PARAMS.monthlyContribution,
+      initialCapital: DEFAULT_PARAMS.initialCapital,
+      params: DEFAULT_PARAMS,
+      model,
+    })
+    const tagesgeld = SERIES.find((s) => s.id === 'savingsAccount')!.compute({
+      base: hauptszenario,
+      params: DEFAULT_PARAMS,
+      model,
+    }) as number[]
+    const gleicherPlan = simulate({
+      annualRatePercent: DEFAULT_PARAMS.savingsRate,
+      monthlyContribution: DEFAULT_PARAMS.monthlyContribution,
+      initialCapital: DEFAULT_PARAMS.initialCapital,
+      monthlyWithdrawalOverride: hauptszenario.monthlyWithdrawal,
+      params: DEFAULT_PARAMS,
+      model,
+    })
+    // Ohne Vorgabe entnähme die Prozentregel vom kleineren Tagesgeld-Kapital.
+    const eigenerPlan = simulate({
+      annualRatePercent: DEFAULT_PARAMS.savingsRate,
+      monthlyContribution: DEFAULT_PARAMS.monthlyContribution,
+      initialCapital: DEFAULT_PARAMS.initialCapital,
+      params: DEFAULT_PARAMS,
+      model,
+    })
+    expect(eigenerPlan.monthlyWithdrawal).toBeLessThan(hauptszenario.monthlyWithdrawal)
+    expect(tagesgeld).toEqual(gleicherPlan.years.map((y) => y.balance))
+  })
+})
+
+describe('Kursverlauf bei verschiedenen Zinsmodi', () => {
+  const markt = (monate: number) => ({
+    symbol: 'TEST',
+    name: 'T',
+    currency: 'USD',
+    start: '2000-01',
+    monthlyReturns: Array<number>(monate).fill(0.01),
+  })
+  const kurs = SERIES.find((s) => s.id === 'marketReturn')!
+  const rechne = (compounding: 'monthly-effective' | 'annual', monate: number, jahre = 10) => {
+    const params = {
+      ...DEFAULT_PARAMS,
+      initialCapital: 10_000,
+      monthlyContribution: 0,
+    }
+    const model = {
+      ...DEFAULT_MODEL,
+      compounding,
+      accumulationYears: jahre,
+      withdrawalYears: 0,
+      timeAxis: 'calendar' as const,
+      startYear: 2000,
+      startMonth: 1,
+    }
+    const baseSim = simulate({
+      annualRatePercent: 0,
+      monthlyContribution: 0,
+      initialCapital: 10_000,
+      params,
+      model,
+    })
+    return kurs.compute({
+      base: baseSim,
+      params,
+      model,
+      market: markt(monate),
+    })
+  }
+
+  it('rechnet Monats- und Jahresmodus auf dasselbe Endergebnis', () => {
+    const erwartet = 10_000 * Math.pow(1.01, 120)
+    expect(rechne('monthly-effective', 360).at(-1)).toBeCloseTo(erwartet, 4)
+    expect(rechne('annual', 360).at(-1)).toBeCloseTo(erwartet, 4)
+  })
+
+  it('endet im Jahresmodus nach dem letzten voll gedeckten Jahr', () => {
+    // 66 Monate = 5 volle Jahre + 6 Monate: Jahr 6 ist nicht mehr gedeckt.
+    for (const modus of ['monthly-effective', 'annual'] as const) {
+      const werte = rechne(modus, 66)
+      expect(werte[5], modus).toBeCloseTo(10_000 * Math.pow(1.01, 60), 4)
+      expect(werte.slice(6), modus).toEqual(Array(5).fill(null))
+    }
+  })
+})

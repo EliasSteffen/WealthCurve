@@ -16,11 +16,14 @@ export const savingsAccountSeries = defineSeries({
   unit: 'currency',
   defaultEnabled: false,
   requiredParams: ['savingsRate', 'monthlyContribution', 'contributionGrowth', 'initialCapital'],
-  compute: ({ params, model }) =>
+  compute: ({ base, params, model }) =>
     simulate({
       annualRatePercent: params.savingsRate,
       monthlyContribution: params.monthlyContribution,
       initialCapital: params.initialCapital,
+      // Derselbe Auszahlplan wie im Hauptszenario, sonst entnähme die Prozentregel
+      // vom kleineren Tagesgeld-Kapital und die Kurven wären nicht vergleichbar.
+      monthlyWithdrawalOverride: base.monthlyWithdrawal,
       params,
       model,
     }).years.map((y) => y.balance),

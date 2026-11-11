@@ -443,3 +443,48 @@ describe('Dynamik der Sparrate', () => {
     expect(lauf(-10).years.at(-1)!.balance).toBeCloseTo(lauf(0).years.at(-1)!.balance, 6)
   })
 })
+
+describe('Prozentregel bei inflationsbereinigten Beträgen', () => {
+  const lauf = (strategie: string, inflation: boolean) =>
+    simulate({
+      annualRatePercent: 7,
+      monthlyContribution: 500,
+      initialCapital: 0,
+      params: DEFAULT_PARAMS,
+      model: {
+        ...DEFAULT_MODEL,
+        withdrawalStrategyId: strategie,
+        amountsInflationAdjusted: inflation,
+      },
+    })
+
+  it('entnimmt im ersten Jahr nominal Satz x nominales Kapital', () => {
+    // Früher stand hier ~7,25 %: die Inflation der Ansparjahre steckte schon im
+    // nominalen Kapital und wurde noch einmal aufgeschlagen.
+    const r = lauf('percentRule', true)
+    const ersteEntnahme = r.years[DEFAULT_MODEL.accumulationYears + 1].withdrawals
+    expect(ersteEntnahme).toBeCloseTo(
+      (r.capitalAtRetirement * DEFAULT_PARAMS.withdrawalRate) / 100,
+      4,
+    )
+  })
+
+  it('weist den Basisbetrag in heutiger Kaufkraft aus', () => {
+    const r = lauf('percentRule', true)
+    const faktor = Math.pow(1 + DEFAULT_PARAMS.inflationRate / 100, DEFAULT_MODEL.accumulationYears)
+    expect(r.monthlyWithdrawal * faktor * 12).toBeCloseTo(
+      (r.capitalAtRetirement * DEFAULT_PARAMS.withdrawalRate) / 100,
+      4,
+    )
+  })
+
+  it('lässt die feste Entnahme unverändert', () => {
+    const r = lauf('fixedAmount', true)
+    expect(r.monthlyWithdrawal).toBeCloseTo(DEFAULT_PARAMS.monthlyWithdrawal, 9)
+    const faktor = Math.pow(1 + DEFAULT_PARAMS.inflationRate / 100, DEFAULT_MODEL.accumulationYears)
+    expect(r.years[DEFAULT_MODEL.accumulationYears + 1].withdrawals).toBeCloseTo(
+      DEFAULT_PARAMS.monthlyWithdrawal * 12 * faktor,
+      4,
+    )
+  })
+})

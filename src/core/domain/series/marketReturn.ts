@@ -44,8 +44,22 @@ export const marketReturnSeries = defineSeries({
     const renditen = market.monthlyReturns
     if (versatz >= renditen.length) return leer()
 
-    const proJahr = model.compounding === 'annual' ? 1 : 12
-    const gedeckteJahre = Math.floor((renditen.length - versatz) / proJahr)
+    // Gedeckt sind immer volle Jahre à 12 Monate - auch bei jährlicher
+    // Verzinsung, die pro Jahr einen Schritt macht.
+    const gedeckteJahre = Math.floor((renditen.length - versatz) / 12)
+    const jaehrlich = model.compounding === 'annual'
+
+    /*
+     * `runPhase` zählt Perioden: Monate, bei jährlicher Verzinsung aber Jahre.
+     * Ein Jahresschritt braucht deshalb die verkettete Rendite der zwölf
+     * Monate, nicht den Wert eines einzelnen Monats.
+     */
+    const rateAt = (i: number): number => {
+      if (!jaehrlich) return renditen[versatz + i] ?? 0
+      let faktor = 1
+      for (let m = 0; m < 12; m += 1) faktor *= 1 + (renditen[versatz + i * 12 + m] ?? 0)
+      return faktor - 1
+    }
 
     const werte = simulate({
       annualRatePercent: 0,
@@ -54,7 +68,7 @@ export const marketReturnSeries = defineSeries({
       monthlyWithdrawalOverride: base.monthlyWithdrawal,
       params,
       model,
-      rateAt: (i) => renditen[versatz + i] ?? 0,
+      rateAt,
     }).years.map((y) => y.balance)
 
     // Jenseits der Historie endet die Kurve, statt fortgeschrieben zu werden -

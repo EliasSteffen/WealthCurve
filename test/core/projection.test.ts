@@ -212,3 +212,27 @@ describe('CSV-Export', () => {
     expect(projectionToCsv(p).split('\n')[0]).toContain('"Zinseszins · Mit;Semikolon"')
   })
 })
+
+describe('buildProjection: Prozentregel und Inflation', () => {
+  it('zahlt im ersten Jahr nominal Satz x Kapital bei Rentenbeginn', () => {
+    const p = build({
+      model: {
+        ...DEFAULT_MODEL,
+        withdrawalStrategyId: 'percentRule',
+        amountsInflationAdjusted: true,
+      },
+    })
+    const s = p.summaries[0]
+    expect(s.monthlyWithdrawalAtStart * 12).toBeCloseTo(
+      (s.capitalAtRetirement * DEFAULT_PARAMS.withdrawalRate) / 100,
+      4,
+    )
+  })
+
+  it('markiert den Phasenwechsel mit ganzen Jahren wie die Simulation', () => {
+    const p = build({
+      model: { ...DEFAULT_MODEL, accumulationYears: 10.7, withdrawalYears: 5 },
+    })
+    expect(p.retirementYear).toBe(10)
+  })
+})

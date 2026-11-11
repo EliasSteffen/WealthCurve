@@ -14,7 +14,13 @@ export interface WithdrawalStrategy {
   readonly requiredParams: readonly ParamId[]
   monthlyAmount(input: {
     readonly params: SimulationParams
-    /** Depotwert am Ende der Ansparphase. */
+    /**
+     * Depotwert am Ende der Ansparphase, in der Währung, in der das Ergebnis
+     * gelten soll: nominal, solange die Beträge nominal eingetragen sind; bei
+     * inflationsbereinigter Eingabe auf heutige Kaufkraft zurückgerechnet. Die
+     * Rückgabe ist dann der Basisbetrag in heutiger Kaufkraft, den `simulate`
+     * selbst mit der Inflation hochrechnet.
+     */
     readonly capitalAtRetirement: number
   }): number
 }
