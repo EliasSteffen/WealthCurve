@@ -1,7 +1,8 @@
 import { useId, useState } from 'react'
 import type { ParamDefinition } from '../../core/domain/parameters'
 import { cn } from '../../lib/cn'
-import { formatParamValue, parseGermanNumber } from '../../lib/format'
+import { formatDraftNumber, formatParamValue, parseLocaleNumber } from '../../lib/format'
+import { useLocale } from '../../react/localeContext'
 
 interface SliderFieldProps {
   readonly definition: ParamDefinition
@@ -11,12 +12,13 @@ interface SliderFieldProps {
 
 export function SliderField({ definition, value, onChange }: SliderFieldProps) {
   const id = useId()
+  const { locale } = useLocale()
   // Während des Tippens gilt der Rohtext. Sonst würde "4," sofort zu "4"
   // normalisiert und das Komma wäre nicht eingebbar.
   const [draft, setDraft] = useState<string | null>(null)
 
   const commit = (raw: string) => {
-    const parsed = parseGermanNumber(raw)
+    const parsed = parseLocaleNumber(raw, locale)
     if (!Number.isNaN(parsed)) onChange(parsed)
   }
 
@@ -31,7 +33,7 @@ export function SliderField({ definition, value, onChange }: SliderFieldProps) {
           type="text"
           inputMode="decimal"
           value={draft ?? formatParamValue(value, definition.unit)}
-          onFocus={() => setDraft(String(value).replace('.', ','))}
+          onFocus={() => setDraft(formatDraftNumber(value, locale))}
           onChange={(e) => {
             setDraft(e.target.value)
             commit(e.target.value)

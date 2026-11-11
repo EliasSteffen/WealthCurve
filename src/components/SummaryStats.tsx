@@ -1,6 +1,10 @@
 import type { ProjectionSummary } from '../core/projection'
+import { selectProjection } from '../core/derive'
+import { actions } from '../core/state'
+import { effectiveMode } from '../core/timeAxis'
 import { formatEur, formatPercent } from '../lib/format'
 import { useT } from '../react/localeContext'
+import { useDispatch, useSelector } from '../react/useSelector'
 import { Stat } from './ui/Stat'
 
 interface SummaryStatsProps {
@@ -22,15 +26,35 @@ export function SummaryStats({
   hasWithdrawalPhase,
 }: SummaryStatsProps) {
   const t = useT()
+  const dispatch = useDispatch()
+  const yearLabels = useSelector((s) => selectProjection(s).yearLabels)
+  const model = useSelector((s) => s.model)
+  const aktiv = useSelector((s) => s.scenarios.find((sc) => sc.id === activeScenarioId))
   const shown = summaries.find((s) => s.scenarioId === activeScenarioId) ?? summaries[0]
   if (!shown) return null
 
   const { balance, contributions, interest } = shown.final
   const interestShare = balance !== 0 ? (interest / balance) * 100 : 0
+  /*
+   * Die Beschriftung der Achse statt des rohen Jahresindex: bei Kalenderachse
+   * stünde sonst „Jahr 23" unter einer Achse, die 2049 zeigt. Die Formulierung
+   * richtet sich nach dem, was die Achse zählt.
+   */
+  const bis = shown.depletedAtYear === null ? null : shown.depletedAtYear
+  const bisLabel =
+    bis === null ? '' : (yearLabels[bis] ?? String(bis))
+  const modus = effectiveMode(model)
   const lasts =
-    shown.depletedAtYear === null
+    bis === null
       ? t('stat.lasts.through', 'reicht durch')
-      : t('stat.lasts.until', `bis Jahr ${shown.depletedAtYear}`, { year: shown.depletedAtYear })
+      : modus === 'calendar'
+        ? t('stat.lasts.untilCalendar', `bis ${bisLabel}`, { year: bisLabel })
+        : modus === 'age'
+          ? t('stat.lasts.untilAge', `bis Alter ${bisLabel}`, { year: bisLabel })
+          : t('stat.lasts.until', `bis Jahr ${bisLabel}`, { year: bisLabel })
+  // Der bearbeitete Regler-Satz gehört zu einem ausgeblendeten Szenario: die
+  // Kennzahlen zeigen dann ein anderes, und das muss man sehen.
+  const versteckt = aktiv !== undefined && !aktiv.visible
 
   return (
     <div>
@@ -44,6 +68,25 @@ export function SummaryStats({
           </span>
         ) : null}
       </div>
+
+      {versteckt ? (
+        <p className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--chart-8)] sm:mb-3">
+          <span>
+            {t(
+              'stat.hiddenActive',
+              `„${aktiv.label}" ist ausgeblendet – die Regler ändern es, die Kennzahlen zeigen ein anderes Szenario.`,
+              { name: aktiv.label },
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={() => dispatch(actions.setScenarioVisible(aktiv.id, true))}
+            className="rounded-md border border-[var(--hairline)] px-2 py-0.5 text-[var(--text-primary)] transition-colors hover:bg-[var(--grid)]"
+          >
+            {t('stat.showActive', 'Einblenden')}
+          </button>
+        </p>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:gap-x-6 sm:gap-y-4 lg:grid-cols-4">
         {hasWithdrawalPhase ? (

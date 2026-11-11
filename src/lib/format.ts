@@ -93,34 +93,43 @@ export function formatParamValue(value: number, unit: 'currency' | 'percent' | '
 }
 
 /**
- * Akzeptiert deutsche Eingaben. `<input type="number">` liefert bei "4,5" in
- * mehreren Browsern NaN - deshalb parsen wir selbst.
+ * Liest eine Zahleneingabe nach den Regeln der Oberflächensprache.
+ * `<input type="number">` liefert bei "4,5" in mehreren Browsern NaN - deshalb
+ * parsen wir selbst.
  *
- * Der Punkt ist im Deutschen mehrdeutig: "10.000" sind zehntausend, "4.5" ist
- * viereinhalb. Aufgeloest wird nach der Gruppenregel - ein Punkt mit exakt drei
- * Ziffern dahinter ist ein Tausenderpunkt, sonst ein Dezimaltrenner.
- * Ein Komma ist immer eindeutig der Dezimaltrenner.
+ * Deutsch: Ein Komma ist immer der Dezimaltrenner. Der Punkt ist mehrdeutig:
+ * "10.000" sind zehntausend, "4.5" ist viereinhalb. Aufgelöst wird nach der
+ * Gruppenregel - ein Punkt mit exakt drei Ziffern dahinter ist ein
+ * Tausenderpunkt, sonst ein Dezimaltrenner.
+ *
+ * Englisch spiegelbildlich: Ein Punkt ist immer der Dezimaltrenner, ein Komma
+ * mit exakt drei Ziffern dahinter ein Tausenderkomma, sonst (tolerant: "4,5")
+ * ein Dezimaltrenner. Ohne diese Spiegelung wurde "1,500" im Englischen zu 1,5 -
+ * Beträge waren um den Faktor 1000 zu klein.
  */
-export function parseGermanNumber(input: string): number {
+export function parseLocaleNumber(input: string, locale: string): number {
   const cleaned = input.replace(/[^\d,.-]/g, '').trim()
   if (cleaned === '' || cleaned === '-') return NaN
+
+  // `fest` ist der Trenner, der immer dezimal ist; `mehrdeutig` der andere.
+  const [fest, mehrdeutig] = locale.startsWith('de') ? [',', '.'] : ['.', ',']
 
   const negative = cleaned.startsWith('-')
   const digits = cleaned.replace(/-/g, '')
 
   let normalized: string
-  if (digits.includes(',')) {
-    // Komma vorhanden -> es ist der Dezimaltrenner, Punkte sind Tausender.
-    const lastComma = digits.lastIndexOf(',')
-    const whole = digits.slice(0, lastComma).replace(/[,.]/g, '')
-    const fraction = digits.slice(lastComma + 1).replace(/[,.]/g, '')
+  if (digits.includes(fest)) {
+    // Der feste Trenner ist der Dezimaltrenner, der andere dann Tausender.
+    const last = digits.lastIndexOf(fest)
+    const whole = digits.slice(0, last).replace(/[,.]/g, '')
+    const fraction = digits.slice(last + 1).replace(/[,.]/g, '')
     normalized = `${whole || '0'}.${fraction || '0'}`
   } else {
-    const parts = digits.split('.')
+    const parts = digits.split(mehrdeutig)
     if (parts.length === 1) {
       normalized = parts[0]
     } else if (parts.length > 2 || parts[parts.length - 1].length === 3) {
-      // "1.234.567" oder "10.000" -> alles Tausenderpunkte.
+      // "1.234.567" oder "10.000" -> alles Tausendertrenner.
       normalized = parts.join('')
     } else {
       normalized = `${parts[0] || '0'}.${parts[1]}`
@@ -130,4 +139,13 @@ export function parseGermanNumber(input: string): number {
   const value = Number(normalized)
   if (!Number.isFinite(value)) return NaN
   return negative ? -value : value
+}
+
+/** Deutsche Eingabe - Kurzform für `parseLocaleNumber(input, 'de')`. */
+export const parseGermanNumber = (input: string): number => parseLocaleNumber(input, 'de')
+
+/** Zahl für ein Eingabefeld: Dezimaltrenner der Sprache, ohne Tausendergruppen. */
+export function formatDraftNumber(value: number, locale: string): string {
+  const text = String(value)
+  return locale.startsWith('de') ? text.replace('.', ',') : text
 }

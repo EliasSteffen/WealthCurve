@@ -69,18 +69,35 @@ export function TimelineControls({
 
   return (
     <div className="space-y-5">
-      {ids.map((id: TimelineFieldId) => (
-        <SliderField
-          key={id}
-          definition={{
-            ...TIMELINE_FIELDS[id],
-            label: t(`timeline.${id}.label`, TIMELINE_FIELDS[id].label),
-            hint: t(`timeline.${id}.hint`, TIMELINE_FIELDS[id].hint),
-          }}
-          value={value[id]}
-          onChange={(next) => onChange({ ...value, [id]: sanitizeTimelineField(id, next) })}
-        />
-      ))}
+      {ids.map((id: TimelineFieldId) => {
+        /*
+         * Solange die Entnahmephase läuft, beginnt ihr Regler bei 1.
+         *
+         * 0 hieße „keine Entnahme" und ließe Regel und Regler mitten in der
+         * Bedienung verschwinden - der Fokus fiele auf die Seite, und der
+         * gemerkte Wert des Schalters ginge auf diesem Weg verloren. Ausschalten
+         * kann nur der Schalter, der sich den letzten Wert merkt.
+         */
+        const mindestens1 = id === 'withdrawalYears' && value.withdrawalYears > 0
+        return (
+          <SliderField
+            key={id}
+            definition={{
+              ...TIMELINE_FIELDS[id],
+              min: mindestens1 ? Math.max(1, TIMELINE_FIELDS[id].min) : TIMELINE_FIELDS[id].min,
+              label: t(`timeline.${id}.label`, TIMELINE_FIELDS[id].label),
+              hint: t(`timeline.${id}.hint`, TIMELINE_FIELDS[id].hint),
+            }}
+            value={value[id]}
+            onChange={(next) =>
+              onChange({
+                ...value,
+                [id]: sanitizeTimelineField(id, mindestens1 ? Math.max(1, next) : next),
+              })
+            }
+          />
+        )
+      })}
       {matches === null ? (
         <p className="text-[11px] leading-snug text-[var(--text-muted)]">
           {t('timeline.shared', 'Gilt für alle Szenarien gemeinsam.')}

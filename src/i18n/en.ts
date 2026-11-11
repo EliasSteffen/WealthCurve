@@ -228,7 +228,7 @@ export const en: Catalog = {
   'market.unavailable': 'The price endpoint is not responding.',
   'market.import': 'Load a price file (CSV or JSON)',
   'market.needsStartYear':
-    'The price curve needs a start year – set it under “General”. Only then is it clear from when the position would have been held.',
+    'The price curve needs a start year – set it under “Time”. Only then is it clear from when the position would have been held.',
   'market.startsLater': 'Only traded from {jahr} – no curve before that year.',
   'market.noServer':
     'This deployment has no price endpoint. Everything else works; prices come from a file – or start the app with `npm run serve`.',
@@ -270,4 +270,13 @@ export const en: Catalog = {
   'theme.dark': 'Dark',
   'theme.system': 'System',
   'locale.label': 'Language',
+
+  // UI-Korrekturen
+  'market.openTime': 'Open the “Time” card',
+  'scenario.fallbackName': 'Scenario {n}',
+  'stat.lasts.untilAge': 'until age {year}',
+  'stat.lasts.untilCalendar': 'until {year}',
+  'stat.hiddenActive':
+    '“{name}” is hidden – the sliders edit it, but the figures show another scenario.',
+  'stat.showActive': 'Show it',
 }
