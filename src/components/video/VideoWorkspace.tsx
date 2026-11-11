@@ -1,4 +1,4 @@
-import { Download, Music, Repeat, Subtitles, Trash2 } from 'lucide-react'
+import { Download, Music, Repeat, Subtitles, Trash2, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   DEFAULT_SPEC,
@@ -15,7 +15,7 @@ import { selectChartStyle, selectProjection } from '../../core/derive'
 import { actions } from '../../core/state'
 import { formatEur, formatPercent, formatYears } from '../../lib/format'
 import { ladeTonspur, type Tonspur } from '../../lib/audioTrack'
-import { pickRecordingFormat, recordCanvas } from '../../lib/recordCanvas'
+import { isAbortError, pickRecordingFormat, recordCanvas, TabHiddenError } from '../../lib/recordCanvas'
 import { transcodeToMp4 } from '../../lib/transcodeToMp4'
 import { useT } from '../../react/localeContext'
 import { useDispatch, useSelector } from '../../react/useSelector'
@@ -28,6 +28,21 @@ import { Checkbox } from '../ui/Checkbox'
 import { SelectField } from '../ui/SelectField'
 
 type Zustand = 'bereit' | 'laeuft' | 'fertig'
+
+/** Wie lange eine Download-URL lebt - ein sofortiges revoke bricht Safari/Firefox ab. */
+const URL_LEBENSDAUER_MS = 60_000
+
+/**
+ * Das Ergebnis samt dem Stand, mit dem es entstand: Untertitel müssen zu den
+ * Texten im Video passen, nicht zu dem, was inzwischen im Editor steht.
+ */
+interface Ergebnis {
+  readonly url: string
+  readonly endung: string
+  readonly blob: Blob
+  readonly spec: AnimationSpec
+  readonly facts: Readonly<Record<string, string>>
+}
 
 /**
  * Vorschau und Aufnahme, samt aller Einstellungen des Videos.
@@ -48,7 +63,7 @@ export function VideoWorkspace() {
   const [spec, setSpec] = useState<AnimationSpec>(DEFAULT_SPEC)
   const [zustand, setZustand] = useState<Zustand>('bereit')
   const [fortschritt, setFortschritt] = useState(0)
-  const [ergebnis, setErgebnis] = useState<{ url: string; endung: string; blob: Blob } | null>(null)
+  const [ergebnis, setErgebnis] = useState<Ergebnis | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
   const [wandeltUm, setWandeltUm] = useState(false)
   // Die Datei, nicht die fertige Spur: ein AudioContext je Aufnahme, sonst
@@ -56,6 +71,10 @@ export function VideoWorkspace() {
   const [tonDatei, setTonDatei] = useState<File | null>(null)
   const tonRef = useRef<HTMLInputElement>(null)
   const [umwandelFortschritt, setUmwandelFortschritt] = useState(0)
+  // Aufnahme und Umwandlung schließen sich aus; ein Controller für beide.
+  const abbruchRef = useRef<AbortController | null>(null)
+  const srtUrlRef = useRef<{ url: string; timer: number } | null>(null)
+  const besetzt = zustand === 'laeuft' || wandeltUm
 
   const model = useSelector((s) => s.model)
   const t = useT()
@@ -132,69 +151,146 @@ export function VideoWorkspace() {
     if (ergebnis) URL.revokeObjectURL(ergebnis.url)
   }, [ergebnis])
 
+  // Der Reiter wird bei Esc, Klick daneben oder Reiterwechsel abgebaut. Ohne
+  // Abbruch liefe die Aufnahme als Geisterschleife weiter (eingefrorene Bilder,
+  // verwaiste Blob-URL) und ließe sich nach dem Wiederöffnen doppelt starten.
+  useEffect(
+    () => () => {
+      abbruchRef.current?.abort()
+      const srt = srtUrlRef.current
+      if (srt) {
+        window.clearTimeout(srt.timer)
+        URL.revokeObjectURL(srt.url)
+      }
+    },
+    [],
+  )
+
+  const abbrechen = () => abbruchRef.current?.abort()
+
   const aufnehmen = async () => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas || abbruchRef.current) return
+    const abbruch = new AbortController()
+    abbruchRef.current = abbruch
+    // Stand festhalten: Untertitel gehören zu dieser Aufnahme.
+    const stand = { spec, facts }
     setFehler(null)
     setZustand('laeuft')
     setFortschritt(0)
     let ton: Tonspur | null = null
     try {
-      if (tonDatei) ton = await ladeTonspur(tonDatei)
+      if (tonDatei) ton = await ladeTonspur(tonDatei, abbruch.signal)
       const aufnahme = await recordCanvas(canvas, {
         frameCount: gesamt,
         fps: spec.fps,
         draw: zeichne,
-        onProgress: (done, total) => setFortschritt(done / total),
+        signal: abbruch.signal,
+        onProgress: (done, total) => {
+          if (!abbruch.signal.aborted) setFortschritt(done / total)
+        },
         audioTrack: ton?.track,
         // Erst wenn der Recorder läuft - alles davor fehlt am Anfang.
         onStart: () => ton?.start(),
       })
+      // Nach Abbruch (z. B. Unmount) weder URL anlegen noch State setzen.
+      if (abbruch.signal.aborted) return
       setErgebnis({
         url: URL.createObjectURL(aufnahme.blob),
         endung: aufnahme.format.extension,
         blob: aufnahme.blob,
+        ...stand,
       })
       setZustand('fertig')
     } catch (e) {
-      setFehler(e instanceof Error ? e.message : 'Unbekannter Fehler')
+      if (abbruch.signal.aborted && !(e instanceof TabHiddenError)) {
+        // Vom Nutzer abgebrochen oder Reiter weg - kein Fehler.
+        if (abbruchRef.current === abbruch) setZustand('bereit')
+        return
+      }
+      if (isAbortError(e)) {
+        setZustand('bereit')
+        return
+      }
+      setFehler(
+        e instanceof TabHiddenError
+          ? t(
+              'video.error.hidden',
+              'Die Aufnahme wurde abgebrochen, weil der Tab in den Hintergrund ging. Lass den Tab während der Aufnahme im Vordergrund und starte sie neu.',
+            )
+          : e instanceof Error
+            ? e.message
+            : 'Unbekannter Fehler',
+      )
       setZustand('bereit')
     } finally {
+      if (abbruchRef.current === abbruch) abbruchRef.current = null
       await ton?.dispose()
     }
   }
 
   /** Die Szenentexte als Datei - im Bild stehen sie ohnehin. */
   const untertitelLaden = () => {
-    const blob = new Blob([toSrt(spec, facts)], { type: 'text/plain;charset=utf-8' })
+    if (!ergebnis) return
+    // BOM: manche Windows-Werkzeuge lesen sonst "€" als Zeichensalat.
+    const blob = new Blob(['\uFEFF', toSrt(ergebnis.spec, ergebnis.facts)], {
+      type: 'text/plain;charset=utf-8',
+    })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
     a.download = 'zinseszins.srt'
     a.click()
-    URL.revokeObjectURL(url)
+    // Nicht sofort freigeben - Safari/Firefox brechen den Download sonst ab.
+    const alt = srtUrlRef.current
+    if (alt) {
+      window.clearTimeout(alt.timer)
+      URL.revokeObjectURL(alt.url)
+    }
+    srtUrlRef.current = {
+      url,
+      timer: window.setTimeout(() => {
+        URL.revokeObjectURL(url)
+        if (srtUrlRef.current?.url === url) srtUrlRef.current = null
+      }, URL_LEBENSDAUER_MS),
+    }
   }
 
   const umwandeln = async () => {
-    if (!ergebnis) return
+    if (!ergebnis || abbruchRef.current) return
+    const abbruch = new AbortController()
+    abbruchRef.current = abbruch
+    const quelle = ergebnis
     setFehler(null)
     setWandeltUm(true)
     setUmwandelFortschritt(0)
     try {
-      const mp4 = await transcodeToMp4(ergebnis.blob, { onProgress: setUmwandelFortschritt })
-      URL.revokeObjectURL(ergebnis.url)
-      setErgebnis({ url: URL.createObjectURL(mp4), endung: 'mp4', blob: mp4 })
+      const mp4 = await transcodeToMp4(quelle.blob, {
+        onProgress: (anteil) => {
+          if (!abbruch.signal.aborted) setUmwandelFortschritt(anteil)
+        },
+        signal: abbruch.signal,
+      })
+      // Abgebrochen oder abgebaut: das Ergebnis ist veraltet und wird verworfen.
+      if (abbruch.signal.aborted) return
+      setErgebnis({ ...quelle, url: URL.createObjectURL(mp4), endung: 'mp4', blob: mp4 })
     } catch (e) {
+      if (abbruch.signal.aborted || isAbortError(e)) return
       setFehler(
-        e instanceof Error ? `Umwandlung fehlgeschlagen: ${e.message}` : 'Umwandlung fehlgeschlagen',
+        e instanceof Error
+          ? t('video.error.convert', 'Umwandlung fehlgeschlagen: {message}', { message: e.message })
+          : t('video.error.convert.plain', 'Umwandlung fehlgeschlagen'),
       )
     } finally {
-      setWandeltUm(false)
+      if (abbruchRef.current === abbruch) {
+        abbruchRef.current = null
+        setWandeltUm(false)
+      }
     }
   }
 
   const sekunden = Math.round(totalSeconds(spec))
-  const hatUntertitel = toSrt(spec, facts).length > 0
+  const hatUntertitel = ergebnis ? toSrt(ergebnis.spec, ergebnis.facts).length > 0 : false
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
@@ -213,6 +309,9 @@ export function VideoWorkspace() {
         </div>
 
         <div className="w-full shrink-0 space-y-4 overflow-y-auto overscroll-contain lg:w-72">
+          {/* Während Aufnahme/Umwandlung gesperrt: Format, fps, Szenen und Ton
+              würden sonst mitten im Lauf Canvas und Spezifikation ändern. */}
+          <fieldset disabled={besetzt} className="m-0 min-w-0 space-y-4 border-0 p-0">
           <SelectField
             label="Format"
             value={spec.formatId}
@@ -360,6 +459,7 @@ export function VideoWorkspace() {
               )}
             </p>
           </div>
+          </fieldset>
 
           {zustand === 'laeuft' ? (
             <div>
@@ -370,14 +470,24 @@ export function VideoWorkspace() {
                 />
               </div>
               <p className="mt-2 text-[11px] text-[var(--text-muted)]">
-                Nimmt auf … {Math.round(fortschritt * 100)} %
+                {t('video.recording', 'Nimmt auf … {percent} %', {
+                  percent: String(Math.round(fortschritt * 100)),
+                })}
               </p>
+              <button
+                type="button"
+                onClick={abbrechen}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--hairline)] px-4 py-2 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--grid)]"
+              >
+                <X size={14} aria-hidden />
+                {t('video.cancel', 'Abbrechen')}
+              </button>
             </div>
           ) : (
             <button
               type="button"
               onClick={aufnehmen}
-              disabled={!aufnahmeFormat || projection.lines.length === 0}
+              disabled={!aufnahmeFormat || projection.lines.length === 0 || besetzt}
               className="w-full rounded-xl bg-[var(--chart-1)] px-4 py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Aufnehmen ({sekunden} s)
@@ -424,8 +534,18 @@ export function VideoWorkspace() {
                       />
                     </div>
                     <p className="mt-1.5 text-[11px] text-[var(--text-muted)]">
-                      Wandelt um … {Math.round(umwandelFortschritt * 100)} %
+                      {t('video.converting', 'Wandelt um … {percent} %', {
+                        percent: String(Math.round(umwandelFortschritt * 100)),
+                      })}
                     </p>
+                    <button
+                      type="button"
+                      onClick={abbrechen}
+                      className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--hairline)] px-4 py-2 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--grid)]"
+                    >
+                      <X size={14} aria-hidden />
+                      {t('video.cancel', 'Abbrechen')}
+                    </button>
                   </div>
                 ) : (
                   <button

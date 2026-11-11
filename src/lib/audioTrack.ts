@@ -23,7 +23,7 @@ export interface Tonspur {
   dispose(): Promise<void>
 }
 
-export async function ladeTonspur(datei: File): Promise<Tonspur> {
+export async function ladeTonspur(datei: File, signal?: AbortSignal): Promise<Tonspur> {
   const AudioCtx =
     window.AudioContext ??
     (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
@@ -37,6 +37,13 @@ export async function ladeTonspur(datei: File): Promise<Tonspur> {
     await ctx.close()
     // Der Browser meldet nur "EncodingError" - das hilft niemandem weiter.
     throw new Error('Diese Audiodatei lässt sich nicht lesen. MP3, M4A, WAV oder OGG gehen.')
+  }
+
+  if (signal?.aborted) {
+    await ctx.close()
+    const e = new Error('Aufnahme abgebrochen')
+    e.name = 'AbortError'
+    throw e
   }
 
   const ziel = ctx.createMediaStreamDestination()

@@ -251,6 +251,11 @@ export const en: Catalog = {
   'video.mp4': 'Recording as MP4 – ready for Instagram and TikTok.',
   'video.webm': 'This browser only records WebM. You can convert it to MP4 right here after recording.',
   'video.unsupported': 'This browser cannot record video.',
+  'video.cancel': 'Cancel',
+  'video.error.hidden':
+    'Recording was cancelled because the tab went to the background. Keep the tab in the foreground while recording and start again.',
+  'video.error.convert': 'Conversion failed: {message}',
+  'video.error.convert.plain': 'Conversion failed',
   'video.realtime': 'Recording runs in real time, so it takes as long as the video.',
 
   // Theme
