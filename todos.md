@@ -29,14 +29,24 @@
 - [x] Tonspur und Untertitel fürs Reel — die Aufnahme legt eine gewählte
       Audiodatei als zweite Spur dazu, die Szenentexte gibt es als `.srt`
       (`ebea905`)
+- [x] Legende im Video nimmt je Serie die Farbe der ersten Linie, nicht der
+      zuletzt gebauten — „Zinseszins" bleibt blau (`429ce5e`)
+- [x] `public/icons.svg` entfernt — Rest der Projektvorlage ohne Referenz
+- [x] Szenario-Zusatz in der Legende auch bei Ersatznamen kürzen (`76fec73`)
+- [x] Restliche Übersetzungslücken geschlossen, Video-Hooks verdrahtet, Guard-Test (`6ec41a4`)
+- [x] Barrierefreiheit: Kontrast, Radiogruppen, Reiter, Backdrop-Klick, Fokus (`5c28c94`)
+- [x] Zustand speichern, Teilen-Link, CSV-Export, Reset-Bestätigung, Code-Splitting (`fb061e8`)
+- [x] Zahleneingabe je Sprache, Wertpapier-Races, Entnahmephase, Kennzahlen (`d95501a`)
+- [x] Video: Querformat-Schriftgrößen, SRT-Leerzeilen, Übersetzungshooks (`429ce5e`)
+- [x] Videoexport robust gegen Abbruch, Drift und Races (`6436fef`)
+- [x] Prozentregel, Kursverlauf und Tagesgeld rechnen korrekt (`7864ac5`)
+- [x] Modell und Zustand beim Einlesen validieren, `series`/`setEnabled` ergänzt (`bb7541d`)
+- [x] Prüfungen laufen auf Branches und Pull Requests (`6f3e0b8`)
+- [x] In-Memory-Cache und Abruf-Deduplizierung für `fetchQuotes` (`61a6a74`)
+- [x] Server gehärtet: 400 bei kaputtem Pfad, 500 statt Absturz, Cache-Header (`5b6ad4f`)
 
 ## Offen
 
-- [ ] Die Legende im Video zeigt beim Vergleich einen Eintrag je Serie und nimmt
-      dafür die Farbe der zuletzt gebauten Linie — im Bild kann so „Zinseszins"
-      orange sein, obwohl die erste Kurve blau ist.
-- [ ] `public/icons.svg` ist ein Rest aus der Projektvorlage (Bluesky- und
-      andere Symbole) und wird von nichts referenziert.
 - [ ] Die Tonspur lässt sich vor der Aufnahme nicht vorhören, und ihre Länge
       wird nicht mit der des Videos verglichen — sie endet einfach mit der
       Aufnahme.
