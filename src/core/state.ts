@@ -12,6 +12,8 @@ import {
 } from './domain/parameters.ts'
 import { DEFAULT_ENABLED_SERIES, SERIES } from './domain/series/index.ts'
 import type { MarketSeries, ModelSettings } from './domain/types.ts'
+import { sanitizeDepot } from './depot/sanitize.ts'
+import { EMPTY_DEPOT, MAX_HOLDINGS, type DepotHolding, type DepotState } from './depot/types.ts'
 import { MIN_MONATE } from './market.ts'
 import { SLOT_COUNT, allocateSlot, type ColorSlot } from './palette.ts'
 import {
@@ -31,6 +33,9 @@ export interface Scenario {
 }
 
 export type EncodingPreference = 'auto' | string
+
+/** Die zwei Bereiche der Anwendung: der Sparplan mit Vermögenskurve und das eigene Depot. */
+export type AppPage = 'sparplan' | 'depot'
 
 export interface AppState {
   readonly scenarios: readonly Scenario[]
@@ -67,6 +72,15 @@ export interface AppState {
    * die Palette hat acht, die sie sich mit den Szenarien teilt.
    */
   readonly markets: readonly MarketSeries[]
+  /**
+   * Das eigene Depot für die Depot-Analyse, samt Was-wäre-wenn-Anteilen.
+   *
+   * Bleibt im Browser: der Teilen-Link lässt es weg (siehe persistence.ts),
+   * Bestände gehen niemanden etwas an, der nur die Kurve sehen soll.
+   */
+  readonly depot: DepotState
+  /** Welcher Bereich offen ist - bleibt über ein Neuladen erhalten, nicht im Teilen-Link. */
+  readonly page: AppPage
 }
 
 let counter = 0
@@ -104,13 +118,18 @@ export function createInitialState(): AppState {
     scenarios: [first],
     activeScenarioId: first.id,
     enabledSeriesIds: DEFAULT_ENABLED_SERIES,
-    model: DEFAULT_MODEL,
+    // Der erste Blick zeigt das Ansparen. Eine Entnahmephase ab Werk beantwortete
+    // eine Frage, die noch niemand gestellt hat ("Kapital reicht"), und ließ die
+    // Kurve am Ende wieder fallen - sie ist einen Schalter entfernt.
+    model: { ...DEFAULT_MODEL, withdrawalYears: 0 },
     encoding: 'auto',
     chartStyleId: DEFAULT_CHART_STYLE_ID,
     sidebarCollapsed: false,
     collapsedCards: [],
     settingsView: 'kompakt',
     markets: [],
+    depot: EMPTY_DEPOT,
+    page: 'sparplan',
   }
 }
 
@@ -147,6 +166,11 @@ export type Action =
   | { type: 'chartStyle/set'; id: string }
   | { type: 'market/add'; market: MarketSeries }
   | { type: 'market/remove'; symbol: string }
+  | { type: 'depot/set'; holdings: readonly DepotHolding[] }
+  | { type: 'depot/setWhatIf'; whatIf: Readonly<Record<string, number>> | null }
+  | { type: 'depot/setWhatIfWeight'; id: string; weight: number }
+  | { type: 'depot/updateHolding'; id: string; patch: Partial<Omit<DepotHolding, 'id'>> }
+  | { type: 'page/set'; page: AppPage }
   | { type: 'sidebar/setCollapsed'; collapsed: boolean }
   | { type: 'settings/toggleCard'; id: SettingsCardId }
   | { type: 'settings/setView'; view: SettingsView }
@@ -200,6 +224,22 @@ export const actions = {
   setChartStyle: (id: string): Action => ({ type: 'chartStyle/set', id }),
   addMarket: (market: MarketSeries): Action => ({ type: 'market/add', market }),
   removeMarket: (symbol: string): Action => ({ type: 'market/remove', symbol }),
+  setDepot: (holdings: readonly DepotHolding[]): Action => ({ type: 'depot/set', holdings }),
+  setDepotWhatIf: (whatIf: Readonly<Record<string, number>> | null): Action => ({
+    type: 'depot/setWhatIf',
+    whatIf,
+  }),
+  setDepotWhatIfWeight: (id: string, weight: number): Action => ({
+    type: 'depot/setWhatIfWeight',
+    id,
+    weight,
+  }),
+  updateDepotHolding: (id: string, patch: Partial<Omit<DepotHolding, 'id'>>): Action => ({
+    type: 'depot/updateHolding',
+    id,
+    patch,
+  }),
+  setPage: (page: AppPage): Action => ({ type: 'page/set', page }),
   setSidebarCollapsed: (collapsed: boolean): Action => ({
     type: 'sidebar/setCollapsed',
     collapsed,
@@ -374,6 +414,41 @@ export function reducer(state: AppState, action: Action): AppState {
       return markets.length === state.markets.length ? state : { ...state, markets }
     }
 
+    case 'depot/set':
+      // Neue Bestände machen alte Was-wäre-wenn-Anteile bedeutungslos.
+      return { ...state, depot: { holdings: action.holdings.slice(0, MAX_HOLDINGS), whatIf: null } }
+
+    case 'depot/setWhatIf':
+      return { ...state, depot: { ...state.depot, whatIf: action.whatIf } }
+
+    case 'depot/updateHolding': {
+      const index = state.depot.holdings.findIndex((h) => h.id === action.id)
+      if (index === -1) return state
+      // Durch dieselbe Prüfung wie gespeicherte Daten: ein Symbol aus einem
+      // Eingabefeld ist nicht vertrauenswürdiger als eines aus dem Browser-Speicher.
+      const geprueft = sanitizeDepot({ holdings: [{ ...state.depot.holdings[index], ...action.patch }] })
+        .holdings[0]
+      if (!geprueft) return state
+      const holdings = [...state.depot.holdings]
+      holdings[index] = geprueft
+      // Anteile bleiben, also bleibt auch die Was-wäre-wenn-Variante gültig.
+      return { ...state, depot: { ...state.depot, holdings } }
+    }
+
+    case 'page/set':
+      return state.page === action.page ? state : { ...state, page: action.page }
+
+    case 'depot/setWhatIfWeight': {
+      const { holdings, whatIf } = state.depot
+      if (!holdings.some((h) => h.id === action.id) || !Number.isFinite(action.weight)) return state
+      // Der erste Eingriff startet vom heutigen Depot, nicht von leeren Anteilen.
+      const basis = whatIf ?? Object.fromEntries(holdings.map((h) => [h.id, h.weight]))
+      return {
+        ...state,
+        depot: { holdings, whatIf: { ...basis, [action.id]: Math.max(0, action.weight) } },
+      }
+    }
+
     case 'sidebar/setCollapsed':
       return state.sidebarCollapsed === action.collapsed
         ? state
@@ -530,6 +605,8 @@ export function deserialize(raw: string): AppState | null {
         ? (parsed.settingsView as SettingsView)
         : base.settingsView,
       markets: Array.isArray(parsed.markets) ? sanitizeMarkets(parsed.markets) : base.markets,
+      depot: sanitizeDepot(parsed.depot),
+      page: parsed.page === 'depot' ? 'depot' : 'sparplan',
     }
   } catch {
     return null

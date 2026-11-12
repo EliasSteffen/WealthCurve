@@ -134,3 +134,6 @@ export {
 // Farben
 export { SLOT_COUNT, allocateSlot, slotVar } from './palette.ts'
 export type { ColorSlot } from './palette.ts'
+
+// Depot-Analyse
+export * from './depot/index.ts'

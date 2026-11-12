@@ -10,7 +10,9 @@
 import { createReadStream, existsSync, statSync } from 'node:fs'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { extname, join, normalize, resolve, sep } from 'node:path'
+import { handleHoldingsRequest } from '../server/holdings'
 import { CACHE_HEADER, handleQuotesRequest } from '../server/quotes'
+import { CACHE_HEADER as RESOLVE_CACHE, handleResolveRequest } from '../server/resolve'
 
 const PORT = Number(process.env.PORT ?? 4173)
 const WURZEL = resolve(import.meta.dirname, '..', 'dist')
@@ -49,11 +51,20 @@ function fehler(res: ServerResponse, status: number, text: string): void {
 async function behandle(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = req.url ?? '/'
 
-  if (url.startsWith('/api/quotes')) {
-    const antwort = await handleQuotesRequest(url)
+  const api = url.startsWith('/api/quotes')
+    ? handleQuotesRequest
+    : url.startsWith('/api/holdings')
+      ? handleHoldingsRequest
+      : url.startsWith('/api/resolve')
+        ? handleResolveRequest
+        : null
+  if (api) {
+    const antwort = await api(url)
     res.statusCode = antwort.status
     res.setHeader('content-type', 'application/json; charset=utf-8')
-    if (antwort.cache) res.setHeader('cache-control', CACHE_HEADER)
+    if (antwort.cache) {
+      res.setHeader('cache-control', api === handleResolveRequest ? RESOLVE_CACHE : CACHE_HEADER)
+    }
     res.end(JSON.stringify(antwort.body))
     return
   }
