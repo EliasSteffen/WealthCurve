@@ -12,7 +12,8 @@ import {
 } from './domain/parameters.ts'
 import { DEFAULT_ENABLED_SERIES, SERIES } from './domain/series/index.ts'
 import type { MarketSeries, ModelSettings } from './domain/types.ts'
-import { sanitizeDepot } from './depot/sanitize.ts'
+import type { GoalTarget } from './depot/goals.ts'
+import { sanitizeDepot, sanitizeGoals } from './depot/sanitize.ts'
 import { EMPTY_DEPOT, MAX_HOLDINGS, type DepotHolding, type DepotState } from './depot/types.ts'
 import { MIN_MONATE } from './market.ts'
 import { SLOT_COUNT, allocateSlot, type ColorSlot } from './palette.ts'
@@ -166,7 +167,9 @@ export type Action =
   | { type: 'chartStyle/set'; id: string }
   | { type: 'market/add'; market: MarketSeries }
   | { type: 'market/remove'; symbol: string }
-  | { type: 'depot/set'; holdings: readonly DepotHolding[] }
+  | { type: 'depot/set'; holdings: readonly DepotHolding[]; value?: number | null }
+  | { type: 'depot/setGoals'; goals: readonly GoalTarget[] }
+  | { type: 'depot/setValue'; value: number | null }
   | { type: 'depot/setWhatIf'; whatIf: Readonly<Record<string, number>> | null }
   | { type: 'depot/setWhatIfWeight'; id: string; weight: number }
   | { type: 'depot/updateHolding'; id: string; patch: Partial<Omit<DepotHolding, 'id'>> }
@@ -224,7 +227,14 @@ export const actions = {
   setChartStyle: (id: string): Action => ({ type: 'chartStyle/set', id }),
   addMarket: (market: MarketSeries): Action => ({ type: 'market/add', market }),
   removeMarket: (symbol: string): Action => ({ type: 'market/remove', symbol }),
-  setDepot: (holdings: readonly DepotHolding[]): Action => ({ type: 'depot/set', holdings }),
+  /** `value`: Depotwert aus dem Import; ohne Angabe bleibt der bisherige. */
+  setDepot: (holdings: readonly DepotHolding[], value?: number | null): Action => ({
+    type: 'depot/set',
+    holdings,
+    value,
+  }),
+  setDepotGoals: (goals: readonly GoalTarget[]): Action => ({ type: 'depot/setGoals', goals }),
+  setDepotValue: (value: number | null): Action => ({ type: 'depot/setValue', value }),
   setDepotWhatIf: (whatIf: Readonly<Record<string, number>> | null): Action => ({
     type: 'depot/setWhatIf',
     whatIf,
@@ -415,8 +425,25 @@ export function reducer(state: AppState, action: Action): AppState {
     }
 
     case 'depot/set':
-      // Neue Bestände machen alte Was-wäre-wenn-Anteile bedeutungslos.
-      return { ...state, depot: { holdings: action.holdings.slice(0, MAX_HOLDINGS), whatIf: null } }
+      // Neue Bestände machen alte Was-wäre-wenn-Anteile bedeutungslos - die Ziele bleiben.
+      return {
+        ...state,
+        depot: {
+          ...state.depot,
+          holdings: action.holdings.slice(0, MAX_HOLDINGS),
+          whatIf: null,
+          value: action.value !== undefined && action.value !== null ? action.value : state.depot.value,
+        },
+      }
+
+    case 'depot/setGoals':
+      return { ...state, depot: { ...state.depot, goals: sanitizeGoals(action.goals) } }
+
+    case 'depot/setValue': {
+      const value =
+        action.value !== null && Number.isFinite(action.value) && action.value > 0 ? action.value : null
+      return state.depot.value === value ? state : { ...state, depot: { ...state.depot, value } }
+    }
 
     case 'depot/setWhatIf':
       return { ...state, depot: { ...state.depot, whatIf: action.whatIf } }
@@ -445,7 +472,7 @@ export function reducer(state: AppState, action: Action): AppState {
       const basis = whatIf ?? Object.fromEntries(holdings.map((h) => [h.id, h.weight]))
       return {
         ...state,
-        depot: { holdings, whatIf: { ...basis, [action.id]: Math.max(0, action.weight) } },
+        depot: { ...state.depot, whatIf: { ...basis, [action.id]: Math.max(0, action.weight) } },
       }
     }
 

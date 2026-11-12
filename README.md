@@ -272,7 +272,17 @@ Muster). Die Depot-Seite zeigt dann:
   Position Rendite, Schwankung, Risiko- und Kostenanteil.
 - **Durchschau** – Kontinente, Märkte (MSCI), Länder, GICS-Branchen,
   Unternehmensgröße, Währungen, Produktarten und die größten Firmen über alle
-  Positionen zusammen.
+  Positionen zusammen. Woher die Zerlegung kommt, steht je Position unter „Daten &
+  Quellen“ (siehe unten).
+- **Ziele & Vorschläge** – Bandbreiten je Anlageklasse, Markt, Kontinent, Land,
+  Branche oder Größe festlegen („Schwellenländer 10–15 %“, „kein Land über 50 %“),
+  von Hand oder aus Vorlagen (Welt nach Börsenwert, 70/30, nach BIP, Klumpen
+  begrenzen, 80/20, Nebenwerte). Je Ziel steht da, wie viel fehlt und wie viel
+  ohne Verkauf zugekauft werden müsste; darüber, welcher breite Baustein
+  (Schwellenländer-, Europa-, USA-, Welt-ETF, Anleihen, Gold …) die meisten Ziele mit
+  dem kleinsten Zukauf erreicht, und ein Plan aus bis zu drei Bausteinen
+  (`src/core/depot/goals.ts`). Mit Depotwert auch in Euro. Bausteine sind Indizes,
+  keine Fonds – nachgerechnet werden nur die eigenen Ziele.
 - **Risiken** – feste Regeln (`FLAG_LIMITS` in `src/core/depot/flags.ts`): Klumpen,
   Länder- und Branchenschwerpunkt, Hebel, Risikotreiber, Fremdwährung, Kostentreiber,
   doppelt gehaltene Aktien, historischer Rückgang, fehlende Daten. Beschreibend,
@@ -289,15 +299,30 @@ Muster). Die Depot-Seite zeigt dann:
 | `ISIN` | nein | Durchschau, wenn die Spalte `Durchschau` fehlt (auch aus einer ISIN als Schlüssel) |
 | `Name`, `Symbol` | nein | Symbol = Yahoo-Ticker für die Kennzahlen, z. B. `EUNL.DE` |
 | `TER`, `Hebel`, `Typ` | nein | Typ `ETF`, `Aktie` oder `ETC` |
-| `Durchschau` | nein | ETF: ISIN eines Amundi-ETFs, `:US`/`:EU`/ISO-Code für nur diesen Teil; Aktie: eigene ISIN; ETC: Rohstoff |
+| `Durchschau` | nein | ETF: ISIN eines Amundi-ETFs, `:US`/`:EU`/`:EMU`/ISO-Code für nur diesen Teil, `idx:em` usw. für Indexgewichte, `-` für keine; Aktie: eigene ISIN; ETC: Rohstoff |
 
 ¹ Eine der beiden. Fehlt `Typ`, entscheiden der Name („ETF“, „UCITS“, Anbieter → ETF;
-„ETC“, „Gold“ → ETC) und die TER (0 → Aktie).
+„ETC“, „Physical Gold“, „Silver 3x Daily Leveraged“ → ETC) und die TER (0 → Aktie).
+Fehlt `Hebel`, gilt ein „3x … Leveraged“ im Namen. Kommt der Name erst über die
+Symbolsuche (Export nur mit WKN), werden Typ und Hebel danach neu bestimmt; bei
+schon gespeicherten Depots bietet „Daten & Quellen“ die Korrektur an.
+
+Woher die Durchschau einer Position kommt, in absteigender Güte
+(`src/core/depot/lookthrough.ts`):
+
+| Position | 1. | 2. | 3. | 4. |
+| --- | --- | --- | --- | --- |
+| ETF | eigener Amundi-Bestand | Bestand eines ähnlichen Amundi-Fonds (z. B. US-Teil des MSCI World für S&P 500) | typische Indexgewichte laut Name (`src/core/depot/indices.ts`) | unbekannt |
+| Aktie | Eintrag in einem Fondsbestand (ISIN oder Firmenname) | Firmenprofil von Yahoo (`/api/profile`) | Land aus dem ISIN-Präfix | unbekannt |
+
+Stufe 2 und 3 sind Schätzungen und als solche gekennzeichnet; die Indexgewichte sind
+gerundet und driften mit den Märkten.
 
 Kurse kommen über `/api/quotes` (Fremdwährungen über `EUR…=X` in Euro umgerechnet),
 Fondsbestände über `/api/holdings?isin=` aus der Produkt-Schnittstelle von Amundi
-(`server/holdings.ts`, eingehängt wie die Kurse in Vite, `npm run serve` und
-Vercel). Die Unternehmensgröße ist aus den Indexgewichten geschätzt, geeicht an den
+(`server/holdings.ts`), Land, Branche und Börsenwert von Einzelaktien über
+`/api/profile?symbols=` von Yahoo (`server/profile.ts`) – alle eingehängt wie die
+Kurse in Vite, `npm run serve` und Vercel. Die Unternehmensgröße ist aus den Indexgewichten geschätzt, geeicht an den
 Börsenwerten großer US-Werte. Das Depot bleibt im Browser: der Teilen-Link lässt es
 weg. Gerechnet wird die Geschichte der heutigen Mischung, monatlich neu gewichtet –
 nicht die eines echten Kontos, und keine Vorhersage.

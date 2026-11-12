@@ -15,6 +15,7 @@ import { Card } from '../ui/Card'
 import { DEPOT_DATEITYPEN, readDepotFile } from './depotFile'
 import { pct } from './depotFormat'
 import { BreakdownView, OverviewView, RisksView, WhatIfView } from './DepotViews'
+import { GoalsView } from './GoalsView'
 import { HoldingsEditor } from './HoldingsEditor'
 import { resolveSymbols } from './resolveSymbols'
 import { useDepotData } from './useDepotData'
@@ -97,7 +98,7 @@ function useDepotImport(): Import {
       setMessage(null)
       return false
     }
-    store.dispatch(actions.setDepot(ergebnis.holdings))
+    store.dispatch(actions.setDepot(ergebnis.holdings, ergebnis.totalValue))
 
     const gespeichert = store.getSnapshot().depot.holdings
     const offen = [
@@ -330,14 +331,27 @@ function DepotUebersicht({ imp }: { readonly imp: Import }) {
     () => computeDepotStats(depot.holdings, data.series, data.fx),
     [depot.holdings, data.series, data.fx],
   )
-  const look = useMemo(() => computeLookThrough(depot.holdings, data.funds), [depot.holdings, data.funds])
+  const look = useMemo(
+    () => computeLookThrough(depot.holdings, data.funds, data.profiles),
+    [depot.holdings, data.funds, data.profiles],
+  )
   const flags = useMemo(() => depotFlags(depot.holdings, stats, look), [depot.holdings, stats, look])
   const variante = useMemo(() => withWeights(depot.holdings, depot.whatIf), [depot.holdings, depot.whatIf])
   const variantStats = useMemo(
     () => computeDepotStats(variante, data.series, data.fx),
     [variante, data.series, data.fx],
   )
-  const variantLook = useMemo(() => computeLookThrough(variante, data.funds), [variante, data.funds])
+  const variantLook = useMemo(
+    () => computeLookThrough(variante, data.funds, data.profiles),
+    [variante, data.funds, data.profiles],
+  )
+  // Ein fehlender Fondsbestand ist kein Fehler, wenn die Position anders zerlegt wurde.
+  const fehler = data.errors.filter(
+    (e) =>
+      !depot.holdings.some(
+        (h) => h.lookThrough.startsWith(e.source) && (look.sources[h.id]?.kind ?? 'none') !== 'none',
+      ),
+  )
 
   const rendite = scenarioRate(stats)
   const imSparplan = () => {
@@ -456,6 +470,13 @@ function DepotUebersicht({ imp }: { readonly imp: Import }) {
         <BreakdownView holdings={depot.holdings} look={look} loading={data.loading} />
       </Abschnitt>
 
+      <Abschnitt
+        title={t('depot.page.goals', 'Ziele & Vorschläge')}
+        hint={t('depot.page.goalsHint', 'Worauf du streuen willst – und was dafür noch fehlt.')}
+      >
+        <GoalsView look={look} goals={depot.goals} value={depot.value} loading={data.loading} />
+      </Abschnitt>
+
       <Abschnitt title={t('depot.page.history', 'Verlauf und Positionen')}>
         <OverviewView holdings={depot.holdings} stats={stats} loading={data.loading} nur="tabellen" />
       </Abschnitt>
@@ -479,10 +500,10 @@ function DepotUebersicht({ imp }: { readonly imp: Import }) {
         )}
       >
         <HoldingsEditor holdings={depot.holdings} data={data} look={look} />
-        {data.errors.length > 0 ? (
+        {fehler.length > 0 ? (
           <p className="mt-3 text-xs text-[var(--text-muted)]">
             {t('depot.errors', 'Nicht geladen: {list}', {
-              list: data.errors.map((e) => `${e.source} (${e.message})`).join('; '),
+              list: fehler.map((e) => `${e.source} (${e.message})`).join('; '),
             })}
           </p>
         ) : null}

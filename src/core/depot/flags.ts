@@ -6,7 +6,7 @@
  * Anleger. Die Grenzwerte stehen offen in FLAG_LIMITS, nicht versteckt im Code.
  */
 import { isWindowStats, type DepotStats } from './metrics.ts'
-import type { LookThrough } from './lookthrough.ts'
+import { NON_EQUITY_KEYS, type LookThrough } from './lookthrough.ts'
 import type { DepotHolding } from './types.ts'
 
 export type FlagId =
@@ -47,7 +47,7 @@ export const FLAG_LIMITS = {
   drawdown: -0.2,
 } as const
 
-const NOT_EQUITY = new Set(['commodity', 'cash', 'unknown', 'financing'])
+const NOT_EQUITY = NON_EQUITY_KEYS
 
 export function depotFlags(
   holdings: readonly DepotHolding[],

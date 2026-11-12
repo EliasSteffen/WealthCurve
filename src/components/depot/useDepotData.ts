@@ -6,8 +6,9 @@
  * oder Was-wäre-wenn-Anteile ändert, löst keinen neuen Abruf aus.
  */
 import { useEffect, useMemo, useState } from 'react'
+import { lookThroughIsins } from '../../core/depot/lookthrough'
 import { fxSymbol, normalizeCurrency } from '../../core/depot/metrics'
-import type { DepotHolding, FundHoldings } from '../../core/depot/types'
+import type { DepotHolding, FundHoldings, StockProfile } from '../../core/depot/types'
 import type { MarketSeries } from '../../core/domain/types'
 
 type Ergebnis<T> = { ok: true; daten: T } | { ok: false; fehler: string; keinServer: boolean }
@@ -49,6 +50,8 @@ export interface DepotData {
   readonly series: ReadonlyMap<string, MarketSeries>
   readonly fx: ReadonlyMap<string, MarketSeries>
   readonly funds: ReadonlyMap<string, FundHoldings>
+  /** Land, Branche und Börsenwert der Einzelaktien, je Kurssymbol. */
+  readonly profiles: ReadonlyMap<string, StockProfile>
   readonly loading: boolean
   readonly noServer: boolean
   /** Fehlertexte je Quelle (Symbol oder ISIN). */
@@ -59,32 +62,25 @@ const LEER: DepotData = {
   series: new Map(),
   fx: new Map(),
   funds: new Map(),
+  profiles: new Map(),
   loading: false,
   noServer: false,
   errors: [],
 }
-
-const ISIN = /^[A-Z]{2}[A-Z0-9]{9}\d$/
 
 export function useDepotData(holdings: readonly DepotHolding[]): DepotData {
   const symbols = useMemo(
     () => [...new Set(holdings.map((h) => h.symbol).filter(Boolean))].sort(),
     [holdings],
   )
-  const isins = useMemo(
-    () =>
-      [
-        ...new Set(
-          holdings
-            .filter((h) => h.kind === 'etf')
-            .map((h) => h.lookThrough.split(':')[0].trim().toUpperCase())
-            .filter((i) => ISIN.test(i)),
-        ),
-      ].sort(),
+  // Eigene Bestände und die Stellvertreter-Fonds der Indizes, die die Namen verraten.
+  const isins = useMemo(() => lookThroughIsins(holdings), [holdings])
+  const aktien = useMemo(
+    () => [...new Set(holdings.filter((h) => h.kind === 'stock' && h.symbol).map((h) => h.symbol))].sort(),
     [holdings],
   )
   // Geladen wird je Kombination aus Symbolen und ISINs; "lädt" ist, was noch nicht passt.
-  const schluessel = `${symbols.join(',')}|${isins.join(',')}`
+  const schluessel = `${symbols.join(',')}|${isins.join(',')}|${aktien.join(',')}`
   const [geladen, setGeladen] = useState<{ readonly schluessel: string; readonly data: DepotData } | null>(
     null,
   )
@@ -94,9 +90,14 @@ export function useDepotData(holdings: readonly DepotHolding[]): DepotData {
     let abgebrochen = false
 
     void (async () => {
-      const [kurse, bestaende] = await Promise.all([
+      const [kurse, bestaende, profilAntwort] = await Promise.all([
         Promise.all(symbols.map((s) => einmal<MarketSeries>(`/api/quotes?symbol=${encodeURIComponent(s)}`))),
         Promise.all(isins.map((i) => einmal<FundHoldings>(`/api/holdings?isin=${encodeURIComponent(i)}`))),
+        aktien.length > 0
+          ? einmal<{ readonly results?: readonly StockProfile[] }>(
+              `/api/profile?symbols=${encodeURIComponent(aktien.join(','))}`,
+            )
+          : null,
       ])
       const series = new Map<string, MarketSeries>()
       const funds = new Map<string, FundHoldings>()
@@ -112,6 +113,12 @@ export function useDepotData(holdings: readonly DepotHolding[]): DepotData {
         else if (e.keinServer) noServer = true
         else errors.push({ source: isins[i], message: e.fehler })
       })
+      const profiles = new Map<string, StockProfile>()
+      if (profilAntwort?.ok) {
+        for (const p of profilAntwort.daten.results ?? []) if (p && typeof p.symbol === 'string') profiles.set(p.symbol, p)
+      } else if (profilAntwort && !profilAntwort.keinServer) {
+        errors.push({ source: aktien.join(', '), message: profilAntwort.fehler })
+      }
 
       // Devisenkurse erst jetzt: welche Währungen es braucht, steht in den Kursen.
       const fxSymbole = [
@@ -131,14 +138,14 @@ export function useDepotData(holdings: readonly DepotHolding[]): DepotData {
       })
 
       if (!abgebrochen) {
-        setGeladen({ schluessel, data: { series, fx, funds, loading: false, noServer, errors } })
+        setGeladen({ schluessel, data: { series, fx, funds, profiles, loading: false, noServer, errors } })
       }
     })()
 
     return () => {
       abgebrochen = true
     }
-  }, [schluessel, symbols, isins])
+  }, [schluessel, symbols, isins, aktien])
 
   if (symbols.length === 0 && isins.length === 0) return LEER
   // Bis der neue Abruf da ist, bleiben die alten Daten stehen - nur als ladend markiert.

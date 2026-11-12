@@ -20,6 +20,8 @@ export interface Aufloesung {
   readonly symbol: string | null
   readonly name: string | null
   readonly currency: string | null
+  /** Produktart laut Yahoo: Fonds/ETF oder Aktie; null, wenn unklar (z. B. ETCs). */
+  readonly type: 'etf' | 'stock' | null
 }
 
 export type AufloesungsErgebnis =
@@ -145,6 +147,13 @@ interface Kurs {
   readonly longName?: string
   readonly shortName?: string
   readonly currency?: string
+  readonly quoteType?: string
+}
+
+function produktart(quoteType: string | undefined): Aufloesung['type'] {
+  if (quoteType === 'ETF' || quoteType === 'MUTUALFUND') return 'etf'
+  if (quoteType === 'EQUITY') return 'stock'
+  return null
 }
 
 /** Welche Kandidaten Yahoo wirklich kennt - unbekannte fehlen in der Antwort. */
@@ -215,6 +224,7 @@ export async function resolveIds(roh: unknown): Promise<AufloesungsErgebnis> {
         symbol,
         name: kurs?.longName ?? kurs?.shortName ?? null,
         currency: kurs?.currency ?? null,
+        type: produktart(kurs?.quoteType),
       }
       ergebnis.set(id, daten)
       // Nur Treffer merken: ein heute unbekanntes Symbol kann morgen gelistet sein.

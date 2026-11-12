@@ -80,14 +80,17 @@ describe('parseDepotText', () => {
   })
 
   it('nimmt die ISIN-Spalte als Durchschau und erkennt Typen am Namen', () => {
-    const { holdings } = parseDepotText(
+    const { holdings, totalValue } = parseDepotText(
       'WKN\tISIN\tName\tWert\nA0S9GB\tDE000A0S9GB0\tXetra-Gold\t1,234.50 USD\n918422\tUS67066G1040\tNVIDIA\t765.50',
     )
+    // Beim ETC zählt der Rohstoff aus dem Namen, nicht die ISIN des Papiers.
     expect(holdings.map((h) => [h.kind, h.lookThrough])).toEqual([
-      ['etc', 'DE000A0S9GB0'],
+      ['etc', 'Gold'],
       ['stock', 'US67066G1040'],
     ])
     expect(holdings[0].weight).toBeCloseTo(1234.5 / 2000)
+    // Der Depotwert bleibt für Beträge in Euro erhalten.
+    expect(totalValue).toBeCloseTo(2000)
   })
 
   it('übersteht den Weg zurück in eine Tabelle', () => {

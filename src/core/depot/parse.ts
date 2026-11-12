@@ -5,6 +5,7 @@
  * kommen als Tabulator-getrennter Text an, eine CSV-Datei genauso gut. Spalten
  * werden am Kopf erkannt, deutsch oder englisch, in beliebiger Reihenfolge.
  */
+import { commodityFromName, inferredPatch, kindFromName, leverageFromName, type ResolvedType } from './classify.ts'
 import { HOLDING_KINDS, MAX_HOLDINGS, type DepotHolding, type HoldingKind } from './types.ts'
 
 export type ParseIssue =
@@ -18,6 +19,8 @@ export type ParseIssue =
 export interface ParseResult {
   readonly holdings: DepotHolding[]
   readonly issues: ParseIssue[]
+  /** Summe der Positionswerte in Euro, wenn die Tabelle Werte statt Anteile führt. */
+  readonly totalValue: number | null
 }
 
 /**
@@ -52,11 +55,6 @@ const ALIASES: Readonly<Record<Column, readonly string[]>> = {
   ],
   isin: ['isin'],
 }
-
-/** Ohne Typ-Spalte verrät oft der Name, was eine Position ist. */
-const ETC_NAME = /\b(ETC|ETP|ETN)\b|\bGOLD\b|\bSILVER\b|\bSILBER\b|\bPLATIN/i
-const ETF_NAME =
-  /\b(ETF|UCITS|INDEX|MSCI|S&P|STOXX|FTSE|ISHARES|XTRACKERS|AMUNDI|LYXOR|VANGUARD|SPDR|INVESCO|VANECK|WISDOMTREE)\b/i
 
 const KIND_WORDS: Readonly<Record<string, HoldingKind>> = {
   etf: 'etf',
@@ -155,8 +153,8 @@ function kindOf(raw: string, ter: number | null, name: string): HoldingKind {
   if (word) return word
   if (HOLDING_KINDS.includes(raw as HoldingKind)) return raw as HoldingKind
   // Ohne Angabe: erst der Name, dann die Kosten - eine TER von 0 hat kein Fonds.
-  if (ETC_NAME.test(name)) return 'etc'
-  if (ETF_NAME.test(name)) return 'etf'
+  const ausName = kindFromName(name)
+  if (ausName) return ausName
   if (ter !== null) return ter > 0 ? 'etf' : 'stock'
   return 'stock'
 }
@@ -179,7 +177,7 @@ export function parseDepotText(text: string): ParseResult {
       break
     }
   }
-  if (headerIndex === -1) return { holdings: [], issues: [{ code: 'noHeader' }] }
+  if (headerIndex === -1) return { holdings: [], issues: [{ code: 'noHeader' }], totalValue: null }
 
   const cell = (row: readonly string[], field: Column) => {
     const index = cols[field]
@@ -196,7 +194,7 @@ export function parseDepotText(text: string): ParseResult {
     readonly symbol: string
     readonly weight: Num
     readonly ter: Num | null
-    readonly leverage: number
+    readonly leverage: number | null
     readonly kind: string
     readonly lookThrough: string
   }
@@ -236,13 +234,13 @@ export function parseDepotText(text: string): ParseResult {
       symbol,
       weight,
       ter: parseNumber(cell(row, 'ter')),
-      leverage: leverage && leverage.value > 0 ? leverage.value : 1,
+      leverage: leverage && leverage.value > 0 ? leverage.value : null,
       kind: cell(row, 'kind'),
       lookThrough,
     })
   }
 
-  if (drafts.length === 0) return { holdings: [], issues: [...issues, { code: 'noRows' }] }
+  if (drafts.length === 0) return { holdings: [], issues: [...issues, { code: 'noRows' }], totalValue: null }
   if (drafts.length > MAX_HOLDINGS) issues.push({ code: 'tooMany', max: MAX_HOLDINGS })
 
   // Ohne Prozentzeichen ist "39,81" mehrdeutig - die Summe entscheidet. Werte in
@@ -263,23 +261,26 @@ export function parseDepotText(text: string): ParseResult {
     const terWert = d.ter ? (!d.ter.percent && d.ter.value > 0.05 ? d.ter.value / 100 : d.ter.value) : null
     const ter = terWert ?? 0
     const kind = kindOf(d.kind, terWert, d.name)
-    // Groß geschriebene Rohstoffnamen ("GOLD") lesbar halten.
+    // Groß geschriebene Rohstoffnamen ("GOLD") lesbar halten; ohne Angabe sagt es oft der Name.
     const lookThrough =
       kind === 'etc' && d.lookThrough && !ISIN.test(d.lookThrough)
         ? d.lookThrough.charAt(0) + d.lookThrough.slice(1).toLowerCase()
-        : d.lookThrough
+        : kind === 'etc'
+          ? (commodityFromName(d.name) ?? d.lookThrough)
+          : d.lookThrough
     return {
       id: d.id,
       name: d.name || d.id,
       symbol: d.symbol,
       weight,
       ter: Math.max(0, ter),
-      leverage: d.leverage,
+      // Ohne Hebel-Spalte: "3x Daily Leveraged" im Namen ist ein Hebel von 3.
+      leverage: d.leverage ?? leverageFromName(d.name) ?? 1,
       kind,
       lookThrough,
     }
   })
-  return { holdings, issues }
+  return { holdings, issues, totalValue: ausWerten && valueSum > 0 ? valueSum : null }
 }
 
 const WKN = /^[A-Z0-9]{6}$/
@@ -295,16 +296,26 @@ export function productId(h: DepotHolding): string | null {
   return ISIN.test(h.lookThrough) ? h.lookThrough : null
 }
 
-/** Gefundene Symbole (und Namen, wo nur die Kennung stand) eintragen - vorhandene bleiben. */
+/**
+ * Gefundene Symbole (und Namen, wo nur die Kennung stand) eintragen - vorhandene bleiben.
+ *
+ * Kam der Name erst mit der Suche, waren Typ und Hebel beim Import geraten
+ * (aus der TER oder gar nicht). Dann zählen jetzt Name und Yahoos Produktart.
+ */
 export function withResolvedSymbols(
   holdings: readonly DepotHolding[],
-  found: ReadonlyMap<string, { readonly symbol: string; readonly name: string | null }>,
+  found: ReadonlyMap<
+    string,
+    { readonly symbol: string; readonly name: string | null; readonly type?: ResolvedType }
+  >,
 ): DepotHolding[] {
   return holdings.map((h) => {
     const kennung = productId(h)
     const treffer = kennung ? found.get(kennung) : undefined
     if (!treffer || h.symbol) return h
-    return { ...h, symbol: treffer.symbol, name: h.name === h.id && treffer.name ? treffer.name : h.name }
+    if (h.name !== h.id || !treffer.name) return { ...h, symbol: treffer.symbol }
+    const benannt = { ...h, symbol: treffer.symbol, name: treffer.name }
+    return { ...benannt, ...inferredPatch(benannt, treffer.type ?? null) }
   })
 }
 

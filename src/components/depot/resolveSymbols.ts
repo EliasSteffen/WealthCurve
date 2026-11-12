@@ -7,6 +7,7 @@
 interface Treffer {
   readonly symbol: string
   readonly name: string | null
+  readonly type: 'etf' | 'stock' | null
 }
 
 export async function resolveSymbols(ids: readonly string[]): Promise<Map<string, Treffer>> {
@@ -16,9 +17,18 @@ export async function resolveSymbols(ids: readonly string[]): Promise<Map<string
     const antwort = await fetch(`/api/resolve?ids=${encodeURIComponent(ids.join(','))}`)
     if (!antwort.ok || !(antwort.headers.get('content-type') ?? '').includes('application/json')) return out
     const body = (await antwort.json()) as {
-      readonly results?: readonly { readonly id: string; readonly symbol: string | null; readonly name: string | null }[]
+      readonly results?: readonly {
+        readonly id: string
+        readonly symbol: string | null
+        readonly name: string | null
+        readonly type?: unknown
+      }[]
     }
-    for (const r of body.results ?? []) if (r.symbol) out.set(r.id, { symbol: r.symbol, name: r.name })
+    for (const r of body.results ?? []) {
+      if (!r.symbol) continue
+      const type = r.type === 'etf' || r.type === 'stock' ? r.type : null
+      out.set(r.id, { symbol: r.symbol, name: r.name, type })
+    }
   } catch {
     // Kein Server, kein Netz: dann eben ohne Symbole.
   }

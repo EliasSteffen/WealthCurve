@@ -1,7 +1,8 @@
 import { AlertTriangle, Info } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import type { DepotFlag } from '../../core/depot/flags'
-import type { LookThrough, Share } from '../../core/depot/lookthrough'
+import { indexTemplate } from '../../core/depot/indices'
+import { NON_EQUITY_KEYS, type LookThrough, type Share } from '../../core/depot/lookthrough'
 import { isWindowStats, scenarioRate, type DepotStats } from '../../core/depot/metrics'
 import type { DepotHolding } from '../../core/depot/types'
 import { PARAMETERS } from '../../core/domain/parameters'
@@ -18,7 +19,7 @@ const KNOPF =
   'rounded-lg border border-[var(--hairline)] px-3 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--surface-page)] disabled:opacity-40'
 const TH = 'px-2 py-1 text-right text-xs font-medium text-[var(--text-muted)] first:pl-0 first:text-left'
 const TD = 'border-t border-[var(--hairline)] px-2 py-1.5 text-right tabular-nums first:pl-0 first:text-left'
-const KEIN_LAND = new Set(['commodity', 'cash', 'unknown', 'financing'])
+const KEIN_LAND = NON_EQUITY_KEYS
 
 function Tabelle({
   caption,
@@ -30,7 +31,7 @@ function Tabelle({
   readonly rows: readonly (readonly ReactNode[])[]
 }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className="w-full text-sm text-[var(--text-primary)]">
         <caption className="mb-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
           {caption}
@@ -289,11 +290,35 @@ export function BreakdownView({
           .slice(0, 15)
           .map((c) => [c.name, pct(c.exposure, 2), c.direct > 0 ? pct(c.direct, 2) : '–', c.via.join(', ')])}
       />
+      {look.estimated.length > 0 ? (
+        <p className="text-xs text-[var(--text-muted)]">
+          {t(
+            'depot.bd.estimated',
+            'Geschätzt, weil der Anbieter keinen Bestand veröffentlicht – über einen ähnlichen Fonds oder typische Indexgewichte: {names}',
+            {
+              names: look.estimated
+                .map((id) => {
+                  const quelle = look.sources[id]
+                  const index =
+                    quelle && (quelle.kind === 'proxy' || quelle.kind === 'index') && quelle.index
+                      ? indexTemplate(quelle.index)?.label
+                      : null
+                  return index ? `${nameOf(holdings, id)} (${index})` : nameOf(holdings, id)
+                })
+                .join(', '),
+            },
+          )}
+        </p>
+      ) : null}
       {look.missing.length > 0 ? (
         <p className="text-xs text-[var(--text-muted)]">
-          {t('depot.bd.missing', 'Ohne Durchschau (zählt als „Unbekannt“): {names}', {
-            names: look.missing.map((id) => nameOf(holdings, id)).join(', '),
-          })}
+          {t(
+            'depot.bd.missing',
+            'Ohne Durchschau (zählt als „Unbekannt“): {names}. Unter „Daten & Quellen“ lässt sich ein Index oder ein ähnlicher Fonds zuordnen.',
+            {
+              names: look.missing.map((id) => nameOf(holdings, id)).join(', '),
+            },
+          )}
         </p>
       ) : null}
     </div>

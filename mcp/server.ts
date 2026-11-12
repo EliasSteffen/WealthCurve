@@ -470,7 +470,7 @@ server.registerTool(
       collapsedCards: [],
       settingsView: 'kompakt',
       markets: [],
-      depot: { holdings: [], whatIf: null },
+      depot: { holdings: [], whatIf: null, goals: [], value: null },
       page: 'sparplan',
     })
     return { content: [{ type: 'text', text: erzeugt }] }

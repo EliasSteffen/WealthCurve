@@ -7,6 +7,8 @@
  */
 
 /** ETF/Fonds, Einzelaktie oder Rohstoff-ETC. */
+import type { GoalTarget } from './goals.ts'
+
 export type HoldingKind = 'etf' | 'stock' | 'etc'
 export const HOLDING_KINDS: readonly HoldingKind[] = ['etf', 'stock', 'etc']
 
@@ -37,9 +39,13 @@ export interface DepotState {
   readonly holdings: readonly DepotHolding[]
   /** Alternative Anteile je Positions-ID für den Was-wäre-wenn-Vergleich. */
   readonly whatIf: Readonly<Record<string, number>> | null
+  /** Wie das Depot aufgeteilt sein soll - überdauert einen neuen Import. */
+  readonly goals: readonly GoalTarget[]
+  /** Depotwert in Euro, für Beträge statt Prozente; aus dem Import oder von Hand. */
+  readonly value: number | null
 }
 
-export const EMPTY_DEPOT: DepotState = { holdings: [], whatIf: null }
+export const EMPTY_DEPOT: DepotState = { holdings: [], whatIf: null, goals: [], value: null }
 
 /** Mehr Zeilen ergeben keine lesbare Analyse mehr - und kein Depot braucht sie. */
 export const MAX_HOLDINGS = 50
@@ -65,4 +71,22 @@ export interface FundHoldings {
   /** Stichtag des Bestands, ISO-Datum. */
   readonly date: string
   readonly positions: readonly FundPosition[]
+}
+
+/**
+ * Was Yahoo über eine Einzelaktie weiß - Land, Branche, Börsenwert.
+ *
+ * Für Aktien, die in keinem geladenen Fondsbestand stehen: ohne das zählten
+ * NVIDIA oder Rheinmetall in der Durchschau als "Unbekannt".
+ */
+export interface StockProfile {
+  readonly symbol: string
+  readonly name: string | null
+  /** Sitzland auf Englisch, wie in den Fondsdaten ("United States"). */
+  readonly country: string | null
+  /** GICS-Sektor auf Englisch ("Information Technology"). */
+  readonly sector: string | null
+  /** Handelswährung der Notierung. */
+  readonly currency: string | null
+  readonly capUsd: number | null
 }

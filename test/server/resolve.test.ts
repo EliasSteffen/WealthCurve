@@ -45,13 +45,19 @@ describe('resolveIds', () => {
     quote.mockImplementation(async (symbole: string[]) =>
       symbole
         .filter((s) => ['EUNL.DE', 'APC.DE', 'AAPL'].includes(s))
-        .map((s) => ({ symbol: s, regularMarketPrice: 100, longName: `Name ${s}`, currency: 'EUR' })),
+        .map((s) => ({
+          symbol: s,
+          regularMarketPrice: 100,
+          longName: `Name ${s}`,
+          currency: 'EUR',
+          quoteType: s === 'EUNL.DE' ? 'ETF' : 'EQUITY',
+        })),
     )
 
     const ergebnis = await resolveIds('ie00b4l5y983,865985')
-    expect(ergebnis.ok && ergebnis.daten.map((d) => [d.id, d.symbol])).toEqual([
-      ['IE00B4L5Y983', 'EUNL.DE'],
-      ['865985', 'APC.DE'],
+    expect(ergebnis.ok && ergebnis.daten.map((d) => [d.id, d.symbol, d.type])).toEqual([
+      ['IE00B4L5Y983', 'EUNL.DE', 'etf'],
+      ['865985', 'APC.DE', 'stock'],
     ])
     // Je Kennung nur die besten Kandidaten, in Vorrang-Reihenfolge.
     expect(quote.mock.calls[0][0]).toEqual(['EUNL.DE', 'EUNL.F', 'IWDA.AS', 'SWDA.L', 'APC.DE', 'AAPL'])
@@ -67,9 +73,9 @@ describe('resolveIds', () => {
 
     const ergebnis = await resolveIds('IE000BI8OT95,ETF146')
     expect(ergebnis.ok && ergebnis.daten).toEqual([
-      { id: 'IE000BI8OT95', symbol: 'WRDU.AS', name: 'World', currency: 'EUR' },
+      { id: 'IE000BI8OT95', symbol: 'WRDU.AS', name: 'World', currency: 'EUR', type: null },
       // Eine WKN lässt sich bei Yahoo nicht suchen.
-      { id: 'ETF146', symbol: null, name: null, currency: null },
+      { id: 'ETF146', symbol: null, name: null, currency: null, type: null },
     ])
     expect(search).toHaveBeenCalledTimes(1)
   })

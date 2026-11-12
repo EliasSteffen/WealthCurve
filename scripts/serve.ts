@@ -11,6 +11,7 @@ import { createReadStream, existsSync, statSync } from 'node:fs'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { extname, join, normalize, resolve, sep } from 'node:path'
 import { handleHoldingsRequest } from '../server/holdings'
+import { CACHE_HEADER as PROFILE_CACHE, handleProfileRequest } from '../server/profile'
 import { CACHE_HEADER, handleQuotesRequest } from '../server/quotes'
 import { CACHE_HEADER as RESOLVE_CACHE, handleResolveRequest } from '../server/resolve'
 
@@ -57,13 +58,18 @@ async function behandle(req: IncomingMessage, res: ServerResponse): Promise<void
       ? handleHoldingsRequest
       : url.startsWith('/api/resolve')
         ? handleResolveRequest
-        : null
+        : url.startsWith('/api/profile')
+          ? handleProfileRequest
+          : null
   if (api) {
     const antwort = await api(url)
     res.statusCode = antwort.status
     res.setHeader('content-type', 'application/json; charset=utf-8')
     if (antwort.cache) {
-      res.setHeader('cache-control', api === handleResolveRequest ? RESOLVE_CACHE : CACHE_HEADER)
+      res.setHeader(
+        'cache-control',
+        api === handleResolveRequest ? RESOLVE_CACHE : api === handleProfileRequest ? PROFILE_CACHE : CACHE_HEADER,
+      )
     }
     res.end(JSON.stringify(antwort.body))
     return

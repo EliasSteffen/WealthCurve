@@ -38,6 +38,8 @@ export function specialLabel(key: string, t: Translate): string | null {
   switch (key) {
     case 'commodity':
       return t('depot.key.commodity', 'Rohstoffe')
+    case 'bond':
+      return t('depot.key.bond', 'Anleihen')
     case 'cash':
       return t('depot.key.cash', 'Barmittel & Derivate')
     case 'unknown':

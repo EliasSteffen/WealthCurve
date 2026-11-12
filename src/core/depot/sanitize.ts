@@ -4,6 +4,7 @@
  * Wie beim übrigen Zustand Feld für Feld: was aus localStorage kommt, hat
  * jemand anders geschrieben - eine ältere Version oder eine Hand im Devtool.
  */
+import { EACH_KEY, GOAL_DIMS, MAX_GOALS, type GoalDim, type GoalTarget } from './goals.ts'
 import {
   EMPTY_DEPOT,
   HOLDING_KINDS,
@@ -36,8 +37,39 @@ function sanitizeHolding(raw: unknown): DepotHolding | null {
   }
 }
 
+const anteil = (v: unknown): number | null =>
+  typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : null
+
+function sanitizeGoal(raw: unknown): GoalTarget | null {
+  if (!isRecord(raw) || !GOAL_DIMS.includes(raw.dim as GoalDim)) return null
+  const key = text(raw.key, 30)
+  if (!/^([A-Za-z]{1,30}|\*)$/.test(key)) return null
+  let min = anteil(raw.min)
+  let max = anteil(raw.max)
+  // "Jeder einzelne" ist eine Obergrenze - eine Untergrenze für alle Länder ergibt keinen Sinn.
+  if (key === EACH_KEY) min = null
+  if (min !== null && max !== null && min > max) [min, max] = [max, min]
+  if (min === 0) min = null
+  if (min === null && max === null) return null
+  return { dim: raw.dim as GoalDim, key, min, max }
+}
+
+export function sanitizeGoals(raw: unknown): GoalTarget[] {
+  if (!Array.isArray(raw)) return []
+  const out: GoalTarget[] = []
+  for (const entry of raw) {
+    const g = sanitizeGoal(entry)
+    if (g && !out.some((x) => x.dim === g.dim && x.key === g.key)) out.push(g)
+    if (out.length >= MAX_GOALS) break
+  }
+  return out
+}
+
 export function sanitizeDepot(raw: unknown): DepotState {
-  if (!isRecord(raw) || !Array.isArray(raw.holdings)) return EMPTY_DEPOT
+  if (!isRecord(raw)) return EMPTY_DEPOT
+  const goals = sanitizeGoals(raw.goals)
+  const value = typeof raw.value === 'number' && Number.isFinite(raw.value) && raw.value > 0 ? raw.value : null
+  if (!Array.isArray(raw.holdings)) return { ...EMPTY_DEPOT, goals, value }
   const holdings: DepotHolding[] = []
   for (const entry of raw.holdings) {
     const h = sanitizeHolding(entry)
@@ -52,5 +84,5 @@ export function sanitizeDepot(raw: unknown): DepotState {
       if (typeof v === 'number' && Number.isFinite(v) && v >= 0) whatIf[h.id] = v
     }
   }
-  return { holdings, whatIf }
+  return { holdings, whatIf, goals, value }
 }
