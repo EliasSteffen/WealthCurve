@@ -131,6 +131,14 @@ export interface MarketSeries {
   readonly start: string
   /** 0.012 bedeutet +1,2 % in diesem Monat. */
   readonly monthlyReturns: readonly number[]
+  /**
+   * Monat ("JJJJ-MM"), in dem jede Rendite endet - gleich lang wie `monthlyReturns`.
+   *
+   * Optional, weil gespeicherte Reihen ihn nicht kennen. Wichtig, sobald Reihen
+   * gegeneinander gerechnet werden (Depot): nach einer Lücke im Kursverlauf
+   * verrät `start` allein nicht mehr, welcher Monat welche Rendite trägt.
+   */
+  readonly months?: readonly string[]
 }
 
 export interface SeriesContext {
