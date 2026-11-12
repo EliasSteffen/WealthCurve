@@ -102,7 +102,11 @@ async function ladeQuotes(symbol: string): Promise<QuoteErgebnis> {
     const ergebnis = await yahoo.chart(symbol, { period1: von, interval: '1mo' })
     const daten = marketFromPrices(
       ergebnis.quotes.map((q) => ({
-        date: q.date.toISOString().slice(0, 10),
+        // Yahoo datiert Monatskurse auf Mitternacht Börsenzeit. In UTC wird daraus
+        // für Xetra der letzte Tag des Vormonats ("…-11-30" für Dezember) - die
+        // Reihe läge einen Monat neben einer US-Reihe. Zwölf Stunden später liegt
+        // jeder Zeitstempel sicher im richtigen Kalendertag.
+        date: new Date(q.date.getTime() + 12 * 60 * 60 * 1000).toISOString().slice(0, 10),
         // Bereinigt um Splits und Dividenden - sonst liest sich ein Split als
         // Kurssturz und die Rendite wäre schlicht falsch.
         price: q.adjclose ?? q.close,

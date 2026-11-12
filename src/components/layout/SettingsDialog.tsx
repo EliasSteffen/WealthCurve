@@ -23,17 +23,12 @@ const PANEL_ID = 'settings-tabpanel'
 const tabId = (id: Reiter) => `settings-tab-${id}`
 
 /**
- * Alle Einstellungen an einem Ort, in drei Reitern.
+ * Was die ganze App betrifft, nicht einen Plan: Sprache, Farbschema, Teilen,
+ * Zurücksetzen - und das Video.
  *
- * Warum überhaupt, wo es doch die Seitenspalte gibt: die Spalte ist 320 px
- * breit und trägt genau das, woran man beim Betrachten des Diagramms dreht.
- * Alles andere - die Einstellungen des Videos, Sprache, Farbschema - hatte
- * keinen Platz und verteilte sich auf die Kopfzeile und einen eigenen Dialog.
- * Hier ist Breite, und die beiden Bereiche der Diagramm-Einstellungen stehen
- * endlich wirklich nebeneinander statt untereinander.
- *
- * Die Seitenspalte bleibt, was sie war: der schnelle Zugriff. Sie zeigt
- * dieselbe Komponente, nur schmal.
+ * Woran man beim Rechnen dreht, steht im Plan-Formular des Sparplans selbst.
+ * Früher lagen dieselben Regler zusätzlich hier und in einer Seitenspalte; drei
+ * Wege zu denselben Reglern hießen dreimal „Einstellungen“.
  *
  * Beide Knöpfe der Kopfzeile gehören in diese Komponente, weil sie denselben
  * Dialog öffnen - nur auf verschiedenen Reitern. Zwei Komponenten mit je einem
@@ -42,13 +37,16 @@ const tabId = (id: Reiter) => `settings-tab-${id}`
 export function SettingsDialog({
   theme,
   onThemeChange,
+  showVideo = true,
 }: {
   readonly theme: ThemePreference
   readonly onThemeChange: (value: ThemePreference) => void
+  /** Das Video zeigt die Vermögenskurve - auf der Depot-Seite gibt es keine. */
+  readonly showVideo?: boolean
 }) {
   const t = useT()
   const [offen, setOffen] = useState(false)
-  const [reiter, setReiter] = useState<Reiter>('diagramm')
+  const [reiter, setReiter] = useState<Reiter>('allgemein')
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -71,9 +69,8 @@ export function SettingsDialog({
   }
 
   const reiterListe: readonly { id: Reiter; label: string }[] = [
-    { id: 'diagramm', label: t('settings.tab.chart', 'Diagramm') },
-    { id: 'video', label: t('settings.tab.video', 'Video') },
     { id: 'allgemein', label: t('settings.tab.general', 'Allgemein') },
+    { id: 'video', label: t('settings.tab.video', 'Video') },
   ]
 
   const kopfKnopf =
@@ -84,14 +81,16 @@ export function SettingsDialog({
     <>
       <button
         type="button"
-        onClick={() => oeffnen('diagramm')}
+        onClick={() => oeffnen('allgemein')}
         onPointerEnter={vorladen}
         onFocus={vorladen}
         className={kopfKnopf}
+        aria-label={t('settings.title', 'Einstellungen')}
       >
         <Settings2 size={14} aria-hidden />
-        {t('settings.title', 'Einstellungen')}
+        <span className="hidden sm:inline">{t('settings.title', 'Einstellungen')}</span>
       </button>
+      {showVideo ? (
       <button
         type="button"
         onClick={() => oeffnen('video')}
@@ -108,6 +107,7 @@ export function SettingsDialog({
         <Film size={14} aria-hidden />
         {t('video.open', 'Video')}
       </button>
+      ) : null}
 
       <dialog
         ref={dialogRef}

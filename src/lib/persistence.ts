@@ -41,6 +41,10 @@ export function toShareJson(state: AppState): string {
   delete json.sidebarCollapsed
   delete json.collapsedCards
   delete json.settingsView
+  // Das eigene Depot ist privat - wer den Link bekommt, soll die Kurve sehen, nicht die Bestände.
+  delete json.depot
+  // Der Empfänger landet beim Plan, den man ihm zeigen wollte.
+  delete json.page
   return JSON.stringify(json)
 }
 

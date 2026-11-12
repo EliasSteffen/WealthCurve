@@ -259,6 +259,81 @@ Aus demselben Grund sind die Pfade in `public/site.webmanifest` relativ
 Basis-Pfad um, das Manifest aber nicht — mit absoluten Pfaden liefen die Symbole
 unter einem Unterpfad ins Leere.
 
+## Depot-Analyse
+
+Im Bereich **Mein Depot** lässt sich ein eigenes Depot laden:
+aus Excel kopiert, als `.xlsx`-, CSV- oder TSV-Datei geladen oder aufs Feld gezogen –
+auch Broker-Exporte mit Positionswerten statt Anteilen. `.xlsx` liest
+`src/core/depot/xlsx.ts` ohne Bibliothek (ZIP über `DecompressionStream`, XML per
+Muster). Die Depot-Seite zeigt dann:
+
+- **Kennzahlen** – Rendite p. a., Schwankung p. a., Rendite je Risiko und größter
+  Rückgang über 5/3/1 Jahre, gewichtete TER, Marktengagement inklusive Hebel, je
+  Position Rendite, Schwankung, Risiko- und Kostenanteil.
+- **Durchschau** – Kontinente, Märkte (MSCI), Länder, GICS-Branchen,
+  Unternehmensgröße, Währungen, Produktarten und die größten Firmen über alle
+  Positionen zusammen. Woher die Zerlegung kommt, steht je Position unter „Daten &
+  Quellen“ (siehe unten).
+- **Ziele & Vorschläge** – Bandbreiten je Anlageklasse, Markt, Kontinent, Land,
+  Branche oder Größe festlegen („Schwellenländer 10–15 %“, „kein Land über 50 %“),
+  von Hand oder aus Vorlagen (Welt nach Börsenwert, 70/30, nach BIP, Klumpen
+  begrenzen, 80/20, Nebenwerte). Kontinente und Länder lassen sich auch auf einer
+  Weltkarte antippen (`src/components/depot/GoalMap.tsx`): die Füllung zeigt den
+  heutigen Anteil, der Rand den Zielstatus. Die Umrisse (Natural Earth 1:110 Mio.,
+  Equal-Earth-Projektion) erzeugt `npm run worldmap` als fertige SVG-Pfade in
+  `worldMap.generated.ts`; d3-geo, TopoJSON und world-atlas sind nur
+  Entwicklungsabhängigkeiten, im Browser landen nur die Pfade – nachgeladen, wenn die
+  Karte zu sehen ist.
+  Je Ziel steht da, wie viel fehlt und wie viel
+  ohne Verkauf zugekauft werden müsste; darüber, welcher breite Baustein
+  (Schwellenländer-, Europa-, USA-, Welt-ETF, Anleihen, Gold …) die meisten Ziele mit
+  dem kleinsten Zukauf erreicht, und ein Plan aus bis zu drei Bausteinen
+  (`src/core/depot/goals.ts`). Mit Depotwert auch in Euro. Bausteine sind Indizes,
+  keine Fonds – nachgerechnet werden nur die eigenen Ziele.
+- **Risiken** – feste Regeln (`FLAG_LIMITS` in `src/core/depot/flags.ts`): Klumpen,
+  Länder- und Branchenschwerpunkt, Hebel, Risikotreiber, Fremdwährung, Kostentreiber,
+  doppelt gehaltene Aktien, historischer Rückgang, fehlende Daten. Beschreibend,
+  keine Empfehlungen.
+- **Was-wäre-wenn** – andere Anteile eintragen, Kennzahlen und Durchschau
+  vergleichen, heute oder die Variante als Szenario in die Vermögenskurve übernehmen
+  (mit der historischen Rendite als Annahme).
+
+| Spalte | Pflicht | Inhalt |
+| --- | --- | --- |
+| `WKN` / `ISIN` | ja | Schlüssel der Position |
+| `Anteil` | ja¹ | `39,81 %`, `0.3981` oder `39.81` (ohne Zeichen entscheidet die Summe) |
+| `Wert` / `Marktwert` / `netValue` | ja¹ | Positionswert in Euro (`12.345,67 €`) – die Anteile folgen aus der Summe |
+| `ISIN` | nein | Durchschau, wenn die Spalte `Durchschau` fehlt (auch aus einer ISIN als Schlüssel) |
+| `Name`, `Symbol` | nein | Symbol = Yahoo-Ticker für die Kennzahlen, z. B. `EUNL.DE` |
+| `TER`, `Hebel`, `Typ` | nein | Typ `ETF`, `Aktie` oder `ETC` |
+| `Durchschau` | nein | ETF: ISIN eines Amundi-ETFs, `:US`/`:EU`/`:EMU`/ISO-Code für nur diesen Teil, `idx:em` usw. für Indexgewichte, `-` für keine; Aktie: eigene ISIN; ETC: Rohstoff |
+
+¹ Eine der beiden. Fehlt `Typ`, entscheiden der Name („ETF“, „UCITS“, Anbieter → ETF;
+„ETC“, „Physical Gold“, „Silver 3x Daily Leveraged“ → ETC) und die TER (0 → Aktie).
+Fehlt `Hebel`, gilt ein „3x … Leveraged“ im Namen. Kommt der Name erst über die
+Symbolsuche (Export nur mit WKN), werden Typ und Hebel danach neu bestimmt; bei
+schon gespeicherten Depots bietet „Daten & Quellen“ die Korrektur an.
+
+Woher die Durchschau einer Position kommt, in absteigender Güte
+(`src/core/depot/lookthrough.ts`):
+
+| Position | 1. | 2. | 3. | 4. |
+| --- | --- | --- | --- | --- |
+| ETF | eigener Amundi-Bestand | Bestand eines ähnlichen Amundi-Fonds (z. B. US-Teil des MSCI World für S&P 500) | typische Indexgewichte laut Name (`src/core/depot/indices.ts`) | unbekannt |
+| Aktie | Eintrag in einem Fondsbestand (ISIN oder Firmenname) | Firmenprofil von Yahoo (`/api/profile`) | Land aus dem ISIN-Präfix | unbekannt |
+
+Stufe 2 und 3 sind Schätzungen und als solche gekennzeichnet; die Indexgewichte sind
+gerundet und driften mit den Märkten.
+
+Kurse kommen über `/api/quotes` (Fremdwährungen über `EUR…=X` in Euro umgerechnet),
+Fondsbestände über `/api/holdings?isin=` aus der Produkt-Schnittstelle von Amundi
+(`server/holdings.ts`), Land, Branche und Börsenwert von Einzelaktien über
+`/api/profile?symbols=` von Yahoo (`server/profile.ts`) – alle eingehängt wie die
+Kurse in Vite, `npm run serve` und Vercel. Die Unternehmensgröße ist aus den Indexgewichten geschätzt, geeicht an den
+Börsenwerten großer US-Werte. Das Depot bleibt im Browser: der Teilen-Link lässt es
+weg. Gerechnet wird die Geschichte der heutigen Mischung, monatlich neu gewichtet –
+nicht die eines echten Kontos, und keine Vorhersage.
+
 ## Entnahmeplan
 
 Die Simulation läuft über eine **Phasenfolge**: erst ansparen, dann entnehmen,
@@ -328,16 +403,27 @@ Eintrag für eine MCP-Konfiguration:
 }
 ```
 
-## Einstellungen
+## Aufbau der Oberfläche
 
-Die Seitenspalte ist in Kategorien gegliedert (Szenarien, Werte, Zeitraum, Kurven,
-Berechnung) und über ein Suchfeld durchsuchbar. Der Suchindex wird in
-`src/core/settings/` **aus den Registries abgeleitet** — eine neue Serie oder ein
-neuer Parameter ist damit sofort auffindbar, ohne dass jemand daran denken muss.
+Zwei Bereiche in der Kopfzeile (`src/components/Dashboard.tsx`), gespeichert als
+`page` im Zustand, nicht im Teilen-Link:
 
-Gezeigt werden nur Regler, die gerade etwas bewirken: Parameter, die keine
-aktive Serie und keine gewählte Entnahmeregel liest, verschwinden samt ihrer
-Kategorie.
+- **Sparplan** (`src/components/sparplan/SparplanPage.tsx`) – links „Dein Plan“ mit
+  Rendite (samt Schnellwahl 3/5/7 % und „Wie mein Depot“), Startkapital, Sparrate und
+  Laufzeit; darunter zugeklappte Abschnitte für Auszahlung, Annahmen, Kurven &
+  Darstellung, echte Kursverläufe und Zeitachse. Rechts Ergebnis, Kurve und
+  Jahrestabelle; auf dem Handy steht das Ergebnis oben. Eine Entnahmephase ist ab
+  Werk aus (nur im App-Startzustand – `DEFAULT_MODEL` der Kern-API bleibt).
+- **Mein Depot** (`src/components/depot/DepotPage.tsx`) – leer eine Ablagefläche
+  (Datei, eingefügte Tabelle oder Beispiel), danach Kennzahlen, die wichtigsten
+  Auffälligkeiten, Durchschau, Verlauf, Was-wäre-wenn und „Daten & Quellen“ mit
+  bearbeitbarem Kurssymbol, Typ, Hebel, TER und Durchschau-Quelle je Position.
+  „Im Sparplan weiterrechnen“ legt ein Szenario mit der historischen Rendite an.
+
+Das Zahnrad (`SettingsDialog`) trägt nur noch, was die ganze App betrifft: Sprache,
+Farbschema, Teilen, Zurücksetzen und – im Sparplan – das Video. Gezeigt werden nur
+Regler, die gerade etwas bewirken: Parameter, die keine aktive Serie und keine
+gewählte Entnahmeregel liest, verschwinden samt Hinweis.
 
 ### Speichern, Teilen, Zurücksetzen
 
@@ -466,15 +552,17 @@ src/lib/           Formatter und Zahlenparser je Sprache, Persistenz und Teilen-
                   Aufnahme und MP4-Transcoding, CSV-Download, Pfeiltasten- und
                   Backdrop-Helfer, Tonspur, Klassennamen (cn)
 src/components/    UI; nur chart/ kennt Recharts
-  layout/          ein SettingsPanel, drei Container (Sidebar / Sheet)
+  sparplan/        Sparplan-Seite mit Plan-Formular und Ergebnis
+  depot/           Depot-Seite: Import, Kennzahlen, Durchschau, Bestands-Editor
+  layout/          Einstellungsdialog (Sprache, Farbschema, Teilen, Video)
   video/           Export-Dialog mit Vorschau
 test/              alle Tests, spiegelt src/ - Importe über den Alias @/
 ```
 
-Die Sidebar ist auf dem Desktop einklappbar und scrollt unabhängig von der
-Chart-Spalte; unterhalb von 1024 px übernimmt ein Bottom-Sheet auf Basis des
-nativen `<dialog>` – Fokus-Falle, ESC und Backdrop kommen vom Browser statt aus
-einer Bibliothek.
+Das Plan-Formular steht auf dem Desktop als eigene, mitlaufende Spalte neben dem
+Ergebnis; darunter folgt es dem Ergebnis in derselben Spalte. Die Zusatz-Abschnitte
+sind native `<details>` – Tastatur, Screenreader und „Auf Seite suchen“ kommen vom
+Browser statt aus einer Bibliothek, wie beim `<dialog>` der Einstellungen.
 
 Farben liegen als CSS-Variablen (`--chart-1` … `--chart-8`) in `src/index.css`, je einmal für Hell
 und Dunkel. Die Palette ist auf Farbfehlsichtigkeit geprüft (schlechtestes Nachbarpaar ΔE 9.1 hell /

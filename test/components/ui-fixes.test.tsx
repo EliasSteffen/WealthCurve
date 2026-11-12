@@ -175,33 +175,28 @@ describe('MarketPanel', () => {
     expect(new Set(ids).size).toBe(2)
   })
 
-  it('verweist ohne Startjahr auf die Karte „Zeit" und öffnet sie', async () => {
+  it('verweist ohne Startjahr auf den Abschnitt „Zeitachse" und klappt ihn auf', async () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
-    function Ansicht() {
-      const v = useSelector((s) => s.settingsView)
-      const zu = useSelector((s) => s.collapsedCards)
-      return <output data-testid="v">{`${v}|${zu.join(',')}`}</output>
-    }
-    const state: AppState = {
-      ...createInitialState(),
-      markets: [markt('AAA')],
-      collapsedCards: ['global:zeit'],
-    }
+    const state: AppState = { ...createInitialState(), markets: [markt('AAA')] }
     const user = userEvent.setup()
-    render(
+    const { container } = render(
       mitSprache(
         'de',
         state,
         <>
           <MarketPanel />
-          <Ansicht />
+          <details id="plan-zeitachse">
+            <summary>Zeitachse</summary>
+          </details>
         </>,
       ),
     )
-    expect(screen.getByText(/unter „Zeit" eintragen/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Karte „Zeit" öffnen/ }))
-    expect(screen.getByTestId('v')).toHaveTextContent('alles|')
-    expect(screen.getByTestId('v').textContent).not.toContain('global:zeit')
+    const abschnitt = container.querySelector('#plan-zeitachse') as HTMLDetailsElement
+    expect(abschnitt.open).toBe(false)
+    expect(screen.getByText(/unter „Zeitachse" eintragen/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Abschnitt „Zeitachse" öffnen/ }))
+    expect(abschnitt.open).toBe(true)
+    expect(screen.getByText('Zeitachse', { selector: 'summary' })).toHaveFocus()
   })
 })
 

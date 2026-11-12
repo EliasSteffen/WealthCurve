@@ -9,9 +9,8 @@ import { useStore } from '../../react/storeContext'
 import { useDispatch } from '../../react/useSelector'
 import { LocaleToggle } from '../LocaleToggle'
 import { ThemeToggle } from '../ThemeToggle'
-import { SettingsPanel } from './SettingsPanel'
 
-export type Reiter = 'diagramm' | 'video' | 'allgemein'
+export type Reiter = 'video' | 'allgemein'
 
 /** Eigener Chunk: das Video-Werkzeug (Canvas, Encoder) braucht, wer nie ein Video macht, nicht. */
 const VideoWorkspace = lazy(loadVideoWorkspace)
@@ -36,7 +35,6 @@ export default function SettingsDialogContent({
 }) {
   return (
     <>
-      {reiter === 'diagramm' ? <SettingsPanel layout="breit" /> : null}
       {reiter === 'video' ? (
         <Suspense fallback={null}>
           <VideoWorkspace />

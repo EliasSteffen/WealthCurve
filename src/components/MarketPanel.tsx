@@ -98,12 +98,13 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
     dispatch(actions.setSeriesEnabled('marketReturn', true))
   }
 
+  // Der Abschnitt „Zeitachse" im Plan-Formular (ID in SparplanPage) - aufklappen und hinscrollen.
   const zeitOeffnen = () => {
-    dispatch(actions.setSettingsView('alles'))
-    // Eine eingeklappte Karte bliebe sonst trotz Wechsel verborgen.
-    if (store.getSnapshot().collapsedCards.includes('global:zeit')) {
-      dispatch(actions.toggleSettingsCard('global:zeit'))
-    }
+    const abschnitt = document.getElementById('plan-zeitachse')
+    if (!(abschnitt instanceof HTMLDetailsElement)) return
+    abschnitt.open = true
+    abschnitt.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
+    abschnitt.querySelector('summary')?.focus()
   }
 
   const laden = async (wert: string) => {
@@ -250,7 +251,7 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
         <p className="rounded-md border border-dashed border-[var(--chart-8)] px-2 py-1.5 text-[11px] leading-snug text-[var(--text-secondary)]">
           {t(
             'market.needsStartYear',
-            'Für den Kursverlauf fehlt das Startjahr – unter „Zeit" eintragen. Erst damit steht fest, ab wann gehalten worden wäre.',
+            'Für den Kursverlauf fehlt das Startjahr – unter „Zeitachse" eintragen. Erst damit steht fest, ab wann gehalten worden wäre.',
           )}
           {/* Die Karte „Zeit" fehlt in der kompakten Ansicht - der Knopf holt sie. */}
           <button
@@ -258,7 +259,7 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
             onClick={zeitOeffnen}
             className="mt-1.5 block rounded-md border border-[var(--hairline)] px-2 py-1 text-[11px] text-[var(--text-primary)] transition-colors hover:bg-[var(--grid)]"
           >
-            {t('market.openTime', 'Karte „Zeit" öffnen')}
+            {t('market.openTime', 'Abschnitt „Zeitachse" öffnen')}
           </button>
         </p>
       ) : null}

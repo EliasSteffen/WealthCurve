@@ -86,6 +86,15 @@ export function marketFromPrices(
   const monthlyReturns = toMonthlyReturns(punkte.map((p) => p.price))
   if (monthlyReturns.length < MIN_MONATE) return null
 
+  // Parallel zu toMonthlyReturns: der Monat des Kurses, mit dem jede Rendite endet.
+  const months: string[] = []
+  let vorher = false
+  for (const p of punkte) {
+    if (!brauchbar(p.price)) continue
+    if (vorher) months.push(MONAT.exec(p.date)?.[1] ?? '')
+    vorher = true
+  }
+
   // Der Start ist der erste BRAUCHBARE Kurs, nicht die erste Zeile: führende
   // Lücken zählen nicht als Historie.
   const ersterGueltiger = punkte.find(
@@ -97,6 +106,8 @@ export function marketFromPrices(
     currency: meta.currency ?? 'USD',
     start: ersterGueltiger?.date || 'unbekannt',
     monthlyReturns,
+    // Nur wenn jeder Kurs ein lesbares Datum trug - sonst lieber gar keine Angabe.
+    ...(months.every(Boolean) && months.length === monthlyReturns.length ? { months } : {}),
   }
 }
 

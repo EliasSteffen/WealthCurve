@@ -1,10 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { Dashboard } from '@/components/Dashboard'
 import { ScenarioList } from '@/components/ScenarioList'
 import { SettingsDialog } from '@/components/layout/SettingsDialog'
-import { SettingsSheet } from '@/components/layout/SettingsSheet'
-import { Sidebar } from '@/components/layout/Sidebar'
 import { actions, createInitialState, reducer, type AppState } from '@/core/state'
 import { LocaleProvider } from '@/react/LocaleProvider'
 import { StoreProvider } from '@/react/StoreProvider'
@@ -37,30 +36,30 @@ describe('Einstellungsdialog: Reiter', () => {
     await user.click(screen.getByRole('button', { name: 'Einstellungen' }))
 
     const tabs = await screen.findAllByRole('tab')
-    expect(tabs.map((x) => x.textContent)).toEqual(['Diagramm', 'Video', 'Allgemein'])
-    expect(tabs.map((x) => x.getAttribute('tabindex'))).toEqual(['0', '-1', '-1'])
+    expect(tabs.map((x) => x.textContent)).toEqual(['Allgemein', 'Video'])
+    expect(tabs.map((x) => x.getAttribute('tabindex'))).toEqual(['0', '-1'])
 
     const panel = screen.getByRole('tabpanel')
     for (const tab of tabs) expect(tab.getAttribute('aria-controls')).toBe(panel.id)
     expect(panel).toHaveAttribute('aria-labelledby', tabs[0]!.id)
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
+    // Der lazy geladene Inhalt erscheint im Panel.
+    expect(await screen.findByRole('radiogroup', { name: 'Sprache' })).toBeInTheDocument()
 
     tabs[0]!.focus()
     await user.keyboard('{ArrowRight}')
     expect(tabs[1]).toHaveFocus()
     expect(tabs[1]).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', tabs[1]!.id)
-    await user.keyboard('{End}')
-    expect(tabs[2]).toHaveAttribute('aria-selected', 'true')
-    // Der lazy geladene Inhalt erscheint im Panel.
-    expect(await screen.findByRole('radiogroup', { name: 'Sprache' })).toBeInTheDocument()
     await user.keyboard('{ArrowRight}')
     expect(tabs[0]).toHaveFocus()
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
     await user.keyboard('{ArrowLeft}')
-    expect(tabs[2]).toHaveFocus()
+    expect(tabs[1]).toHaveFocus()
     await user.keyboard('{Home}')
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
+    await user.keyboard('{End}')
+    expect(tabs[1]).toHaveAttribute('aria-selected', 'true')
   })
 })
 
@@ -95,7 +94,6 @@ describe('Backdrop-Klick', () => {
     mit(createInitialState(), <SettingsDialog theme="light" onThemeChange={() => {}} />),
     'Einstellungen',
   )
-  cases('SettingsSheet', mit(createInitialState(), <SettingsSheet />), 'Einstellungen öffnen')
 })
 
 describe('Fokus nach Aktionen', () => {
@@ -126,12 +124,38 @@ describe('Fokus nach Aktionen', () => {
     expect(document.body).not.toHaveFocus()
   })
 
-  it('Sidebar: Fokus folgt dem Umschalter', async () => {
+})
+
+describe('Bereichs-Navigation', () => {
+  it('markiert den offenen Bereich und wechselt ohne Neuladen', async () => {
     const user = userEvent.setup()
-    render(mit(createInitialState(), <Sidebar />))
-    await user.click(screen.getByRole('button', { name: 'Einstellungen ausblenden' }))
-    expect(screen.getByRole('button', { name: 'Einstellungen einblenden' })).toHaveFocus()
-    await user.click(screen.getByRole('button', { name: 'Einstellungen einblenden' }))
-    expect(screen.getByRole('button', { name: 'Einstellungen ausblenden' })).toHaveFocus()
+    render(mit(createInitialState(), <Dashboard />))
+    const nav = screen.getByRole('navigation', { name: 'Bereiche' })
+    const sparplan = screen.getByRole('button', { name: 'Sparplan' })
+    const depot = screen.getByRole('button', { name: 'Mein Depot' })
+    expect(nav).toContainElement(sparplan)
+    expect(sparplan).toHaveAttribute('aria-current', 'page')
+    expect(depot).not.toHaveAttribute('aria-current')
+    // Das Video gehört zur Vermögenskurve.
+    expect(screen.getByRole('button', { name: 'Video' })).toBeInTheDocument()
+
+    await user.click(depot)
+    expect(depot).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('heading', { name: 'Dein Depot durchleuchten' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Datei auswählen' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Video' })).toBeNull()
+    // Genau ein Weg zu den Einstellungen, nicht drei.
+    expect(screen.getAllByRole('button', { name: 'Einstellungen' })).toHaveLength(1)
+  })
+
+  it('zeigt im Sparplan zuerst den Plan, die Extras zugeklappt', () => {
+    const { container } = render(mit(createInitialState(), <Dashboard />))
+    expect(screen.getByRole('heading', { name: 'Dein Plan' })).toBeInTheDocument()
+    expect(screen.getByRole('slider', { name: 'Monatliche Sparrate' })).toBeInTheDocument()
+    const abschnitte = [...container.querySelectorAll('details')]
+    expect(abschnitte.length).toBeGreaterThanOrEqual(4)
+    expect(abschnitte.every((d) => !d.open)).toBe(true)
+    // Ohne Entnahmephase ab Werk.
+    expect(screen.queryByText('Rentenbeginn')).toBeNull()
   })
 })
