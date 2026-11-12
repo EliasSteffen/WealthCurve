@@ -7,10 +7,11 @@ import { describe, expect, it } from 'vitest'
  * Architektonische Wache, zweiter Teil.
  *
  * Andere Projekte laden den Kern als Paket `wealthcurve` mit reinem Node - ohne
- * tsx, ohne Vite, ohne Build (siehe `exports` in package.json). Node entfernt
- * dabei nur die Typen und löst Importe wörtlich auf: ohne Endung findet es keine
- * Datei. Vite und tsx verzeihen das, deshalb fiele ein vergessenes `.ts` sonst
- * erst im fremden Projekt auf.
+ * tsx und ohne Vite (siehe `exports` in package.json). Installiert von GitHub,
+ * baut `prepare` dafür `lib/` mit tsconfig.lib.json: Node entfernt in
+ * node_modules keine Typen. Der Build schreibt `.ts` in `.js` um und kennt nur
+ * Importe mit Endung; Vite und tsx verzeihen eine fehlende, deshalb fiele ein
+ * vergessenes `.ts` sonst erst im fremden Projekt auf.
  */
 const walk = (dir: string): string[] =>
   readdirSync(dir).flatMap((entry) => {
@@ -34,6 +35,10 @@ describe('Kern lädt mit reinem Node', () => {
   })
 
   it('lässt sich über die Paket-Einstiege importieren', () => {
+    // Erst der Paket-Build, wie ihn `prepare` bei der Installation ausführt.
+    execFileSync(process.execPath, ['node_modules/typescript/bin/tsc', '-p', 'tsconfig.lib.json'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
     // Ein eigener Prozess statt eines Imports hier: nur so gilt Nodes eigene
     // Auflösung und nicht die von Vitest. Das Paket importiert sich dabei über
     // seinen Namen selbst - genau der Weg, den ein fremdes Projekt nimmt.
@@ -47,5 +52,5 @@ describe('Kern lädt mit reinem Node', () => {
       stdio: ['ignore', 'pipe', 'pipe'],
     })
     expect(ausgabe.trim()).toBe('function function function')
-  })
+  }, 30_000)
 })

@@ -6,8 +6,10 @@
  * Node-Skript, einem Test oder einem späteren MCP-Server nutzbar.
  *
  * Andere Projekte laden diese Datei als `wealthcurve` (siehe `exports` in
- * package.json) - mit reinem Node, ohne tsx und ohne Build. Deshalb trägt jeder
- * relative Import hier die Endung `.ts`; `node-import.test.ts` wacht darüber.
+ * package.json) - mit reinem Node, ohne tsx. Bei der Installation von GitHub
+ * baut `prepare` sie mit tsconfig.lib.json nach `lib/`, weil Node in
+ * node_modules keine Typen entfernt. Jeder relative Import trägt die Endung
+ * `.ts`, der Build schreibt sie in `.js` um; `node-import.test.ts` wacht darüber.
  *
  * Zwei Einstiege:
  *

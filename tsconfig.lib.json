@@ -1,0 +1,25 @@
+{
+  /* Baut das Paket `wealthcurve` für andere Projekte: Kern und Kursabruf als
+     JavaScript mit Typen in `lib/`. Läuft als `prepare` - bei `npm install`
+     hier und, wichtiger, wenn ein fremdes Projekt das Paket direkt von GitHub
+     installiert. Node entfernt in node_modules keine Typen, deshalb braucht es
+     dort fertiges JavaScript statt der .ts-Quellen. */
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    /* Die Quellen importieren mit `.ts`; im Ergebnis steht `.js`. */
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+
+    "rootDir": ".",
+    "outDir": "lib",
+    "declaration": true
+  },
+  "files": ["src/core/index.ts", "server/quotes.ts"]
+}
