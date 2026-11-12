@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DepotPage } from '@/components/depot/DepotPage'
-import { MAP_COLUMNS, MAP_ROWS, WORLD_TILES } from '@/components/depot/worldTiles'
+import { MAP_CONTINENTS, MAP_COUNTRIES, MAP_DOTS } from '@/components/depot/worldMap.generated'
 import { COUNTRIES } from '@/core/depot/lookthrough'
 import type { DepotHolding } from '@/core/depot/types'
 import { createInitialState, type AppState } from '@/core/state'
@@ -10,21 +10,19 @@ import { LocaleProvider } from '@/react/LocaleProvider'
 import { StoreProvider } from '@/react/StoreProvider'
 import { useSelector } from '@/react/useSelector'
 
-describe('Kachelkarte', () => {
-  it('kennt jedes Land der Durchschau, ohne doppelte Kacheln', () => {
-    const kacheln = new Set(WORLD_TILES.map((t) => t.code))
+describe('Weltkarte', () => {
+  it('zeichnet jedes Land der Durchschau - als Umriss oder als Punkt - und alle Kontinente', () => {
+    const gezeichnet = new Set([...MAP_COUNTRIES.map((c) => c.code), ...MAP_DOTS.map((d) => d.code)])
     const fehlen = Object.values(COUNTRIES)
       .map((c) => c.code)
-      .filter((code) => !kacheln.has(code))
+      .filter((code) => !gezeichnet.has(code))
     expect(fehlen).toEqual([])
-    expect(kacheln.size).toBe(WORLD_TILES.length)
-
-    const plaetze = WORLD_TILES.map((t) => `${t.x}|${t.y}`)
-    expect(new Set(plaetze).size).toBe(plaetze.length)
-    for (const t of WORLD_TILES) {
-      expect(t.x).toBeLessThan(MAP_COLUMNS)
-      expect(t.y).toBeLessThan(MAP_ROWS)
-    }
+    expect(MAP_COUNTRIES.length).toBeGreaterThan(150)
+    expect(MAP_CONTINENTS.map((c) => c.continent).sort()).toEqual(
+      ['africa', 'asia', 'europe', 'northAmerica', 'oceania', 'southAmerica'],
+    )
+    // Jedes Land gehört zu einem Kontinent, sonst fehlte es im Kontinent-Modus.
+    expect(MAP_COUNTRIES.filter((c) => c.continent === null).map((c) => c.code)).toEqual([])
   })
 })
 
@@ -78,12 +76,12 @@ describe('Ziele auf der Karte', () => {
   })
   afterEach(() => vi.unstubAllGlobals())
 
-  it('setzt per Klick auf eine Kachel ein Ziel für den ganzen Kontinent', async () => {
+  it('setzt per Klick auf einen Kontinent ein Ziel für den ganzen Kontinent', async () => {
     const user = userEvent.setup()
     zeige()
-    const karte = screen.getByRole('group', { name: /Weltkarte/ })
-    // Im Kontinent-Modus steht jede Kachel für ihren Kontinent.
-    await user.click(within(karte).getByRole('button', { name: /^Asien \(Japan\)/ }))
+    const karte = await screen.findByRole('group', { name: /Weltkarte/ })
+    // Im Kontinent-Modus sind die Kontinente je ein Umriss.
+    await user.click(within(karte).getByRole('button', { name: /^Asien ·/ }))
     const mindestens = screen.getByRole('textbox', { name: 'Mindestens, Asien' })
     await user.type(mindestens, '10{Enter}')
     expect(JSON.parse(screen.getByTestId('ziele').textContent ?? '[]')).toEqual([
@@ -97,7 +95,7 @@ describe('Ziele auf der Karte', () => {
     const user = userEvent.setup()
     zeige()
     await user.click(screen.getByRole('radio', { name: 'Länder' }))
-    const karte = screen.getByRole('group', { name: /Weltkarte/ })
+    const karte = await screen.findByRole('group', { name: /Weltkarte/ })
     await user.click(within(karte).getByRole('button', { name: /^Vereinigte Staaten · heute/ }))
     await user.type(screen.getByRole('textbox', { name: 'Höchstens, Vereinigte Staaten' }), '50{Enter}')
     expect(JSON.parse(screen.getByTestId('ziele').textContent ?? '[]')).toEqual([
@@ -106,7 +104,7 @@ describe('Ziele auf der Karte', () => {
     // Auch ohne Maus: dieselbe Auswahl steht als Liste unter der Karte.
     await user.selectOptions(screen.getByRole('combobox', { name: 'Land' }), 'JP')
     // Japan steckt in keinem der beiden Fonds.
-    expect(screen.getByText(/· nicht im Depot/)).toBeInTheDocument()
+    expect(screen.getByText('Japan', { selector: 'span' }).parentElement).toHaveTextContent('Japan · nicht im Depot')
     await user.selectOptions(screen.getByRole('combobox', { name: 'Land' }), 'US')
     const entfernen = screen.getAllByRole('button', { name: 'Ziel Vereinigte Staaten entfernen' })
     await user.click(entfernen[0])

@@ -674,7 +674,7 @@ export const en: Catalog = {
   'depot.map.pickCountry': 'Country',
   'depot.map.pick': 'Choose on the map …',
   'depot.map.range': 'Goal',
-  'depot.map.empty': 'Nothing chosen yet – tap a tile or pick from the list.',
+  'depot.map.empty': 'Nothing chosen yet – tap a region or pick from the list.',
   'depot.goals.planAll': 'meets all goals ({total} in addition).',
   'depot.goals.planOne': 'one goal remains open afterwards ({total} in addition).',
   'depot.goals.planSome': '{open} goals remain open afterwards ({total} in addition).',

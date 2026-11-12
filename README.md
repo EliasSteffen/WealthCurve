@@ -278,8 +278,12 @@ Muster). Die Depot-Seite zeigt dann:
   Branche oder Größe festlegen („Schwellenländer 10–15 %“, „kein Land über 50 %“),
   von Hand oder aus Vorlagen (Welt nach Börsenwert, 70/30, nach BIP, Klumpen
   begrenzen, 80/20, Nebenwerte). Kontinente und Länder lassen sich auch auf einer
-  Kachelkarte antippen (`src/components/depot/GoalMap.tsx`, Raster in
-  `worldTiles.ts`): die Farbe zeigt den heutigen Anteil, der Rahmen den Zielstatus.
+  Weltkarte antippen (`src/components/depot/GoalMap.tsx`): die Füllung zeigt den
+  heutigen Anteil, der Rand den Zielstatus. Die Umrisse (Natural Earth 1:110 Mio.,
+  Equal-Earth-Projektion) erzeugt `npm run worldmap` als fertige SVG-Pfade in
+  `worldMap.generated.ts`; d3-geo, TopoJSON und world-atlas sind nur
+  Entwicklungsabhängigkeiten, im Browser landen nur die Pfade – nachgeladen, wenn die
+  Karte zu sehen ist.
   Je Ziel steht da, wie viel fehlt und wie viel
   ohne Verkauf zugekauft werden müsste; darüber, welcher breite Baustein
   (Schwellenländer-, Europa-, USA-, Welt-ETF, Anleihen, Gold …) die meisten Ziele mit
