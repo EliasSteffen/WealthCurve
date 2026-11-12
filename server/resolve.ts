@@ -94,10 +94,38 @@ export function ordne(kandidaten: readonly string[]): string[] {
 interface FigiTreffer {
   readonly ticker?: string
   readonly exchCode?: string
+  readonly name?: string
+  readonly securityType?: string
+  readonly securityType2?: string
 }
 
-async function openFigi(ids: readonly string[]): Promise<Map<string, string[]>> {
-  const out = new Map<string, string[]>()
+/** Was OpenFIGI zu einer Kennung weiß: Kandidaten fürs Yahoo-Symbol, dazu Name und Art. */
+interface FigiEintrag {
+  readonly kandidaten: readonly string[]
+  readonly name: string | null
+  readonly type: Aufloesung['type']
+}
+
+const ABKUERZUNGEN = new Set(['ETF', 'ETC', 'ETP', 'ETN', 'MSCI', 'UCITS', 'ESG', 'SRI', 'FTSE', 'ACWI', 'EM', 'USA', 'US', 'UK', 'EUR', 'USD', 'II', 'III', 'AG', 'SE', 'NV', 'PLC', 'SA', 'ACC', 'DIST', 'S&P'])
+
+/** OpenFIGI schreibt Namen in Großbuchstaben - für die Anzeige lesbar machen. */
+export function lesbarerName(name: string): string {
+  const roh = name.trim().replace(/\s+/g, ' ')
+  if (roh !== roh.toUpperCase()) return roh
+  return roh
+    .split(' ')
+    .map((w) => (ABKUERZUNGEN.has(w) || /\d/.test(w) ? w : w.charAt(0) + w.slice(1).toLowerCase()))
+    .join(' ')
+}
+
+function figiArt(d: FigiTreffer): Aufloesung['type'] {
+  if (d.securityType === 'Common Stock' || d.securityType2 === 'Common Stock') return 'stock'
+  if (d.securityType === 'ETP' || d.securityType2 === 'Mutual Fund') return 'etf'
+  return null
+}
+
+async function openFigi(ids: readonly string[]): Promise<Map<string, FigiEintrag>> {
+  const out = new Map<string, FigiEintrag>()
   // Ohne Schlüssel nimmt OpenFIGI zehn Kennungen je Anfrage.
   for (let i = 0; i < ids.length; i += 10) {
     const teil = ids.slice(i, i + 10)
@@ -119,8 +147,17 @@ async function openFigi(ids: readonly string[]): Promise<Map<string, string[]>> 
           if (DEUTSCH.has(d.exchCode)) kandidaten.push(`${ticker}.DE`)
           kandidaten.push(ticker + BOERSE[d.exchCode])
         }
+        // Name und Art auch dann, wenn Yahoo keine der Notierungen kennt: am Namen
+        // erkennt die Durchschau den Index ("AMUNDI MSCI WORLD" -> MSCI World).
+        const benannt = (eintrag.data ?? []).find((d) => typeof d.name === 'string' && d.name.trim())
         const id = teil[k]
-        if (id !== undefined) out.set(id, kandidaten)
+        if (id !== undefined) {
+          out.set(id, {
+            kandidaten,
+            name: benannt?.name ? lesbarerName(benannt.name) : null,
+            type: benannt ? figiArt(benannt) : null,
+          })
+        }
       })
     } catch {
       // OpenFIGI ist eine von zwei Quellen - ohne sie bleibt die Yahoo-Suche.
@@ -211,7 +248,7 @@ export async function resolveIds(roh: unknown): Promise<AufloesungsErgebnis> {
     const figi = await openFigi(offen)
     const kandidaten = new Map<string, string[]>()
     for (const id of offen) {
-      let liste = figi.get(id) ?? []
+      let liste = [...(figi.get(id)?.kandidaten ?? [])]
       if (liste.length === 0 && ISIN.test(id)) liste = await yahooSuche(id)
       kandidaten.set(id, ordne(liste).slice(0, KANDIDATEN_JE_KENNUNG))
     }
@@ -219,12 +256,13 @@ export async function resolveIds(roh: unknown): Promise<AufloesungsErgebnis> {
     for (const id of offen) {
       const symbol = kandidaten.get(id)?.find((s) => gueltig.has(s)) ?? null
       const kurs = symbol ? gueltig.get(symbol) : undefined
+      const ausFigi = figi.get(id)
       const daten: Aufloesung = {
         id,
         symbol,
-        name: kurs?.longName ?? kurs?.shortName ?? null,
+        name: kurs?.longName ?? kurs?.shortName ?? ausFigi?.name ?? null,
         currency: kurs?.currency ?? null,
-        type: produktart(kurs?.quoteType),
+        type: produktart(kurs?.quoteType) ?? ausFigi?.type ?? null,
       }
       ergebnis.set(id, daten)
       // Nur Treffer merken: ein heute unbekanntes Symbol kann morgen gelistet sein.

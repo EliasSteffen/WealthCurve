@@ -1,11 +1,12 @@
 import { Upload } from 'lucide-react'
-import { useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { depotFlags } from '../../core/depot/flags'
 import { computeLookThrough } from '../../core/depot/lookthrough'
 import { computeDepotStats, scenarioRate, withWeights } from '../../core/depot/metrics'
 import { parseDepotText, productId, withResolvedSymbols, type ParseIssue } from '../../core/depot/parse'
 import { PARAMETERS } from '../../core/domain/parameters'
 import { MAX_SCENARIOS, actions } from '../../core/state'
+import type { DepotHolding } from '../../core/depot/types'
 import type { Translate } from '../../i18n'
 import { cn } from '../../lib/cn'
 import { useT } from '../../react/localeContext'
@@ -17,7 +18,7 @@ import { pct } from './depotFormat'
 import { BreakdownView, OverviewView, RisksView, WhatIfView } from './DepotViews'
 import { GoalsView } from './GoalsView'
 import { HoldingsEditor } from './HoldingsEditor'
-import { resolveSymbols } from './resolveSymbols'
+import { notYetResolved, resolveSymbols } from './resolveSymbols'
 import { useDepotData } from './useDepotData'
 
 const PRIMAER =
@@ -65,6 +66,48 @@ function issueText(issue: ParseIssue, t: Translate): string {
   }
 }
 
+/** Kennungen von Positionen ohne Kurssymbol oder ohne Namen - dafür fragt die Seite nach. */
+function offeneKennungen(holdings: readonly DepotHolding[]): string[] {
+  return [
+    ...new Set(
+      holdings
+        .filter((h) => !h.symbol || h.name === h.id)
+        .map(productId)
+        .filter((id): id is string => id !== null),
+    ),
+  ]
+}
+
+/**
+ * Gespeicherte Depots nachbessern: Positionen, für die der Import kein Symbol
+ * oder keinen Namen fand, werden einmal je Sitzung erneut nachgeschlagen.
+ *
+ * Ohne Namen erkennt die Durchschau keinen Index - eine WKN wie "ETF146"
+ * (Amundi MSCI World) zählte sonst dauerhaft als "Unbekannt", bis man neu
+ * importiert. Was der Anleger selbst eingetragen hat, bleibt unangetastet.
+ */
+function useDepotReparatur(holdings: readonly DepotHolding[]): void {
+  const store = useStore()
+  useEffect(() => {
+    const offen = notYetResolved(offeneKennungen(holdings))
+    if (offen.length === 0) return
+    void resolveSymbols(offen).then((gefunden) => {
+      if (gefunden.size === 0) return
+      const aktuell = store.getSnapshot().depot.holdings
+      withResolvedSymbols(aktuell, gefunden).forEach((neu, i) => {
+        const alt = aktuell[i]
+        if (!alt || neu === alt) return
+        const patch: Partial<Omit<DepotHolding, 'id'>> = {}
+        for (const feld of ['name', 'symbol', 'kind', 'leverage', 'lookThrough'] as const) {
+          if (neu[feld] !== alt[feld]) Object.assign(patch, { [feld]: neu[feld] })
+        }
+        // Einzeln statt `setDepot`: die Was-wäre-wenn-Anteile bleiben gültig.
+        if (Object.keys(patch).length > 0) store.dispatch(actions.updateDepotHolding(alt.id, patch))
+      })
+    })
+  }, [holdings, store])
+}
+
 interface Import {
   readonly busy: boolean
   readonly issues: readonly ParseIssue[]
@@ -101,14 +144,7 @@ function useDepotImport(): Import {
     store.dispatch(actions.setDepot(ergebnis.holdings, ergebnis.totalValue))
 
     const gespeichert = store.getSnapshot().depot.holdings
-    const offen = [
-      ...new Set(
-        gespeichert
-          .filter((h) => !h.symbol)
-          .map(productId)
-          .filter((id): id is string => id !== null),
-      ),
-    ]
+    const offen = offeneKennungen(gespeichert)
     if (offen.length === 0) {
       setMessage(t('depot.panel.applied', '{count} Positionen übernommen.', { count }))
       return true
@@ -129,7 +165,7 @@ function useDepotImport(): Import {
         t(
           'depot.import.resolved',
           '{count} Positionen übernommen, {found} von {open} Kurssymbolen gefunden. Fehlende unter „Daten & Quellen“ eintragen.',
-          { count, found: gefunden.size, open: offen.length },
+          { count, found: [...gefunden.values()].filter((g) => g.symbol).length, open: offen.length },
         ),
       )
     } finally {
@@ -323,6 +359,7 @@ function DepotUebersicht({ imp }: { readonly imp: Import }) {
   const depot = useSelector((s) => s.depot)
   const szenarien = useSelector((s) => s.scenarios.length)
   const data = useDepotData(depot.holdings)
+  useDepotReparatur(depot.holdings)
   const [importOffen, setImportOffen] = useState(false)
   const [alleRisiken, setAlleRisiken] = useState(false)
   const [leerenFragen, setLeerenFragen] = useState(false)

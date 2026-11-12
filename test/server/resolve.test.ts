@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { computeLookThrough } from '../../src/core/depot/lookthrough'
 import { productId, withResolvedSymbols } from '../../src/core/depot/parse'
 import type { DepotHolding } from '../../src/core/depot/types'
 
@@ -80,6 +81,27 @@ describe('resolveIds', () => {
     expect(search).toHaveBeenCalledTimes(1)
   })
 
+  it('nennt Name und Art aus OpenFIGI, auch wenn Yahoo keine Notierung kennt', async () => {
+    // So stand "ETF146" (Amundi Core MSCI World) bisher ohne Namen da - und damit ohne Durchschau.
+    fetchMock.mockResolvedValue(
+      figi([
+        {
+          data: [
+            { ticker: 'MWRD', exchCode: 'GY', name: 'AMUNDI MSCI WORLD UCITS ETF', securityType: 'ETP', securityType2: 'Mutual Fund' },
+          ],
+        },
+        { data: [{ ticker: 'RHM', exchCode: 'GY', name: 'RHEINMETALL AG', securityType: 'Common Stock' }] },
+      ]),
+    )
+    quote.mockResolvedValue([])
+
+    const ergebnis = await resolveIds('ETF146,703000')
+    expect(ergebnis.ok && ergebnis.daten).toEqual([
+      { id: 'ETF146', symbol: null, name: 'Amundi MSCI World UCITS ETF', currency: null, type: 'etf' },
+      { id: '703000', symbol: null, name: 'Rheinmetall AG', currency: null, type: 'stock' },
+    ])
+  })
+
   it('übersteht Ausfälle beider Dienste und lehnt Unsinn ab', async () => {
     fetchMock.mockRejectedValue(new Error('offline'))
     search.mockRejectedValue(new Error('429'))
@@ -123,5 +145,14 @@ describe('Symbole ins Depot eintragen', () => {
       ['APC.DE', 'Apple Inc.'],
       ['EIGEN.DE', 'Mein Name'],
     ])
+  })
+
+  it('nimmt einen Namen auch ohne Symbol - die Durchschau erkennt daran den Index', () => {
+    const neu = withResolvedSymbols(
+      [h({ id: 'ETF146' })],
+      new Map([['ETF146', { symbol: '', name: 'Amundi MSCI World UCITS ETF', type: 'etf' as const }]]),
+    )
+    expect(neu[0]).toMatchObject({ symbol: '', name: 'Amundi MSCI World UCITS ETF', kind: 'etf' })
+    expect(computeLookThrough(neu, new Map()).sources.ETF146).toEqual({ kind: 'index', index: 'world', sector: null })
   })
 })

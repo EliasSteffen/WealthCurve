@@ -297,7 +297,8 @@ export function productId(h: DepotHolding): string | null {
 }
 
 /**
- * Gefundene Symbole (und Namen, wo nur die Kennung stand) eintragen - vorhandene bleiben.
+ * Gefundene Symbole und Namen eintragen, wo sie fehlen - vorhandene bleiben.
+ * Ein Name ohne Symbol genügt: an ihm erkennt die Durchschau den Index.
  *
  * Kam der Name erst mit der Suche, waren Typ und Hebel beim Import geraten
  * (aus der TER oder gar nicht). Dann zählen jetzt Name und Yahoos Produktart.
@@ -312,9 +313,10 @@ export function withResolvedSymbols(
   return holdings.map((h) => {
     const kennung = productId(h)
     const treffer = kennung ? found.get(kennung) : undefined
-    if (!treffer || h.symbol) return h
-    if (h.name !== h.id || !treffer.name) return { ...h, symbol: treffer.symbol }
-    const benannt = { ...h, symbol: treffer.symbol, name: treffer.name }
+    if (!treffer) return h
+    const symbol = h.symbol || treffer.symbol
+    if (h.name !== h.id || !treffer.name) return symbol === h.symbol ? h : { ...h, symbol }
+    const benannt = { ...h, symbol, name: treffer.name }
     return { ...benannt, ...inferredPatch(benannt, treffer.type ?? null) }
   })
 }

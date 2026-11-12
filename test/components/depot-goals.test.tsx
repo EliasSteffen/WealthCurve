@@ -34,9 +34,35 @@ function zeige(holdings: DepotHolding[]) {
   )
 }
 
+beforeEach(() => localStorage.setItem('zinseszins.locale', 'de'))
+
+describe('Gespeichertes Depot nachbessern', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('schlägt Positionen ohne Namen nach und schätzt sie dann über den Index', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.startsWith('/api/resolve')) {
+        return new Response(
+          JSON.stringify({
+            results: [{ id: 'ETF146', symbol: null, name: 'Amundi MSCI World UCITS ETF', currency: null, type: 'etf' }],
+          }),
+          { headers: { 'content-type': 'application/json' } },
+        )
+      }
+      return new Response('<html></html>', { headers: { 'content-type': 'text/html' } })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    zeige([holding({ id: 'ETF146', weight: 1 })])
+
+    expect(await screen.findByText(/Amundi MSCI World UCITS ETF \(MSCI World\)/)).toBeInTheDocument()
+    expect(screen.queryByText(/Ohne Durchschau/)).toBeNull()
+    // Einmal je Sitzung - kein zweiter Abruf beim nächsten Rendern.
+    expect(fetchMock.mock.calls.filter(([u]) => String(u).startsWith('/api/resolve'))).toHaveLength(1)
+  })
+})
+
 describe('Ziele & Vorschläge', () => {
   beforeEach(() => {
-    localStorage.setItem('zinseszins.locale', 'de')
     // Statische Auslieferung: kein Server, also nur Schätzungen aus den Namen.
     vi.stubGlobal(
       'fetch',
