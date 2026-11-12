@@ -1,11 +1,12 @@
 import { Loader2, Search, Trash2, Upload } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { MarketSeries } from '../core/domain/types'
 import { parseMarketFile } from '../core/market'
 import { MAX_MARKETS, actions } from '../core/state'
 import { marketMonthOffset } from '../core/timeAxis'
 import { cn } from '../lib/cn'
 import { useT } from '../react/localeContext'
+import { useStore } from '../react/storeContext'
 import { useDispatch, useSelector } from '../react/useSelector'
 
 /** Ein paar geläufige Ticker als Startpunkt - Yahoo-Schreibweise. */
@@ -38,7 +39,9 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
   const dispatch = useDispatch()
   const t = useT()
   const markets = useSelector((s) => s.markets)
-  const enabledSeriesIds = useSelector((s) => s.enabledSeriesIds)
+  const store = useStore()
+  // Sidebar und Einstellungsdialog können dieses Panel gleichzeitig rendern.
+  const symbolId = useId()
   const startYear = useSelector((s) => s.model.startYear)
   const startMonth = useSelector((s) => s.model.startMonth)
   const [symbol, setSymbol] = useState('')
@@ -71,10 +74,15 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
 
   if (matches !== null && !matches.has('market')) return null
 
-  const voll = markets.length >= MAX_MARKETS
-
   const uebernehmen = (daten: MarketSeries) => {
-    if (voll && !markets.some((m) => m.symbol === daten.symbol)) {
+    /*
+     * Frischer Stand statt der beim Klick eingefrorenen Render-Werte: zwei fast
+     * gleichzeitig fertige Abrufe sähen sonst beide die alte Liste und die alte
+     * Serienauswahl.
+     */
+    const aktuelle = store.getSnapshot().markets
+    const voll = aktuelle.length >= MAX_MARKETS
+    if (voll && !aktuelle.some((m) => m.symbol === daten.symbol)) {
       setFehler(
         t(
           'market.full',
@@ -85,8 +93,17 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
       return
     }
     dispatch(actions.addMarket(daten))
-    // Die Serie nützt nichts, wenn sie ausgeschaltet bleibt.
-    if (!enabledSeriesIds.includes('marketReturn')) dispatch(actions.toggleSeries('marketReturn'))
+    // Die Serie nützt nichts, wenn sie ausgeschaltet bleibt. Idempotent - ein
+    // Umschalten würde sie beim zweiten Treffer wieder ausschalten.
+    dispatch(actions.setSeriesEnabled('marketReturn', true))
+  }
+
+  const zeitOeffnen = () => {
+    dispatch(actions.setSettingsView('alles'))
+    // Eine eingeklappte Karte bliebe sonst trotz Wechsel verborgen.
+    if (store.getSnapshot().collapsedCards.includes('global:zeit')) {
+      dispatch(actions.toggleSettingsCard('global:zeit'))
+    }
   }
 
   const laden = async (wert: string) => {
@@ -107,10 +124,18 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
       }
 
       const daten = (await antwort.json()) as MarketSeries & { error?: string }
-      if (!antwort.ok) throw new Error(daten.error ?? `Fehler ${antwort.status}`)
+      if (!antwort.ok) {
+        throw new Error(
+          // Die Meldung des Servers bleibt, wie sie ist - nur der Rückfall ist übersetzbar.
+          daten.error ??
+            t('market.error.status', `Fehler ${antwort.status}`, { status: antwort.status }),
+        )
+      }
       uebernehmen(daten)
     } catch (e) {
-      setFehler(e instanceof Error ? e.message : 'Abruf fehlgeschlagen')
+      setFehler(
+        e instanceof Error ? e.message : t('market.error.fetch', 'Abruf fehlgeschlagen'),
+      )
     } finally {
       setLaedt(false)
     }
@@ -139,14 +164,14 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
         <>
           <div>
             <label
-              htmlFor="market-symbol"
+              htmlFor={symbolId}
               className="mb-1.5 block text-xs font-medium text-[var(--text-secondary)]"
             >
               {t('market.label', 'Wertpapier')}
             </label>
             <div className="flex gap-1.5">
               <input
-                id="market-symbol"
+                id={symbolId}
                 value={symbol}
                 onChange={(e) => setSymbol(e.target.value)}
                 onKeyDown={(e) => {
@@ -172,11 +197,12 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
               <button
                 key={v.symbol}
                 type="button"
+                disabled={laedt}
                 onClick={() => {
                   setSymbol(v.symbol)
                   void laden(v.symbol)
                 }}
-                className="rounded-md border border-[var(--hairline)] px-2 py-1 text-[11px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--grid)]"
+                className="rounded-md border border-[var(--hairline)] px-2 py-1 text-[11px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--grid)] disabled:opacity-40"
               >
                 {v.label}
               </button>
@@ -224,8 +250,16 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
         <p className="rounded-md border border-dashed border-[var(--chart-8)] px-2 py-1.5 text-[11px] leading-snug text-[var(--text-secondary)]">
           {t(
             'market.needsStartYear',
-            'Für den Kursverlauf fehlt das Startjahr – unter „Generell" eintragen. Erst damit steht fest, ab wann gehalten worden wäre.',
+            'Für den Kursverlauf fehlt das Startjahr – unter „Zeit" eintragen. Erst damit steht fest, ab wann gehalten worden wäre.',
           )}
+          {/* Die Karte „Zeit" fehlt in der kompakten Ansicht - der Knopf holt sie. */}
+          <button
+            type="button"
+            onClick={zeitOeffnen}
+            className="mt-1.5 block rounded-md border border-[var(--hairline)] px-2 py-1 text-[11px] text-[var(--text-primary)] transition-colors hover:bg-[var(--grid)]"
+          >
+            {t('market.openTime', 'Karte „Zeit" öffnen')}
+          </button>
         </p>
       ) : null}
 
@@ -238,7 +272,11 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
             >
               <span className="min-w-0 text-[11px] leading-snug text-[var(--text-muted)]">
                 <span className="block truncate text-[var(--text-primary)]">{m.name}</span>
-                {m.symbol} · seit {m.start} · {Math.floor(m.monthlyReturns.length / 12)} Jahre
+                {m.symbol} ·{' '}
+                {t('market.history', 'seit {start} · {years} Jahre', {
+                  start: m.start,
+                  years: Math.floor(m.monthlyReturns.length / 12),
+                })}
                 {/* Monatsgenau wie die Rechnung - ein Papier ab März fehlt auch im Januar desselben Jahres. */}
                 {startYear !== null &&
                 (marketMonthOffset(m.start, startYear, startMonth) ?? 0) < 0 ? (

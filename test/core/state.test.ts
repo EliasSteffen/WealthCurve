@@ -66,6 +66,12 @@ describe('Szenarien', () => {
     expect(reducer(state, actions.removeScenario(state.scenarios[0].id))).toBe(state)
   })
 
+  it('übernimmt beim Duplizieren den von der Oberfläche übersetzten Namen', () => {
+    const state = withScenarios(2)
+    const next = reducer(state, actions.duplicateScenario(state.scenarios[0].id, 'Mein Name (copy)'))
+    expect(next.scenarios[1].label).toBe('Mein Name (copy)')
+  })
+
   it('dupliziert mit eigenen Parametern direkt hinter dem Original', () => {
     const state = withScenarios(2)
     const source = state.scenarios[0]

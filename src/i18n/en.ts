@@ -228,7 +228,7 @@ export const en: Catalog = {
   'market.unavailable': 'The price endpoint is not responding.',
   'market.import': 'Load a price file (CSV or JSON)',
   'market.needsStartYear':
-    'The price curve needs a start year – set it under “General”. Only then is it clear from when the position would have been held.',
+    'The price curve needs a start year – set it under “Time”. Only then is it clear from when the position would have been held.',
   'market.startsLater': 'Only traded from {jahr} – no curve before that year.',
   'market.noServer':
     'This deployment has no price endpoint. Everything else works; prices come from a file – or start the app with `npm run serve`.',
@@ -251,7 +251,18 @@ export const en: Catalog = {
   'video.mp4': 'Recording as MP4 – ready for Instagram and TikTok.',
   'video.webm': 'This browser only records WebM. You can convert it to MP4 right here after recording.',
   'video.unsupported': 'This browser cannot record video.',
+  'video.cancel': 'Cancel',
+  'video.error.hidden':
+    'Recording was cancelled because the tab went to the background. Keep the tab in the foreground while recording and start again.',
+  'video.error.convert': 'Conversion failed: {message}',
+  'video.error.convert.plain': 'Conversion failed',
   'video.realtime': 'Recording runs in real time, so it takes as long as the video.',
+
+  // Video-Bild
+  'video.frame.year': 'Year {year}',
+  'video.frame.more': '+ {count} more',
+  'facts.lastsThrough': 'lasts throughout',
+  'facts.untilYear': 'until year {year}',
 
   // Theme
   'theme.label': 'Colour scheme',
@@ -259,4 +270,78 @@ export const en: Catalog = {
   'theme.dark': 'Dark',
   'theme.system': 'System',
   'locale.label': 'Language',
+
+  // UI-Korrekturen
+  'market.openTime': 'Open the “Time” card',
+  'scenario.fallbackName': 'Scenario {n}',
+  'stat.lasts.untilAge': 'until age {year}',
+  'stat.lasts.untilCalendar': 'until {year}',
+  'stat.hiddenActive':
+    '“{name}” is hidden – the sliders edit it, but the figures show another scenario.',
+  'stat.showActive': 'Show it',
+
+  // Speichern, Teilen, Export
+  'share.label': 'Share',
+  'share.hint': 'Copies a link with scenarios and settings. Market data is not included.',
+  'share.copy': 'Copy share link',
+  'share.copied': 'Link copied',
+  'share.manual': 'Copying is not possible – please copy the link by hand:',
+  'app.reset.confirm': 'Really reset?',
+  'app.reset.yes': 'Yes, reset',
+  'app.reset.cancel': 'Cancel',
+  'table.download': 'Download CSV',
+
+  // Mobiles Einstellungs-Sheet, Tooltip, Szenario-Namen
+  'settings.sheet.open': 'Open settings',
+  'chart.tooltip.year': 'Year {year}',
+  'scenario.name': 'Name of {name}',
+  'scenario.copyName': '{name} (copy)',
+  'scenario.color.seriesEncoding':
+    'While only one scenario is visible, the chart colours by series – the colour is shown here and in the settings header.',
+
+  // Wertpapier: Hinweise und Fehler
+  'market.full':
+    'More than {max} securities can no longer be told apart. Remove one first.',
+  'market.remove': 'Remove {symbol}',
+  'market.error.status': 'Error {status}',
+  'market.error.fetch': 'Request failed',
+
+  // Hinweise zur gewählten Option (stehen sichtbar unter dem Schalter)
+  'settings.view.kompakt.hint': 'Only the settings you change often.',
+  'settings.view.alles.hint': 'Also time, securities and calculation assumptions.',
+  'model.compounding.monthly-effective.hint':
+    'Twelve monthly steps add up to exactly the annual rate (ETF convention).',
+  'model.compounding.monthly-nominal.hint':
+    'Rate/12 – bank convention. Yields more than the annual rate you entered.',
+  'model.compounding.annual.hint': 'Interest is paid once a year; contributions pile up without interest.',
+  'model.timing.end.hint': 'Contribution at the end of the month.',
+  'model.timing.start.hint': 'Contribution at the start of the month.',
+  'model.timeAxis.relative.hint': 'Counts the duration, independent of age and calendar.',
+  'model.timeAxis.age.hint': 'Labelled with your age – “at 65” instead of “year 35”.',
+  'model.timeAxis.calendar.hint': 'Labelled with calendar years. Needed for real price histories.',
+  'model.amounts.nominal.hint': 'Saving and withdrawal amounts stay the same over the years.',
+  'model.amounts.real.hint':
+    'The amount you enter counts as today’s purchasing power; nominally it rises with inflation every year so that its real value stays constant.',
+
+  // Suche: Beschriftungen und Stichwörter der Einträge ohne eigene Registry
+  'settings.index.scenarios.label': 'Scenarios',
+  'settings.index.scenarios.keywords': 'scenario comparison variant duplicate colour color',
+  'settings.index.market.label': 'Security',
+  'settings.index.market.keywords': 'stock share etf price yahoo symbol ticker index history',
+  'settings.index.style.label': 'Appearance',
+  'settings.index.style.keywords': 'style look design sketched minimal',
+  'settings.index.model.compounding.label': 'Compounding',
+  'settings.index.model.compounding.keywords':
+    'interest effective nominal annual yearly convention',
+  'settings.index.model.timing.label': 'Contribution timing',
+  'settings.index.model.timing.keywords': 'in advance in arrears start end of month timing',
+  'settings.index.model.timeAxis.label': 'Time axis, age, start year and month',
+  'settings.index.model.timeAxis.keywords':
+    'age start year start month month calendar axis time retirement birth year',
+  'settings.index.model.amountsInflationAdjusted.label': 'Inflation-adjusted amounts',
+  'settings.index.model.amountsInflationAdjusted.keywords':
+    'inflation purchasing power real nominal amount',
+  'settings.index.model.withdrawalRule.label': 'Withdrawal rule',
+  'settings.index.model.withdrawalRule.keywords':
+    'withdrawal rule percentage rule fixed amount 4 percent pension',
 }

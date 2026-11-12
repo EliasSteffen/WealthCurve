@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 
 /**
  * Reagiert auf eine Media Query.
@@ -7,14 +7,20 @@ import { useSyncExternalStore } from 'react'
  * Zwischenrender mit falschem Wert direkt nach dem Mounten.
  */
 export function useMediaQuery(query: string): boolean {
-  const subscribe = (onChange: () => void) => {
-    const list = window.matchMedia(query)
-    list.addEventListener('change', onChange)
-    return () => list.removeEventListener('change', onChange)
-  }
+  // Stabil je Abfrage: eine neue Funktion pro Render ließe React bei jedem
+  // Rendern ab- und wieder anmelden.
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const list = window.matchMedia(query)
+      list.addEventListener('change', onChange)
+      return () => list.removeEventListener('change', onChange)
+    },
+    [query],
+  )
+  const getSnapshot = useCallback(() => window.matchMedia(query).matches, [query])
   return useSyncExternalStore(
     subscribe,
-    () => window.matchMedia(query).matches,
+    getSnapshot,
     () => false, // Serverseitig gibt es keine Viewport-Breite.
   )
 }

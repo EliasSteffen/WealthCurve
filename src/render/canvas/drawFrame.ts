@@ -1,7 +1,9 @@
 import type { FrameState, VideoFormat } from '../../core/animation'
 import type { ChartStyle } from '../../core/chart-style'
-import type { Projection } from '../../core/projection'
+import type { Projection, ProjectionLine } from '../../core/projection'
 import { formatEur, formatEurCompact } from '../../lib/format'
+import type { Translate } from '../../i18n'
+import { deutsch } from '../translate'
 import { wobble } from '../wobble'
 
 /**
@@ -55,6 +57,17 @@ export interface DrawInput {
    * einen Übergang, den es nicht gibt.
    */
   readonly hasWithdrawalPhase?: boolean
+  /**
+   * Übersetzung für die festen Texte im Bild ("Jahr N", "+ N weitere").
+   * Ohne sie bleibt es beim deutschen Original.
+   */
+  readonly t?: Translate
+  /**
+   * Beschriftung einer Linie in der Legende. Der Kern liefert nur deutsche
+   * Labels; die Oberfläche setzt sie in der gewählten Sprache neu zusammen.
+   * Ohne sie gilt `line.label`.
+   */
+  readonly lineLabel?: (line: ProjectionLine) => string
 }
 
 // Der Punkt gehört dazu: `{{s2.rendite}}` nennt das zweite Szenario. Ohne ihn
@@ -164,6 +177,7 @@ function maxValue(projection: Projection): number {
 export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void {
   const { frame, projection, style, format, theme, colors } = input
   const { width, height } = format
+  const t = input.t ?? deutsch
 
   ctx.save()
   ctx.fillStyle = theme.surface
@@ -178,7 +192,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
     const text = resolveText(frame.scene.text, input.facts)
     ctx.textAlign = 'center'
     ctx.fillStyle = theme.text
-    const groesse = Math.round(width * 0.082)
+    const groesse = Math.round(Math.min(width, height) * 0.082)
     ctx.font = font(style, groesse, '600')
     const nutzbar = width - pad * 2
     const zeilen = wrapLines(ctx, text, nutzbar).length
@@ -248,7 +262,8 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
     )
     const label = Math.round(bezug * (einzeilig ? 0.032 : 0.026) * skala)
     const zeile = Math.round(label * 1.25 + wert * 1.2)
-    const weitereHoehe = weitere > 0 ? Math.round(label * 1.6) : 0
+    const weitereGroesse = Math.round(bezug * 0.024)
+    const weitereHoehe = weitere > 0 ? Math.round(Math.max(label, weitereGroesse) * 1.6) : 0
     const unter = Math.round(bezug * 0.03 * skala)
     // Umbrechen braucht die gesetzte Schrift, sonst misst measureText die falsche.
     ctx.font = font(style, unter)
@@ -262,6 +277,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
       label,
       zeile,
       weitereHoehe,
+      weitereGroesse,
       unter,
       unterZeilenH: Math.round(unter * 1.3),
       zeilen,
@@ -335,8 +351,10 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
   }
   if (weitere > 0) {
     ctx.fillStyle = theme.textMuted
-    ctx.font = font(style, Math.round(width * 0.024))
-    ctx.fillText(`+ ${weitere} weitere`, pad, kopfY + labelGroesse)
+    // Grundlinie aus der eigenen Schriftgröße: mit der des Labels darüber
+    // ragte die Zeile bei größerer Schrift in den Wert der Zeile davor.
+    ctx.font = font(style, kopf.weitereGroesse)
+    ctx.fillText(t('video.frame.more', '+ {count} weitere', { count: weitere }), pad, kopfY + kopf.weitereGroesse)
     kopfY += weitereH
   }
 
@@ -467,12 +485,24 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
 
   /* --------------------------------------------------------------- Pointe */
   if (frame.scene.kind === 'punchline' && untertitel) {
-    const groesse = Math.round(width * 0.058)
-    ctx.font = font(style, groesse, '600')
     const nutzbar = width - pad * 2
-    const zeilen = wrapLines(ctx, untertitel, nutzbar).length
-    const blockH = zeilen * groesse * 1.25 + groesse
-    const blockY = plot.bottom - blockH - groesse * 0.5
+    const masse = (g: number) => {
+      ctx.font = font(style, g, '600')
+      const n = wrapLines(ctx, untertitel, nutzbar).length
+      return { zeilen: n, hoehe: n * g * 1.25 + g }
+    }
+    // Die kürzere Kante gibt das Maß (wie Kopf und Fuß). Passt der Block nicht
+    // zwischen Kopf und Achse, wird die Schrift kleiner statt in die Kopfzeilen
+    // zu laufen - zu lang wäre im fertigen Video nicht mehr zu retten.
+    let groesse = Math.round(bezug * 0.058)
+    let block = masse(groesse)
+    const platzOben = plot.bottom - headerH
+    while (groesse > bezug * 0.03 && block.hoehe + groesse * 0.5 > platzOben) {
+      groesse = Math.floor(groesse * 0.92)
+      block = masse(groesse)
+    }
+    const blockH = block.hoehe
+    const blockY = Math.max(headerH, plot.bottom - blockH - groesse * 0.5)
 
     // Leicht abgedunkelter Grund, damit der Text auch über der Kurve trägt.
     ctx.globalAlpha = 0.88
@@ -500,7 +530,9 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
   if (input.showYear !== false) {
     const jahrText = projection.yearLabels[frame.year]
     ctx.fillText(
-      jahrText !== undefined && jahrText !== String(frame.year) ? jahrText : `Jahr ${frame.year}`,
+      jahrText !== undefined && jahrText !== String(frame.year)
+        ? jahrText
+        : t('video.frame.year', 'Jahr {year}', { year: frame.year }),
       pad,
       plot.bottom + Math.round(footerH * 0.34),
     )
@@ -529,13 +561,30 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
    * farbig im Kopf; hier unten fehlt nur noch, welche Kurve welche Serie ist.
    */
   const vergleich = new Set(projection.lines.map((l) => l.scenarioId)).size > 1
-  const legende = vergleich
-    ? [...new Map(projection.lines.map((l) => [l.seriesId, l])).values()]
+  /*
+   * Je Serie UND Variante die erste Linie - nicht die letzte.
+   *
+   * `new Map(...)` behält beim doppelten Schlüssel die letzte, also die Farbe
+   * des zuletzt gebauten Szenarios: "Zinseszins" stand orange da, obwohl die
+   * erste Kurve blau war. Nur nach `seriesId` zu schlüsseln verschmolz zudem
+   * die Wertpapiere einer Kursserie zu einem Eintrag.
+   */
+  const legende: readonly ProjectionLine[] = vergleich
+    ? [
+        ...new Map(
+          [...projection.lines]
+            .reverse()
+            .map((l) => [l.key.slice(l.scenarioId.length + 1), l] as const),
+        ).values(),
+      ].reverse()
     : projection.lines
+  // Färbt die Farbe das Szenario, sagt sie über die Serie nichts - das Muster
+  // (Strichart) schon. Der Schlüssel zeigt dann in Textfarbe.
+  const faerbtSzenario = projection.encodingId === 'colorByScenario'
 
   let ly = legendStart
   for (const line of legende.slice(0, Math.min(4, passt))) {
-    ctx.strokeStyle = colors[line.key] ?? theme.text
+    ctx.strokeStyle = faerbtSzenario ? theme.text : (colors[line.key] ?? theme.text)
     ctx.lineWidth = Math.max(2, style.line.width * (width / 700))
     ctx.setLineDash(line.dash ? line.dash.split(/[\s,]+/).map(Number) : [])
     ctx.beginPath()
@@ -545,11 +594,14 @@ export function drawFrame(ctx: CanvasRenderingContext2D, input: DrawInput): void
     ctx.setLineDash([])
 
     // Das " · Szenario" am Ende weglassen - es benennt hier nur eines von
-    // mehreren und führte damit in die Irre.
+    // mehreren und führte damit in die Irre. Abgeschnitten wird am letzten
+    // Trenner statt am Szenarionamen: eine übersetzte Beschriftung kann für
+    // ein leeres Szenario einen Ersatznamen tragen ("Szenario 2"), der in
+    // `scenarioLabel` gar nicht vorkommt.
+    const roh = input.lineLabel ? input.lineLabel(line) : line.label
+    const trenner = roh.lastIndexOf(' · ')
     const beschriftung =
-      vergleich && line.scenarioLabel
-        ? line.label.replace(` · ${line.scenarioLabel}`, '')
-        : line.label
+      vergleich && line.scenarioLabel !== null && trenner !== -1 ? roh.slice(0, trenner) : roh
 
     ctx.fillStyle = theme.text
     ctx.fillText(kuerzen(ctx, beschriftung, textBreite), textLinks, ly)

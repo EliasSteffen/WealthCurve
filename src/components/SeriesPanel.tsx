@@ -1,6 +1,7 @@
 import type { CapacityReport } from '../core/encoding'
 import { SERIES } from '../core/domain/series'
 import { useT } from '../react/localeContext'
+import { capacityText } from '../react/projectionText'
 import { Checkbox } from './ui/Checkbox'
 
 interface SeriesPanelProps {
@@ -15,7 +16,7 @@ export function SeriesPanel({ enabledSeriesIds, onToggle, capacity, matches = nu
   const sichtbar = SERIES.filter((s) => matches === null || matches.has(`series:${s.id}`))
   if (sichtbar.length === 0) return null
 
-
+  const warnung = capacityText(t, capacity)
   return (
     <div>
       <div className="space-y-3.5">
@@ -30,8 +31,8 @@ export function SeriesPanel({ enabledSeriesIds, onToggle, capacity, matches = nu
           />
         ))}
       </div>
-      {capacity.message ? (
-        <p className="mt-4 text-[11px] leading-snug text-[var(--text-muted)]">{capacity.message}</p>
+      {warnung ? (
+        <p className="mt-4 text-[11px] leading-snug text-[var(--text-muted)]">{warnung}</p>
       ) : null}
     </div>
   )

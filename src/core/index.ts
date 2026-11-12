@@ -29,6 +29,7 @@ export { projectionToCsv } from './csv.ts'
 
 // Domäne
 export { DEFAULT_MODEL, MONTHS_PER_YEAR, buildPhases, simulate, toMonthlyRate } from './domain/math.ts'
+export { TIME_AXIS_MODES, sanitizeModel } from './domain/model.ts'
 export type {
   Compounding,
   ContributionTiming,

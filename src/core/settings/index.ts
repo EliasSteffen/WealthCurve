@@ -200,16 +200,23 @@ function normalisieren(text: string): string {
  *
  * Bewusst einfache Teilstring-Suche über Label und Schlagworte - bei rund
  * zwanzig Einstellungen wäre eine unscharfe Suche mehr Aufwand als Nutzen.
+ *
+ * `extraText` liefert zusätzlichen Suchtext je Eintrag - die Oberfläche reicht
+ * damit die Beschriftungen der aktiven Sprache nach, ohne dass der Kern eine
+ * Sprache kennt. Die deutschen Treffer bleiben immer erhalten.
  */
 export function matchSettings(
   index: readonly SettingsEntry[],
   query: string,
+  extraText?: (entry: SettingsEntry) => readonly string[],
 ): ReadonlySet<string> | null {
   const q = normalisieren(query.trim())
   if (q.length === 0) return null
   const treffer = new Set<string>()
   for (const entry of index) {
-    const heuhaufen = normalisieren([entry.label, ...entry.keywords].join(' '))
+    const heuhaufen = normalisieren(
+      [entry.label, ...entry.keywords, ...(extraText?.(entry) ?? [])].join(' '),
+    )
     if (heuhaufen.includes(q)) treffer.add(entry.id)
   }
   return treffer

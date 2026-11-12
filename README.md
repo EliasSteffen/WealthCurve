@@ -79,7 +79,7 @@ prüft das und lädt beide Einstiege in einem eigenen Node-Prozess.
 
 Node entfernt Typen allerdings nicht innerhalb von `node_modules`. Ein
 `npm install github:…` scheitert deshalb beim Start; eingebunden wird das Projekt
-als Verweis auf eine Arbeitskopie (`"wealthcurve": "file:../finance-visualization"`,
+als Verweis auf eine Arbeitskopie (`"wealthcurve": "file:../WealthCurve"`,
 Workspace oder Git-Submodul). npm legt dann einen Symlink an, Node folgt ihm aus
 `node_modules` heraus, und alles läuft.
 
@@ -91,14 +91,14 @@ Tooltip, Tabelle und KPI-Zeile ziehen automatisch nach.
 ### 1. Serien-Datei anlegen
 
 ```ts
-// src/domain/series/realEstate.ts
-import { defineSeries } from '../types'
+// src/core/domain/series/realEstate.ts
+import { defineSeries } from '../types.ts'
 
 export const realEstateSeries = defineSeries({
   id: 'realEstate',
   label: 'Immobilie',
   description: 'Wertentwicklung bei eigener Rate.',
-  colorVar: 'var(--chart-5, #e87ba4)',   // nächster freier Slot aus index.css
+  colorVar: 'var(--chart-6, #008300)',   // freier Slot, Fallback wie in src/index.css
   unit: 'currency',
   defaultEnabled: false,
   requiredParams: ['years', 'initialCapital', 'appreciationRate'],
@@ -109,19 +109,20 @@ export const realEstateSeries = defineSeries({
 ### 2. Falls nötig: Parameter ergänzen
 
 ```ts
-// src/domain/parameters.ts
+// src/core/domain/parameters.ts
 appreciationRate: {
   label: 'Wertsteigerung p. a.',
   unit: 'percent',
   min: 0, max: 10, step: 0.1, defaultValue: 3,
   group: 'annahmen',
+  category: 'annahmen',   // Pflicht: welche Einstellungs-Karte den Regler zeigt
 },
 ```
 
 ### 3. Im Registry eintragen
 
 ```ts
-// src/domain/series/index.ts
+// src/core/domain/series/index.ts
 export const SERIES: readonly SeriesDefinition[] = [
   compoundSeries,
   contributionsSeries,
@@ -137,7 +138,7 @@ alle `requiredParams` existieren und `compute()` genauso viele Werte liefert wie
 ## Wie eine Serie rechnet
 
 Serien bekommen **eine fertige Simulation** (`base`) und projizieren daraus — sie simulieren nicht
-selbst. Dadurch lebt die Zinslogik an genau einer Stelle (`domain/math.ts`), und weil keine Serie
+selbst. Dadurch lebt die Zinslogik an genau einer Stelle (`core/domain/math.ts`), und weil keine Serie
 eine andere sieht, sind Abhängigkeiten zwischen Serien strukturell unmöglich.
 
 ```ts
@@ -146,7 +147,7 @@ compute: ({ base }) => base.years.map((y) => y.balance)
 
 // Eigene Dynamik - der Notausgang, siehe savingsAccount.ts
 compute: ({ params, model }) =>
-  simulateMonthly({ annualRatePercent: params.savingsRate, /* … */, model }).years.map((y) => y.balance)
+  simulate({ annualRatePercent: params.savingsRate, /* … */, model }).years.map((y) => y.balance)
 ```
 
 `base.years[i]` liefert pro Jahr `balance`, `contributions` und `interest`.
@@ -161,6 +162,10 @@ Fehlt ein Schlüssel, bleibt der deutsche Text stehen statt eines rohen
 Schlüssels. Das ist Absicht: eine neue Serie funktioniert dadurch sofort in
 beiden Sprachen, sie ist nur noch nicht übersetzt. Ein Test prüft, dass alle
 Serien, Parameter, Regeln und Stile im Katalog vorkommen.
+
+`test/i18n/keys-coverage.test.ts` liest den Quelltext und verlangt für jedes `t('…')` einen englischen
+Eintrag. Ausnahmen stehen einzeln begründet in `NUR_DEUTSCH`. Die Einstellungssuche findet in beiden
+Sprachen (`test/components/i18n-gaps.test.tsx`).
 
 Zahlen und Währung folgen der Sprache. Die Formatter halten die Sprache
 modulweit statt im React-Kontext, damit sie auch aus dem Canvas-Renderer und dem
@@ -202,6 +207,12 @@ Damit hängt das Projekt an keiner Plattform. Der Edge-Cache (`s-maxage=86400`)
 ist die eigentliche Antwort auf die Drosselung — ein Proxy allein würde sie nur
 weiterreichen.
 
+Dazu kommt ein Cache im Prozess (`server/quotes.ts`): Erfolge bleiben 24 Stunden im Speicher, höchstens
+200 Symbole. Parallele Anfragen zum selben Symbol teilen sich einen Abruf. Fehler werden nicht gemerkt,
+damit sich eine Drosselung erholen kann. So fragen `npm run dev`, `npm run serve` und der MCP-Server
+Yahoo nicht bei jeder Anfrage erneut an. Auf Vercel wirkt zusätzlich der Edge-Cache; der Speicher
+gilt pro Instanz.
+
 ### Ohne Serverfunktion
 
 Wird die Seite rein statisch ausgeliefert, **funktioniert alles außer dem
@@ -233,8 +244,9 @@ Achse zählt danach ganze Jahre ab diesem Monat.
 | Vercel | `vercel.json` + `api/quotes.ts` | ja |
 | Eigener Server | `npm run serve` | ja |
 
-Der Ablauf prüft (`typecheck`, `lint`, `test`) und veröffentlicht den
-Standardzweig. Einmalig nötig: unter Settings → Pages als Quelle
+`pages.yml` prüft (`typecheck`, `lint`, `test`) und veröffentlicht danach `main`.
+`ci.yml` führt dieselben Prüfungen auf jedem Branch und jedem Pull Request aus, damit
+Fehler vor dem Merge auffallen. Einmalig nötig: unter Settings → Pages als Quelle
 **GitHub Actions** wählen.
 
 Ein Punkt, der leicht übersehen wird: die Seite liegt unter `/<repo>/` und
@@ -266,6 +278,16 @@ Entnahmen werden auf den Bestand gedeckelt – das Depot läuft nie ins Minus. D
 erste Jahr, in dem eine Entnahme nicht mehr voll bedient werden kann, steht als
 `depletedAtYear` in der Zusammenfassung. Beispiel: 584.726 € Rentenkapital,
 5.000 €/Monat, 7 % Rendite → aufgebraucht in Jahr 46.
+
+**Beträge in heutiger Kaufkraft:** Ist die Option aktiv, zahlt die Prozentregel im ersten
+Entnahmejahr genau Satz × nominales Kapital bei Rentenbeginn und wächst danach mit der Inflation.
+Ohne die Zurückrechnung zählte die Inflation der Ansparjahre doppelt – die 4-%-Regel entnähme dann
+rund 7 %. Die Begründung steht am `simulate` in `src/core/domain/math.ts`.
+
+**Jahrestabelle als CSV:** Der Knopf in der Jahrestabelle lädt alle Jahreszeilen mit den aktiven
+Linien herunter. Semikolon als Trenner und Komma als Dezimalzeichen – so öffnet Excel in deutscher
+Einstellung die Datei ohne Nachfrage. Vorangestellt ist eine UTF-8-BOM, sonst zerlegt Excel „€“ und
+Umlaute (`src/core/csv.ts`, `src/lib/download.ts`).
 
 ## MCP-Server
 
@@ -317,6 +339,24 @@ Gezeigt werden nur Regler, die gerade etwas bewirken: Parameter, die keine
 aktive Serie und keine gewählte Entnahmeregel liest, verschwinden samt ihrer
 Kategorie.
 
+### Speichern, Teilen, Zurücksetzen
+
+Der Zustand liegt im `localStorage` unter `wealthcurve.state.v1` (`src/lib/persistence.ts`).
+Geschrieben wird entprellt, beim Verlassen der Seite sofort. Schlägt der Zugriff fehl – privates
+Fenster, gesperrte Website-Daten, volle Quota –, läuft die App ohne Speicher weiter.
+
+Beim Einlesen wird nichts ungeprüft übernommen. Alles läuft durch `deserialize`, das Modell durch
+`sanitizeModel`, die Szenarien durch eine eigene Bereinigung (eindeutige IDs, freie Farb-Slots).
+Fremde oder kaputte Daten werden geklemmt oder verworfen, nie in die Rechnung durchgereicht.
+
+„Link teilen“ (Einstellungen → Allgemein) kopiert einen Link mit `#s=` und allen Szenarien und
+Einstellungen, ohne Oberflächenzustand. Kursdaten fehlen im Link und müssen nach dem Öffnen neu
+geladen werden – sie würden die URL sprengen. Wer den Link öffnet, bekommt diesen Stand; er hat
+Vorrang vor dem gespeicherten. Danach wird der Hash entfernt, damit ein Neuladen spätere
+Änderungen nicht überschreibt.
+
+„Zurücksetzen“ steht daneben und fragt erst nach. Ein versehentlicher Klick löscht sonst alles.
+
 ## Darstellungsstile
 
 Wie das Diagramm aussieht, bestimmt ein Stil aus `src/core/chart-style/` — Standard, Gezeichnet,
@@ -362,6 +402,8 @@ Zwei Eigenheiten, die bewusst so sind:
   heraus, wandelt ein Knopf die Datei per ffmpeg.wasm in MP4 um. Die rund 30 MB dafür werden **erst
   bei diesem Klick** geladen (dynamischer Import plus Core von der CDN) — wer direkt MP4 aufnimmt,
   lädt nichts davon.
+- Während der Aufnahme lässt sich abbrechen. Der Tab muss dafür im Vordergrund bleiben: wechselt er
+  in den Hintergrund, bricht die Aufnahme ab (`src/lib/recordCanvas.ts`).
 
 ## Szenarien und Farben
 
@@ -403,10 +445,15 @@ src/core/          reine Logik - kein React, kein DOM, kein Recharts
   domain/
     math.ts        simulate() über Phasen, toMonthlyRate()
     parameters.ts  PARAMETERS + TIMELINE_FIELDS -> ParamId, sanitizeParam
+    model.ts       ModelSettings, sanitizeModel - Modell beim Einlesen bereinigen
     series/        eine Datei pro Serie + index.ts als Registry
     withdrawal/    eine Datei pro Entnahmeregel + Registry
   encoding/        Farb-/Strichzuordnung als austauschbare Strategie
   projection.ts    buildProjection() - die zentrale Rechnung
+  csv.ts           Jahrestabelle als CSV (Semikolon, Dezimalkomma)
+  market.ts        Kursreihen aus Preisen - derselbe Weg für Abruf und Datei
+  timeAxis.ts      Beschriftung der Zeitachse (Jahre, Kalender, Alter)
+  settings/        Suchindex, aus den Registries abgeleitet
   state.ts         AppState, Aktionen, Reducer, Serialisierung
   store.ts         beobachtbarer Store (~40 Zeilen, ohne Bibliothek)
   derive.ts        memoisierte Selektoren
@@ -415,7 +462,9 @@ src/core/          reine Logik - kein React, kein DOM, kein Recharts
   chart-style/     Darstellungsstile als reine Daten
 src/render/        Pixel: Canvas-Renderer und die Skizzen-Curve
 src/react/         Bindung an den Store über useSyncExternalStore
-src/lib/           Intl-Formatter (de-DE), deutscher Zahlenparser
+src/lib/           Formatter und Zahlenparser je Sprache, Persistenz und Teilen-Link,
+                  Aufnahme und MP4-Transcoding, CSV-Download, Pfeiltasten- und
+                  Backdrop-Helfer, Tonspur, Klassennamen (cn)
 src/components/    UI; nur chart/ kennt Recharts
   layout/          ein SettingsPanel, drei Container (Sidebar / Sheet)
   video/           Export-Dialog mit Vorschau

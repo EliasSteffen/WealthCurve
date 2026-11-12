@@ -1,5 +1,7 @@
-import { DEFAULT_CHART_STYLE_ID } from './chart-style/index.ts'
+import { CHART_STYLES, DEFAULT_CHART_STYLE_ID } from './chart-style/index.ts'
+import { AUTO_ENCODING, ENCODINGS } from './encoding/index.ts'
 import { DEFAULT_MODEL } from './domain/math.ts'
+import { TIME_AXIS_MODES, sanitizeModel } from './domain/model.ts'
 import {
   DEFAULT_PARAMS,
   sanitizeParam,
@@ -9,8 +11,8 @@ import {
   type TimelineFieldId,
 } from './domain/parameters.ts'
 import { DEFAULT_ENABLED_SERIES, SERIES } from './domain/series/index.ts'
-import type { MarketSeries, ModelSettings, TimeAxisMode } from './domain/types.ts'
-import { sanitizeStartAge, sanitizeStartMonth, sanitizeStartYear } from './timeAxis.ts'
+import type { MarketSeries, ModelSettings } from './domain/types.ts'
+import { MIN_MONATE } from './market.ts'
 import { SLOT_COUNT, allocateSlot, type ColorSlot } from './palette.ts'
 import {
   SETTINGS_CARD_IDS,
@@ -123,14 +125,14 @@ export const MAX_SCENARIOS = SLOT_COUNT
  */
 export const MAX_MARKETS = 4
 
-/** Die erlaubten Beschriftungen der Zeitachse - fuer die Pruefung beim Einlesen. */
-export const TIME_AXIS_MODES: readonly TimeAxisMode[] = ['relative', 'age', 'calendar']
+/** Bleibt von hier aus erreichbar; die Definition liegt beim Modell-Bereiniger. */
+export { TIME_AXIS_MODES }
 
 /* ------------------------------------------------------------------ Actions */
 
 export type Action =
   | { type: 'scenario/add'; label?: string; params?: Partial<SimulationParams> }
-  | { type: 'scenario/duplicate'; id: string }
+  | { type: 'scenario/duplicate'; id: string; label?: string }
   | { type: 'scenario/remove'; id: string }
   | { type: 'scenario/rename'; id: string; label: string }
   | { type: 'scenario/setVisible'; id: string; visible: boolean }
@@ -138,6 +140,7 @@ export type Action =
   | { type: 'scenario/select'; id: string }
   | { type: 'scenario/setParam'; id: string; paramId: ParamId; value: number }
   | { type: 'series/toggle'; id: string }
+  | { type: 'series/setEnabled'; id: string; enabled: boolean }
   | { type: 'model/set'; model: ModelSettings }
   | { type: 'model/setTimeline'; field: TimelineFieldId; value: number }
   | { type: 'encoding/set'; encoding: EncodingPreference }
@@ -156,7 +159,12 @@ export const actions = {
     label,
     params,
   }),
-  duplicateScenario: (id: string): Action => ({ type: 'scenario/duplicate', id }),
+  // `label` kommt aus der Oberfläche (übersetzt); ohne ihn bleibt es beim deutschen Standard.
+  duplicateScenario: (id: string, label?: string): Action => ({
+    type: 'scenario/duplicate',
+    id,
+    label,
+  }),
   removeScenario: (id: string): Action => ({ type: 'scenario/remove', id }),
   renameScenario: (id: string, label: string): Action => ({ type: 'scenario/rename', id, label }),
   setScenarioVisible: (id: string, visible: boolean): Action => ({
@@ -177,6 +185,11 @@ export const actions = {
     value,
   }),
   toggleSeries: (id: string): Action => ({ type: 'series/toggle', id }),
+  setSeriesEnabled: (id: string, enabled: boolean): Action => ({
+    type: 'series/setEnabled',
+    id,
+    enabled,
+  }),
   setModel: (model: ModelSettings): Action => ({ type: 'model/set', model }),
   setTimeline: (field: TimelineFieldId, value: number): Action => ({
     type: 'model/setTimeline',
@@ -240,7 +253,7 @@ export function reducer(state: AppState, action: Action): AppState {
       const slot = allocateSlot(state.scenarios.map((s) => s.colorSlot))
       if (slot === null) return state
       const copy = createScenario({
-        label: `${source.label} (Kopie)`,
+        label: action.label ?? `${source.label} (Kopie)`,
         params: source.params,
         visible: source.visible,
         colorSlot: slot,
@@ -312,18 +325,23 @@ export function reducer(state: AppState, action: Action): AppState {
       }
     }
 
-    case 'model/set':
+    case 'series/setEnabled': {
+      // Anders als 'toggle' idempotent: zwei fast gleichzeitig fertige
+      // Ladevorgaenge duerfen sich nicht gegenseitig wieder ausschalten.
+      if (!SERIES.some((s) => s.id === action.id)) return state
+      if (state.enabledSeriesIds.includes(action.id) === action.enabled) return state
       return {
         ...state,
-        model: {
-          ...action.model,
-          // Ein geleertes Zahlenfeld liefert NaN. Hier wird daraus null, also
-          // "kein Anker" - genau das, was das Leeren bedeuten soll.
-          startAge: sanitizeStartAge(action.model.startAge),
-          startYear: sanitizeStartYear(action.model.startYear),
-          startMonth: sanitizeStartMonth(action.model.startMonth),
-        },
+        enabledSeriesIds: action.enabled
+          ? [...state.enabledSeriesIds, action.id]
+          : state.enabledSeriesIds.filter((id) => id !== action.id),
       }
+    }
+
+    case 'model/set':
+      // Dieselbe Bereinigung wie beim Einlesen. Ein geleertes Zahlenfeld liefert
+      // NaN, daraus wird "kein Anker" - und Unsinn erreicht das Modell nie.
+      return { ...state, model: sanitizeModel(action.model) }
 
     case 'model/setTimeline':
       return {
@@ -395,45 +413,110 @@ export function serialize(state: AppState): string {
   return JSON.stringify(state)
 }
 
-export function deserialize(raw: string): AppState | null {
-  try {
-    const parsed = JSON.parse(raw) as Partial<AppState>
-    if (!Array.isArray(parsed.scenarios) || parsed.scenarios.length === 0) return null
-    const base = createInitialState()
-    // Jeden Wert durch dieselbe Bereinigung schicken wie eine Eingabe - fremdes
-    // JSON darf keine NaN in die Simulation tragen.
-    const scenarios = parsed.scenarios.map((s, index) => ({
-      id: typeof s.id === 'string' ? s.id : createId(),
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+/** Szenarien einlesen: begrenzt, mit eindeutigen IDs und eindeutigen Farb-Slots. */
+function sanitizeScenarios(list: readonly unknown[]): Scenario[] {
+  const entries = list.slice(0, SLOT_COUNT).map((raw) => (isRecord(raw) ? raw : {}))
+  // Zuerst alle gueltigen Slots reservieren, damit ein ungueltiger keinen davon
+  // wegnimmt - sonst verloere ein sauberer Zustand beim Einlesen eine Farbe.
+  const used = new Set<number>()
+  const slots = entries.map((s) => {
+    const slot = s.colorSlot
+    if (typeof slot !== 'number' || !Number.isInteger(slot)) return null
+    if (slot < 1 || slot > SLOT_COUNT || used.has(slot)) return null
+    used.add(slot)
+    return slot
+  })
+  const ids = new Set<string>()
+  return entries.map((s, index) => {
+    // Doppelte IDs lenkten Auswahl und Reducer immer auf das erste Szenario.
+    let id = typeof s.id === 'string' && s.id !== '' ? s.id : createId()
+    while (ids.has(id)) id = createId()
+    ids.add(id)
+    // Hoechstens SLOT_COUNT Eintraege: ein freier Slot ist immer vorhanden.
+    let colorSlot = slots[index]
+    if (colorSlot === null) {
+      colorSlot = allocateSlot(used) ?? 1
+      used.add(colorSlot)
+    }
+    const params = isRecord(s.params) ? s.params : {}
+    return {
+      id,
       label: typeof s.label === 'string' ? s.label : `Szenario ${index + 1}`,
       visible: s.visible !== false,
-      colorSlot: Number.isFinite(s.colorSlot) ? (s.colorSlot as number) : index + 1,
+      colorSlot,
+      // Jeden Wert durch dieselbe Bereinigung schicken wie eine Eingabe - fremdes
+      // JSON darf keine NaN in die Simulation tragen.
       params: Object.fromEntries(
         Object.entries(DEFAULT_PARAMS).map(([key, fallback]) => [
           key,
-          sanitizeParam(key as ParamId, (s.params?.[key as ParamId] ?? fallback) as number),
+          sanitizeParam(key as ParamId, (params[key] ?? fallback) as number),
         ]),
       ) as SimulationParams,
-    }))
+    }
+  })
+}
+
+function sanitizeMarkets(list: readonly unknown[]): MarketSeries[] {
+  const markets: MarketSeries[] = []
+  for (const m of list) {
+    if (markets.length >= MAX_MARKETS) break
+    if (!isRecord(m) || typeof m.symbol !== 'string' || !Array.isArray(m.monthlyReturns)) continue
+    const symbol = m.symbol
+    if (markets.some((x) => x.symbol === symbol)) continue
+    // Eine Reihe ohne brauchbare Renditen zeichnet nichts und faende sich nie
+    // wieder aus dem Zustand heraus - deshalb hier aussortieren statt aufheben.
+    const monthlyReturns = m.monthlyReturns.filter(
+      (r): r is number => typeof r === 'number' && Number.isFinite(r),
+    )
+    if (monthlyReturns.length < MIN_MONATE) continue
+    markets.push({
+      symbol,
+      name: typeof m.name === 'string' ? m.name : symbol,
+      currency: typeof m.currency === 'string' ? m.currency : '',
+      start: typeof m.start === 'string' ? m.start : '',
+      monthlyReturns,
+    })
+  }
+  return markets
+}
+
+export function deserialize(raw: string): AppState | null {
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (!isRecord(parsed) || !Array.isArray(parsed.scenarios) || parsed.scenarios.length === 0) {
+      return null
+    }
+    const base = createInitialState()
+    const scenarios = sanitizeScenarios(parsed.scenarios)
+    // Feld fuer Feld statt `...parsed`: unbekannte Schluessel haetten sonst
+    // ungeprueft im Zustand gelandet.
     return {
-      ...base,
-      ...parsed,
       scenarios,
       activeScenarioId: scenarios.some((s) => s.id === parsed.activeScenarioId)
-        ? parsed.activeScenarioId!
+        ? (parsed.activeScenarioId as string)
         : scenarios[0].id,
-      model: {
-        ...base.model,
-        ...parsed.model,
-        // Fremdes JSON darf keinen Anker jenseits der Grenzen setzen - ein
-        // Startjahr von 1e9 machte jede Achsenbeschriftung unlesbar.
-        timeAxis: TIME_AXIS_MODES.includes(parsed.model?.timeAxis as TimeAxisMode)
-          ? (parsed.model?.timeAxis as TimeAxisMode)
-          : base.model.timeAxis,
-        startAge: sanitizeStartAge(parsed.model?.startAge ?? null),
-        startYear: sanitizeStartYear(parsed.model?.startYear ?? null),
-        // Gespeicherte Zustände von vor diesem Feld kennen keinen Monat: Januar.
-        startMonth: sanitizeStartMonth(parsed.model?.startMonth),
-      },
+      enabledSeriesIds: Array.isArray(parsed.enabledSeriesIds)
+        ? (parsed.enabledSeriesIds as unknown[]).filter(
+            (id, i, all): id is string =>
+              SERIES.some((s) => s.id === id) && all.indexOf(id) === i,
+          )
+        : base.enabledSeriesIds,
+      model: sanitizeModel(parsed.model),
+      encoding:
+        parsed.encoding === AUTO_ENCODING || ENCODINGS.some((e) => e.id === parsed.encoding)
+          ? (parsed.encoding as string)
+          : base.encoding,
+      chartStyleId: CHART_STYLES.some((c) => c.id === parsed.chartStyleId)
+        ? (parsed.chartStyleId as string)
+        : base.chartStyleId,
+      sidebarCollapsed:
+        typeof parsed.sidebarCollapsed === 'boolean'
+          ? parsed.sidebarCollapsed
+          : base.sidebarCollapsed,
       // Nur bekannte Karten uebernehmen - eine erfundene ID bliebe sonst fuer
       // immer im Zustand stehen und liesse sich durch nichts mehr loesen. Das
       // faengt zugleich die alten Schluessel ohne Bereich ab: sie fallen hier
@@ -446,16 +529,7 @@ export function deserialize(raw: string): AppState | null {
       settingsView: SETTINGS_VIEWS.includes(parsed.settingsView as SettingsView)
         ? (parsed.settingsView as SettingsView)
         : base.settingsView,
-      // Eine Kursreihe ohne Renditen zeichnet nichts und faende sich nie wieder
-      // aus dem Zustand heraus - deshalb hier aussortieren statt aufheben.
-      markets: Array.isArray(parsed.markets)
-        ? parsed.markets
-            .filter(
-              (m): m is MarketSeries =>
-                typeof m?.symbol === 'string' && Array.isArray(m?.monthlyReturns),
-            )
-            .slice(0, MAX_MARKETS)
-        : base.markets,
+      markets: Array.isArray(parsed.markets) ? sanitizeMarkets(parsed.markets) : base.markets,
     }
   } catch {
     return null

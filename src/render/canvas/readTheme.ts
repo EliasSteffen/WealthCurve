@@ -23,7 +23,7 @@ export function readRenderTheme(root?: HTMLElement): RenderTheme {
   return {
     surface: lies('--surface-1', '#fcfcfb'),
     text: lies('--text-primary', '#0b0b0b'),
-    textMuted: lies('--text-muted', '#898781'),
+    textMuted: lies('--text-muted', '#73716b'),
     grid: lies('--grid', '#e1e0d9'),
     axis: lies('--axis', '#c3c2b7'),
   }

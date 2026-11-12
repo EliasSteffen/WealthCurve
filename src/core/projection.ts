@@ -1,5 +1,5 @@
 import { AUTO_ENCODING, resolveEncoding, type CapacityReport } from './encoding/index.ts'
-import { simulate } from './domain/math.ts'
+import { simulate, wholeYears } from './domain/math.ts'
 import type { SimulationParams } from './domain/parameters.ts'
 import { SERIES } from './domain/series/index.ts'
 import type {
@@ -271,7 +271,7 @@ export function buildProjection(input: ProjectionInput): Projection {
       monthlyWithdrawalAtStart:
         result.monthlyWithdrawal *
         (model.amountsInflationAdjusted
-          ? Math.pow(1 + scenario.params.inflationRate / 100, model.accumulationYears)
+          ? Math.pow(1 + scenario.params.inflationRate / 100, wholeYears(model.accumulationYears))
           : 1),
       depletedAtYear: result.depletedAtYear,
     }
@@ -282,7 +282,8 @@ export function buildProjection(input: ProjectionInput): Projection {
     rows,
     yearLabels: yearLabels(rows.length, model),
     summaries,
-    retirementYear: model.accumulationYears,
+    // Ganze Jahre wie in der Simulation, sonst läge die Markierung zwischen zwei Zeilen.
+    retirementYear: wholeYears(model.accumulationYears),
     encodingDescription: encoding.describe(encodingInput),
     encodingId: encoding.id,
     capacity: encoding.capacity(encodingInput),

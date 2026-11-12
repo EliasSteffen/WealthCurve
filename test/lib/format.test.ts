@@ -1,5 +1,49 @@
 import { describe, expect, it } from 'vitest'
-import { formatEur, formatEurCompact, formatPercent, parseGermanNumber } from '@/lib/format'
+import {
+  currentFormatterLocale,
+  setFormatterLocale,
+  formatDraftNumber,
+  formatEur,
+  formatEurCompact,
+  formatPercent,
+  parseGermanNumber,
+  parseLocaleNumber,
+} from '@/lib/format'
+
+describe('parseLocaleNumber', () => {
+  it('liest englische Tausenderkommas als Gruppen, nicht als Dezimaltrenner', () => {
+    // Die Regression: "1,500" wurde im Englischen zu 1,5 - Beträge 1000-fach zu klein.
+    expect(parseLocaleNumber('1,500', 'en')).toBe(1500)
+    expect(parseLocaleNumber('€1,500', 'en')).toBe(1500)
+    expect(parseLocaleNumber('10,000', 'en')).toBe(10000)
+    expect(parseLocaleNumber('1,234,567', 'en')).toBe(1234567)
+    expect(parseLocaleNumber('1,500.5', 'en')).toBe(1500.5)
+  })
+
+  it('behandelt im Englischen den Punkt als Dezimaltrenner', () => {
+    expect(parseLocaleNumber('4.5', 'en')).toBe(4.5)
+    expect(parseLocaleNumber('4.500', 'en')).toBe(4.5)
+    expect(parseLocaleNumber('-2.5', 'en')).toBe(-2.5)
+  })
+
+  it('toleriert im Englischen ein Dezimalkomma', () => {
+    expect(parseLocaleNumber('4,5', 'en')).toBe(4.5)
+    expect(parseLocaleNumber('4,25', 'en')).toBe(4.25)
+  })
+
+  it('lässt das Deutsche unverändert', () => {
+    expect(parseLocaleNumber('4,5', 'de')).toBe(4.5)
+    expect(parseLocaleNumber('10.000', 'de')).toBe(10000)
+    expect(parseLocaleNumber('4.5', 'de')).toBe(4.5)
+    expect(parseLocaleNumber('1.234,56', 'de')).toBe(1234.56)
+    expect(parseLocaleNumber('', 'en')).toBeNaN()
+  })
+
+  it('formatiert den Entwurf mit dem Dezimaltrenner der Sprache', () => {
+    expect(formatDraftNumber(1500.5, 'de')).toBe('1500,5')
+    expect(formatDraftNumber(1500.5, 'en')).toBe('1500.5')
+  })
+})
 
 /*
  * de-DE setzt ein GESCHUETZTES Leerzeichen (U+00A0) vor das Euro-Zeichen.
@@ -22,6 +66,19 @@ describe('Formatierung', () => {
     // Deutsches Compact lässt Tausender ausgeschrieben - das ist Absicht.
     expect(normalize(formatEurCompact(609_985))).toBe('609.985 €')
     expect(normalize(formatEurCompact(1_234_567))).toBe('1,2 Mio. €')
+  })
+
+  it('setzt das Währungszeichen im Englischen vor die Zahl', () => {
+    // Vorher wurde " €" angehängt und ergab "610K €".
+    const vorher = currentFormatterLocale()
+    setFormatterLocale('en-US')
+    try {
+      expect(formatEurCompact(609_985)).toBe('€610K')
+      expect(formatEurCompact(1_234_567)).toBe('€1.2M')
+      expect(formatEurCompact(0)).toBe('€0')
+    } finally {
+      setFormatterLocale(vorher)
+    }
   })
 
   it('formatiert Prozentpunkte', () => {

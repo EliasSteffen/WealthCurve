@@ -1,5 +1,7 @@
 import { SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useBackdropClose } from '../../lib/backdropClose'
+import { useT } from '../../react/localeContext'
 import { SettingsPanel } from './SettingsPanel'
 
 /**
@@ -14,6 +16,7 @@ import { SettingsPanel } from './SettingsPanel'
  * Ein schwebender Knopf liegt dagegen zwangsläufig über scrollendem Inhalt.
  */
 export function SettingsSheet() {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const dialogRef = useRef<HTMLDialogElement>(null)
 
@@ -24,17 +27,19 @@ export function SettingsSheet() {
     if (!open && dialog.open) dialog.close()
   }, [open])
 
+  const backdrop = useBackdropClose(dialogRef, () => setOpen(false))
+
   return (
     <>
       <div className="shrink-0 border-t border-[var(--hairline)] bg-[var(--surface-1)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
         <button
           type="button"
           onClick={() => setOpen(true)}
-          aria-label="Einstellungen öffnen"
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--chart-1)] px-4 py-3 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+          aria-label={t('settings.sheet.open', 'Einstellungen öffnen')}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent-fill)] px-4 py-3 text-sm font-semibold text-[var(--on-accent)] transition-transform active:scale-[0.98]"
         >
           <SlidersHorizontal size={16} aria-hidden />
-          Einstellungen
+          {t('settings.title', 'Einstellungen')}
         </button>
       </div>
 
@@ -42,18 +47,16 @@ export function SettingsSheet() {
         ref={dialogRef}
         // ESC und Backdrop-Klick melden 'close' - der State muss nachziehen.
         onClose={() => setOpen(false)}
-        onClick={(e) => {
-          if (e.target === dialogRef.current) setOpen(false)
-        }}
+        {...backdrop}
         className="settings-sheet"
-        aria-label="Einstellungen"
+        aria-label={t('settings.title', 'Einstellungen')}
       >
         <div className="flex items-center justify-between border-b border-[var(--hairline)] px-4 py-3">
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Einstellungen</h2>
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">{t('settings.title', 'Einstellungen')}</h2>
           <button
             type="button"
             onClick={() => setOpen(false)}
-            aria-label="Schließen"
+            aria-label={t('dialog.close', 'Schließen')}
             className="flex size-10 items-center justify-center rounded-md text-[var(--text-muted)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--text-primary)]"
           >
             <X size={16} aria-hidden />

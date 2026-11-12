@@ -1,7 +1,10 @@
 import { Languages } from 'lucide-react'
 import { LOCALES } from '../i18n'
+import { rovingKeyHandler } from '../lib/rovingKeys'
 import { cn } from '../lib/cn'
 import { useLocale } from '../react/localeContext'
+
+const onKeyDown = rovingKeyHandler('[role="radio"]')
 
 export function LocaleToggle() {
   const { locale, setLocale, t } = useLocale()
@@ -9,6 +12,7 @@ export function LocaleToggle() {
     <div
       role="radiogroup"
       aria-label={t('locale.label', 'Sprache')}
+      onKeyDown={onKeyDown}
       className="flex items-center gap-0.5 rounded-lg border border-[var(--hairline)] p-0.5"
     >
       <Languages size={13} aria-hidden className="mx-1 text-[var(--text-muted)]" />
@@ -18,13 +22,14 @@ export function LocaleToggle() {
           type="button"
           role="radio"
           aria-checked={locale === id}
+          tabIndex={locale === id ? 0 : -1}
           aria-label={label}
           title={label}
           onClick={() => setLocale(id)}
           className={cn(
             'rounded-md px-1.5 py-1 text-[11px] font-semibold uppercase transition-colors',
             locale === id
-              ? 'bg-[var(--chart-1)] text-white'
+              ? 'bg-[var(--accent-fill)] text-[var(--on-accent)]'
               : 'text-[var(--text-secondary)] hover:bg-[var(--grid)]',
           )}
         >

@@ -25,6 +25,18 @@ describe('srtZeit', () => {
   })
 })
 
+describe('toSrt: Leerzeilen', () => {
+  it('fasst Leerzeilen im Szenentext zusammen', () => {
+    // Eine Leerzeile beendet in SRT den Block - der Rest wäre ein verwaister
+    // Block ohne Nummer. Das Bild überspringt leere Absätze ebenfalls.
+    const srt = toSrt(
+      spec({ scenes: [{ kind: 'hook', seconds: 2, text: 'Erste Zeile\n\n\nZweite Zeile' }] }),
+      facts,
+    )
+    expect(srt).toBe('1\n00:00:00,000 --> 00:00:02,000\nErste Zeile\nZweite Zeile\n')
+  })
+})
+
 describe('toSrt', () => {
   it('nummeriert fortlaufend und löst die Platzhalter auf', () => {
     const srt = toSrt(spec(), facts)

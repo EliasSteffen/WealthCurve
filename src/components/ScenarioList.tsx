@@ -1,5 +1,5 @@
 import { Copy, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MAX_SCENARIOS, actions, type Scenario } from '../core/state'
 import { SLOT_COUNT, slotVar, type ColorSlot } from '../core/palette'
 import { selectProjection } from '../core/derive'
@@ -30,9 +30,41 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
    */
   const faerbtSzenarien = useSelector(selectProjection).encodingId === colorByScenario.id
 
+  /*
+   * Fokus nach dem Löschen. Der gelöschte Knopf verschwindet aus dem DOM, der
+   * Fokus fiele auf <body> - Tastatur- und Screenreader-Nutzer stünden wieder
+   * am Seitenanfang. Wir merken uns das Ziel (nächstes, sonst vorheriges
+   * Szenario, sonst "hinzufügen") und setzen den Fokus, sobald die Liste neu
+   * gerendert ist.
+   */
+  const listeRef = useRef<HTMLUListElement>(null)
+  const addRef = useRef<HTMLButtonElement>(null)
+  const fokusZiel = useRef<string | 'add' | null>(null)
+  useEffect(() => {
+    const ziel = fokusZiel.current
+    if (ziel === null) return
+    fokusZiel.current = null
+    if (ziel !== 'add') {
+      const feld = Array.from(
+        listeRef.current?.querySelectorAll<HTMLElement>('input[data-scenario-id]') ?? [],
+      ).find((el) => el.dataset.scenarioId === ziel)
+      if (feld) {
+        feld.focus()
+        return
+      }
+    }
+    addRef.current?.focus()
+  }, [scenarios])
+
+  const loeschen = (id: string) => {
+    const i = scenarios.findIndex((s) => s.id === id)
+    fokusZiel.current = (scenarios[i + 1] ?? scenarios[i - 1])?.id ?? 'add'
+    dispatch(actions.removeScenario(id))
+  }
+
   return (
     <div>
-      <ul className="space-y-1">
+      <ul ref={listeRef} className="space-y-1">
         {scenarios.map((scenario) => {
           const active = scenario.id === activeScenarioId
           return (
@@ -71,7 +103,8 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
               {/* Direkt im Feld umbenennbar - kein Dialog für einen Namen. */}
               <input
                 value={scenario.label}
-                aria-label={`Name von ${scenario.label}`}
+                aria-label={t('scenario.name', `Name von ${scenario.label}`, { name: scenario.label })}
+                data-scenario-id={scenario.id}
                 onFocus={() => dispatch(actions.selectScenario(scenario.id))}
                 onChange={(e) => dispatch(actions.renameScenario(scenario.id, e.target.value))}
                 className={cn(
@@ -102,7 +135,12 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
                   disabledReason={t('scenario.limitShort', `Maximal ${MAX_SCENARIOS} Szenarien`, {
                     max: MAX_SCENARIOS,
                   })}
-                  onClick={() => dispatch(actions.duplicateScenario(scenario.id))}
+                  onClick={() => dispatch(
+                      actions.duplicateScenario(
+                        scenario.id,
+                        t('scenario.copyName', `${scenario.label} (Kopie)`, { name: scenario.label }),
+                      ),
+                    )}
                 >
                   <Copy size={15} />
                 </IconButton>
@@ -113,7 +151,7 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
                     'scenario.lastOne',
                     'Das letzte Szenario lässt sich nicht löschen',
                   )}
-                  onClick={() => dispatch(actions.removeScenario(scenario.id))}
+                  onClick={() => loeschen(scenario.id)}
                 >
                   <Trash2 size={15} />
                 </IconButton>
@@ -137,9 +175,19 @@ export function ScenarioList({ scenarios, activeScenarioId }: ScenarioListProps)
       </ul>
 
       <button
+        ref={addRef}
         type="button"
         disabled={atLimit}
-        onClick={() => dispatch(actions.addScenario())}
+        onClick={() =>
+          dispatch(
+            actions.addScenario(
+              // Derselbe Standardname wie im Reducer, nur in der Sprache der Oberfläche.
+              t('scenario.fallbackName', `Szenario ${scenarios.length + 1}`, {
+                n: String(scenarios.length + 1),
+              }),
+            ),
+          )
+        }
         className={cn(
           'mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed px-3 py-2 text-xs font-medium transition-colors',
           atLimit
