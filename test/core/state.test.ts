@@ -272,3 +272,32 @@ describe('Farbe eines Szenarios', () => {
     expect(reducer(um, actions.setScenarioColor(um.scenarios[1].id, alt)).scenarios[1].colorSlot).toBe(alt)
   })
 })
+
+describe('Pro-Modus', () => {
+  it('ist ab Werk aus und lässt sich schalten', () => {
+    const state = createInitialState()
+    expect(state.proMode).toBe(false)
+    const an = reducer(state, actions.setProMode(true))
+    expect(an.proMode).toBe(true)
+    expect(reducer(an, actions.setProMode(false)).proMode).toBe(false)
+  })
+
+  it('gibt bei unverändertem Wert denselben State zurück', () => {
+    const state = createInitialState()
+    expect(reducer(state, actions.setProMode(false))).toBe(state)
+  })
+
+  it('nimmt nur ein echtes Boolean an', () => {
+    const state = createInitialState()
+    expect(reducer(state, { type: 'pro/set', enabled: 'ja' as unknown as boolean })).toBe(state)
+  })
+
+  it('überlebt die Serialisierung, aber nur als true', () => {
+    const an = reducer(createInitialState(), actions.setProMode(true))
+    expect(deserialize(serialize(an))!.proMode).toBe(true)
+    const json = JSON.parse(serialize(an)) as Record<string, unknown>
+    expect(deserialize(JSON.stringify({ ...json, proMode: 'true' }))!.proMode).toBe(false)
+    delete json.proMode
+    expect(deserialize(JSON.stringify(json))!.proMode).toBe(false)
+  })
+})

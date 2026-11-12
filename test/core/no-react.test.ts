@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest'
  * leicht versehentlich zu durchbrechen, deshalb prüft sie ein Test statt eines
  * Kommentars.
  */
-const FORBIDDEN = ['react', 'react-dom', 'recharts', 'lucide-react']
+const FORBIDDEN = ['react', 'react-dom', 'recharts', 'lucide-react', 'lightweight-charts']
 
 const walk = (dir: string): string[] =>
   readdirSync(dir).flatMap((entry) => {

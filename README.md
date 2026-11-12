@@ -457,6 +457,30 @@ d3-Curve-Factory (`src/render/sketchCurve.ts`). Wichtig dabei: der Versatz wird 
 den Koordinaten berechnet (`src/render/wobble.ts`). Mit `Math.random()` bekäme dieselbe Kurve bei
 jedem Render einen neuen Ausschlag und würde beim Ziehen eines Reglers sichtbar flimmern.
 
+## Pro-Modus
+
+Der Schalter „Pro“ in der Kopfzeile macht aus dem Sparplan ein Handelsterminal. Gezeichnet wird
+dort mit TradingViews [`lightweight-charts`](https://github.com/tradingview/lightweight-charts)
+statt mit Recharts:
+
+- **Vermögenschart** mit Kalenderachse, linearer oder logarithmischer Skala, Zeiträumen (10/20/30
+  Jahre, alle), Fadenkreuz-Legende mit Veränderung zum Vorjahr, Entnahmephase als Fläche samt
+  Marke auf der Zeitachse, Kapital bei Rentenbeginn als Preislinie und Balken der jährlichen
+  Veränderung darunter. Eine Kurve aus der Seitenspalte wird per Klick zur Hauptkurve.
+- **Kerzenchart je geladenem Wertpapier**: Monatskerzen von Schluss zu Schluss (die Reihen kennen
+  keine Tageshochs, deshalb ohne Dochte), Monatsrenditen und Abstand zum Hoch in eigenen Flächen,
+  der Einstieg des Plans als Marke.
+- **Seitenspalte** mit Szenarien, Kurven, Wertpapieren (Rendite p. a., größter Rückgang) und
+  Kennzahlen wie Vervielfachung, Verdopplungszeit und Endwert in heutiger Kaufkraft; einen Reiter
+  weiter der vollständige Plan.
+- Jahreswerte als dichte Tabelle, CSV, Chart als PNG, Vollbild.
+
+Was dort steht, rechnet `src/core/analytics.ts` – ohne Chart-Bibliothek, wie der restliche Kern
+(`no-react.test.ts` verbietet auch `lightweight-charts`). Die Pro-Ansicht ist ein eigener Chunk:
+wer sie nie einschaltet, lädt sie nie. Ihre Farben (`[data-pro]` in `src/index.css`) tauschen nur
+Flächen und Schrift; die Serienfarben bleiben, damit Zinseszins auch hier blau ist. Der Schalter
+bleibt im Browser gespeichert, wandert aber nicht in den Teilen-Link.
+
 ## Video-Export
 
 Der Knopf „Video" in der Kopfzeile erzeugt ein Reel: die Kurve wächst über die Jahre, die Zahlen

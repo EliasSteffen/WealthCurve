@@ -38,6 +38,8 @@ const GrowthChart = lazy(() => import('../chart/GrowthChart').then((m) => ({ def
 
 /** Der Abschnitt „Zeitachse" - MarketPanel springt dorthin, wenn das Startjahr fehlt (gleiche ID dort). */
 const ABSCHNITT_ZEITACHSE = 'plan-zeitachse'
+/** Der Abschnitt „Echte Kursverläufe" - die Pro-Ansicht öffnet ihn über ihr Plus. */
+export const ABSCHNITT_WERTPAPIERE = 'plan-wertpapiere'
 
 /**
  * Ein aufklappbarer Abschnitt für alles, was nicht jeder braucht.
@@ -123,7 +125,7 @@ function RenditeVorgaben({ value, onPick }: { readonly value: number; readonly o
  * Satz darüber sagt, was wofür gilt. Früher trennten zwei Bereiche das sauber,
  * und niemand fand die Laufzeit.
  */
-function PlanPanel() {
+export function PlanPanel() {
   const t = useT()
   const dispatch = useDispatch()
   const scenarios = useSelector((s) => s.scenarios)
@@ -221,6 +223,7 @@ function PlanPanel() {
       </Abschnitt>
 
       <Abschnitt
+        id={ABSCHNITT_WERTPAPIERE}
         title={t('plan.section.markets', 'Echte Kursverläufe')}
         hint={t('plan.section.marketsHint', 'Bis zu vier Wertpapiere zum Vergleich')}
       >
