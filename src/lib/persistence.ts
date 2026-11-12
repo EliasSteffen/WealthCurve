@@ -45,6 +45,8 @@ export function toShareJson(state: AppState): string {
   delete json.depot
   // Der Empfänger landet beim Plan, den man ihm zeigen wollte.
   delete json.page
+  // Ansicht ist Sache des Empfängers - wer nur die Kurve sehen will, bekommt kein Terminal.
+  delete json.proMode
   return JSON.stringify(json)
 }
 

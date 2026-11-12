@@ -82,6 +82,13 @@ export interface AppState {
   readonly depot: DepotState
   /** Welcher Bereich offen ist - bleibt über ein Neuladen erhalten, nicht im Teilen-Link. */
   readonly page: AppPage
+  /**
+   * Pro-Modus: Terminal-Ansicht mit TradingView-Charts statt der ruhigen Kurve.
+   *
+   * Eine Vorliebe der Person am Bildschirm, kein Teil des Plans - bleibt über ein
+   * Neuladen erhalten, wandert aber nicht in den Teilen-Link.
+   */
+  readonly proMode: boolean
 }
 
 let counter = 0
@@ -131,6 +138,7 @@ export function createInitialState(): AppState {
     markets: [],
     depot: EMPTY_DEPOT,
     page: 'sparplan',
+    proMode: false,
   }
 }
 
@@ -174,6 +182,7 @@ export type Action =
   | { type: 'depot/setWhatIfWeight'; id: string; weight: number }
   | { type: 'depot/updateHolding'; id: string; patch: Partial<Omit<DepotHolding, 'id'>> }
   | { type: 'page/set'; page: AppPage }
+  | { type: 'pro/set'; enabled: boolean }
   | { type: 'sidebar/setCollapsed'; collapsed: boolean }
   | { type: 'settings/toggleCard'; id: SettingsCardId }
   | { type: 'settings/setView'; view: SettingsView }
@@ -250,6 +259,7 @@ export const actions = {
     patch,
   }),
   setPage: (page: AppPage): Action => ({ type: 'page/set', page }),
+  setProMode: (enabled: boolean): Action => ({ type: 'pro/set', enabled }),
   setSidebarCollapsed: (collapsed: boolean): Action => ({
     type: 'sidebar/setCollapsed',
     collapsed,
@@ -465,6 +475,12 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'page/set':
       return state.page === action.page ? state : { ...state, page: action.page }
 
+    case 'pro/set':
+      // Nur ein echtes Boolean: aus fremdem JSON darf kein "ja" als Wahrheit durchrutschen.
+      return typeof action.enabled !== 'boolean' || state.proMode === action.enabled
+        ? state
+        : { ...state, proMode: action.enabled }
+
     case 'depot/setWhatIfWeight': {
       const { holdings, whatIf } = state.depot
       if (!holdings.some((h) => h.id === action.id) || !Number.isFinite(action.weight)) return state
@@ -634,6 +650,7 @@ export function deserialize(raw: string): AppState | null {
       markets: Array.isArray(parsed.markets) ? sanitizeMarkets(parsed.markets) : base.markets,
       depot: sanitizeDepot(parsed.depot),
       page: parsed.page === 'depot' ? 'depot' : 'sparplan',
+      proMode: parsed.proMode === true,
     }
   } catch {
     return null

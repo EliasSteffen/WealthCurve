@@ -137,3 +137,24 @@ export type { ColorSlot } from './palette.ts'
 
 // Depot-Analyse
 export * from './depot/index.ts'
+
+// Pro-Ansicht: Kalenderachse, Kursindex, Kennzahlen
+export {
+  marketPriceIndex,
+  marketStats,
+  monthKeyToUtc,
+  monthToUtc,
+  monthsBetween,
+  scenarioFigures,
+  timeAnchor,
+  yearIndexTime,
+  yearOverYear,
+} from './analytics.ts'
+export type {
+  IndexBar,
+  MarketStats,
+  PriceIndex,
+  ScenarioFigures,
+  TimeAnchor,
+  UtcSeconds,
+} from './analytics.ts'

@@ -106,6 +106,7 @@ describe('Teilen-Link', () => {
     const s = {
       ...reducer(createInitialState(), actions.addScenario('Größe 🚀')),
       sidebarCollapsed: true,
+      proMode: true,
     }
     const encoded = encodeShare(s)
     expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/)
@@ -113,6 +114,8 @@ describe('Teilen-Link', () => {
     expect(back?.scenarios.map((x) => x.label)).toContain('Größe 🚀')
     expect(back?.scenarios.map((x) => x.params)).toEqual(s.scenarios.map((x) => x.params))
     expect(back?.sidebarCollapsed).toBe(false)
+    // Die Ansicht ist Sache des Empfängers.
+    expect(back?.proMode).toBe(false)
     expect(back?.markets).toEqual([])
   })
 

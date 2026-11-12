@@ -472,6 +472,7 @@ server.registerTool(
       markets: [],
       depot: { holdings: [], whatIf: null, goals: [], value: null },
       page: 'sparplan',
+      proMode: false,
     })
     return { content: [{ type: 'text', text: erzeugt }] }
   },
