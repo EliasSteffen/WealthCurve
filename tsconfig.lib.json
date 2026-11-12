@@ -1,5 +1,5 @@
 {
-  /* Baut das Paket `wealthcurve` für andere Projekte: Kern und Kursabruf als
+  /* Baut das Paket `wealthcurve` für andere Projekte: Kern, Kursabruf und Firmenprofile als
      JavaScript mit Typen in `lib/`. Läuft als `prepare` - bei `npm install`
      hier und, wichtiger, wenn ein fremdes Projekt das Paket direkt von GitHub
      installiert. Node entfernt in node_modules keine Typen, deshalb braucht es
@@ -9,6 +9,7 @@
     "lib": ["ES2023"],
     "types": ["node"],
     "skipLibCheck": true,
+    "strict": true,
 
     "module": "nodenext",
     "moduleResolution": "nodenext",
@@ -21,5 +22,5 @@
     "outDir": "lib",
     "declaration": true
   },
-  "files": ["src/core/index.ts", "server/quotes.ts"]
+  "files": ["src/core/index.ts", "server/quotes.ts", "server/profile.ts"]
 }

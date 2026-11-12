@@ -55,12 +55,13 @@ Das Paket heißt `wealthcurve` und wird direkt von GitHub installiert:
 npm install github:EliasSteffen/WealthCurve
 ```
 
-Es hat zwei Einstiege:
+Es hat drei Einstiege:
 
 | Import | Quelle | Inhalt |
 |---|---|---|
 | `wealthcurve` | `src/core/index.ts` | Rechnung, Zustand, Registries, Kursreihen (`marketFromPrices`, `parseMarketFile`) |
 | `wealthcurve/quotes` | `server/quotes.ts` | `fetchQuotes(symbol)` – Kurse von Yahoo, bereinigt um Splits und Dividenden |
+| `wealthcurve/profile` | `server/profile.ts` | `fetchProfiles(symbole)` – Land, Branche, Währung und Börsenwert von Aktien, für die Depot-Durchschau |
 
 ```ts
 import { buildProjection, DEFAULT_MODEL, DEFAULT_PARAMS } from 'wealthcurve'

@@ -21,7 +21,7 @@ const walk = (dir: string): string[] =>
   })
 
 describe('Kern lädt mit reinem Node', () => {
-  const files = [...walk('src/core'), 'server/quotes.ts']
+  const files = [...walk('src/core'), 'server/quotes.ts', 'server/profile.ts']
 
   it('schreibt jeden relativen Import mit Endung', () => {
     const offenders: string[] = []
@@ -45,12 +45,13 @@ describe('Kern lädt mit reinem Node', () => {
     const skript = `
       const kern = await import('wealthcurve')
       const kurse = await import('wealthcurve/quotes')
-      console.log(typeof kern.buildProjection, typeof kern.marketFromPrices, typeof kurse.fetchQuotes)
+      const profile = await import('wealthcurve/profile')
+      console.log(typeof kern.buildProjection, typeof kern.marketFromPrices, typeof kurse.fetchQuotes, typeof profile.fetchProfiles)
     `
     const ausgabe = execFileSync(process.execPath, ['--input-type=module', '-e', skript], {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
     })
-    expect(ausgabe.trim()).toBe('function function function')
+    expect(ausgabe.trim()).toBe('function function function function')
   }, 30_000)
 })

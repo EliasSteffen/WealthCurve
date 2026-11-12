@@ -12,6 +12,10 @@
       "types": "./lib/server/quotes.d.ts",
       "default": "./lib/server/quotes.js"
     },
+    "./profile": {
+      "types": "./lib/server/profile.d.ts",
+      "default": "./lib/server/profile.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
