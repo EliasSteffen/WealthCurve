@@ -277,7 +277,10 @@ Muster). Die Depot-Seite zeigt dann:
 - **Ziele & Vorschläge** – Bandbreiten je Anlageklasse, Markt, Kontinent, Land,
   Branche oder Größe festlegen („Schwellenländer 10–15 %“, „kein Land über 50 %“),
   von Hand oder aus Vorlagen (Welt nach Börsenwert, 70/30, nach BIP, Klumpen
-  begrenzen, 80/20, Nebenwerte). Je Ziel steht da, wie viel fehlt und wie viel
+  begrenzen, 80/20, Nebenwerte). Kontinente und Länder lassen sich auch auf einer
+  Kachelkarte antippen (`src/components/depot/GoalMap.tsx`, Raster in
+  `worldTiles.ts`): die Farbe zeigt den heutigen Anteil, der Rahmen den Zielstatus.
+  Je Ziel steht da, wie viel fehlt und wie viel
   ohne Verkauf zugekauft werden müsste; darüber, welcher breite Baustein
   (Schwellenländer-, Europa-, USA-, Welt-ETF, Anleihen, Gold …) die meisten Ziele mit
   dem kleinsten Zukauf erreicht, und ein Plan aus bis zu drei Bausteinen

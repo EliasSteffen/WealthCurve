@@ -21,6 +21,8 @@ import { currentFormatterLocale, formatEur } from '../../lib/format'
 import { useT } from '../../react/localeContext'
 import { useDispatch } from '../../react/useSelector'
 import { pct, shareLabel } from './depotFormat'
+import { GoalMap } from './GoalMap'
+import { GrenzFeld } from './GrenzFeld'
 
 const KNOPF =
   'rounded-lg border border-[var(--hairline)] px-3 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--grid)] disabled:opacity-40'
@@ -141,52 +143,6 @@ const euro = (anteil: number, value: number | null) =>
 function betrag(anteil: number, value: number | null, t: Translate): string {
   if (!Number.isFinite(anteil)) return t('depot.goals.unreachable', 'nicht durch Zukauf erreichbar')
   return t('depot.goals.ofValue', '{share} des Depotwerts', { share: pct(anteil) }) + euro(anteil, value)
-}
-
-/** Prozentfeld, das leer sein darf: leer = keine Grenze. */
-function GrenzFeld({
-  value,
-  label,
-  onCommit,
-}: {
-  readonly value: number | null
-  readonly label: string
-  readonly onCommit: (value: number | null) => void
-}) {
-  const [entwurf, setEntwurf] = useState<string | null>(null)
-  const anzeige =
-    entwurf ??
-    (value === null ? '' : (value * 100).toLocaleString(currentFormatterLocale(), { maximumFractionDigits: 1 }))
-  const uebernehmen = () => {
-    if (entwurf === null) return
-    const text = entwurf.trim().replace('%', '').replace(',', '.')
-    if (text === '') onCommit(null)
-    else {
-      const zahl = Number.parseFloat(text)
-      if (Number.isFinite(zahl) && zahl >= 0 && zahl <= 100) onCommit(zahl / 100)
-    }
-    setEntwurf(null)
-  }
-  return (
-    <span className="inline-flex items-center gap-1">
-      <input
-        inputMode="decimal"
-        aria-label={label}
-        value={anzeige}
-        placeholder="–"
-        onChange={(e) => setEntwurf(e.target.value)}
-        onBlur={uebernehmen}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') uebernehmen()
-          if (e.key === 'Escape') setEntwurf(null)
-        }}
-        className={cn(EINGABE, 'w-14 text-right tabular-nums')}
-      />
-      <span aria-hidden className="text-xs text-[var(--text-muted)]">
-        %
-      </span>
-    </span>
-  )
 }
 
 /** Heutiger Anteil als Balken, das Zielband dahinter. */
@@ -485,6 +441,15 @@ export function GoalsView({
   const setGoals = (next: readonly GoalTarget[]) => dispatch(actions.setDepotGoals(next))
   const ersetze = (target: GoalTarget) =>
     setGoals([...goals.filter((g) => !(g.dim === target.dim && g.key === target.key)), target])
+  const entferne = (target: GoalTarget) => setGoals(goals.filter((g) => g !== target))
+  const karte = (
+    <section className="space-y-2">
+      <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
+        {t('depot.map.title', 'Regionen auf der Karte')}
+      </h3>
+      <GoalMap look={look} goals={goals} checks={advice.checks} onSet={ersetze} onRemove={entferne} />
+    </section>
+  )
 
   if (goals.length === 0) {
     return (
@@ -496,6 +461,7 @@ export function GoalsView({
           )}
         </p>
         <Vorlagen onApply={(id) => setGoals(applyPreset(goals, id))} />
+        {karte}
         <details className="text-sm">
           <summary className="cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
             {t('depot.goals.custom', 'Eigenes Ziel festlegen')}
@@ -617,6 +583,8 @@ export function GoalsView({
         </div>
       ) : null}
 
+      {karte}
+
       {nachDim.map(({ dim, checks }) => {
         const abdeckung = checks[0]?.coverage ?? 1
         return (
@@ -640,7 +608,7 @@ export function GoalsView({
                   check={c}
                   value={value}
                   onChange={(patch) => ersetze({ ...c.target, ...patch })}
-                  onRemove={() => setGoals(goals.filter((g) => g !== c.target))}
+                  onRemove={() => entferne(c.target)}
                 />
               ))}
             </ul>
