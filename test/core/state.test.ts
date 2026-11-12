@@ -273,31 +273,19 @@ describe('Farbe eines Szenarios', () => {
   })
 })
 
-describe('Pro-Modus', () => {
-  it('ist ab Werk aus und lässt sich schalten', () => {
-    const state = createInitialState()
-    expect(state.proMode).toBe(false)
-    const an = reducer(state, actions.setProMode(true))
-    expect(an.proMode).toBe(true)
-    expect(reducer(an, actions.setProMode(false)).proMode).toBe(false)
+describe('Bereiche', () => {
+  it('wechselt zwischen Plan, Depot und Video', () => {
+    let state = createInitialState()
+    expect(state.page).toBe('sparplan')
+    state = reducer(state, actions.setPage('video'))
+    expect(state.page).toBe('video')
+    expect(deserialize(serialize(state))!.page).toBe('video')
   })
 
-  it('gibt bei unverändertem Wert denselben State zurück', () => {
+  it('weist einen unbekannten Bereich ab, beim Schalten wie beim Einlesen', () => {
     const state = createInitialState()
-    expect(reducer(state, actions.setProMode(false))).toBe(state)
-  })
-
-  it('nimmt nur ein echtes Boolean an', () => {
-    const state = createInitialState()
-    expect(reducer(state, { type: 'pro/set', enabled: 'ja' as unknown as boolean })).toBe(state)
-  })
-
-  it('überlebt die Serialisierung, aber nur als true', () => {
-    const an = reducer(createInitialState(), actions.setProMode(true))
-    expect(deserialize(serialize(an))!.proMode).toBe(true)
-    const json = JSON.parse(serialize(an)) as Record<string, unknown>
-    expect(deserialize(JSON.stringify({ ...json, proMode: 'true' }))!.proMode).toBe(false)
-    delete json.proMode
-    expect(deserialize(JSON.stringify(json))!.proMode).toBe(false)
+    expect(reducer(state, actions.setPage('terminal' as never))).toBe(state)
+    const json = JSON.parse(serialize(state)) as Record<string, unknown>
+    expect(deserialize(JSON.stringify({ ...json, page: 'terminal' }))!.page).toBe('sparplan')
   })
 })

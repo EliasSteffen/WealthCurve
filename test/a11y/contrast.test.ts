@@ -54,6 +54,13 @@ describe('Kontrast (WCAG AA, 4.5:1)', () => {
     it(`Text auf gefüllter Akzentfläche erreicht 4.5:1 (${name})`, () => {
       expect(contrast(t['on-accent']!, t['accent-fill']!)).toBeGreaterThanOrEqual(4.5)
     })
+
+    for (const token of ['text-primary', 'text-secondary', 'up', 'down', 'accent-text']) {
+      it(`--${token} erreicht 4.5:1 auf Karte und Seite (${name})`, () => {
+        expect(contrast(t[token]!, t['surface-1']!)).toBeGreaterThanOrEqual(4.5)
+        expect(contrast(t[token]!, t['surface-page']!)).toBeGreaterThanOrEqual(4.5)
+      })
+    }
   }
 
   it('--text-muted bleibt erkennbar gedämpft (schwächer als Sekundärtext)', () => {
@@ -66,37 +73,4 @@ describe('Kontrast (WCAG AA, 4.5:1)', () => {
     expect(light['chart-1']).toBe('#2a78d6')
     expect(dark['chart-1']).toBe('#3987e5')
   })
-})
-
-describe('Kontrast im Pro-Modus (WCAG AA, 4.5:1)', () => {
-  const proHell = tokens(':root[data-pro] {')
-  const proDunkel = tokens(':root[data-pro][data-theme="dark"]')
-  const proDunkelMedia = tokens(':root[data-pro]:not([data-theme="light"])')
-
-  it('Dark-Scopes sind identisch', () => {
-    expect(proDunkelMedia).toEqual(proDunkel)
-  })
-
-  it('lässt die Serienfarben in Ruhe', () => {
-    // Sonst wäre Zinseszins im Pro-Modus plötzlich nicht mehr blau.
-    for (const t of [proHell, proDunkel]) {
-      expect(Object.keys(t).filter((k) => k.startsWith('chart-'))).toEqual([])
-    }
-  })
-
-  for (const [name, t] of [
-    ['hell', proHell],
-    ['dunkel', proDunkel],
-  ] as const) {
-    for (const token of ['text-primary', 'text-secondary', 'text-muted', 'up', 'down', 'accent-text']) {
-      it(`--${token} erreicht 4.5:1 auf Karte und Seite (${name})`, () => {
-        expect(contrast(t[token]!, t['surface-1']!)).toBeGreaterThanOrEqual(4.5)
-        expect(contrast(t[token]!, t['surface-page']!)).toBeGreaterThanOrEqual(4.5)
-      })
-    }
-
-    it(`Text auf gefüllter Akzentfläche erreicht 4.5:1 (${name})`, () => {
-      expect(contrast(t['on-accent']!, t['accent-fill']!)).toBeGreaterThanOrEqual(4.5)
-    })
-  }
 })

@@ -60,7 +60,12 @@ export function TimelineControls({
   onChange,
   matches = null,
   category,
-}: ModelProps & { readonly category: SettingsCategoryId }) {
+  note = true,
+}: ModelProps & {
+  readonly category: SettingsCategoryId
+  /** Der Hinweis „gilt für alle" - überflüssig, wo die Umgebung das schon sagt. */
+  readonly note?: boolean
+}) {
   const t = useT()
   const ids = TIMELINE_FIELD_IDS.filter(
     (id) => TIMELINE_FIELDS[id].category === category && zeigt(matches, `timeline:${id}`),
@@ -68,7 +73,7 @@ export function TimelineControls({
   if (ids.length === 0) return null
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {ids.map((id: TimelineFieldId) => {
         /*
          * Solange die Entnahmephase läuft, beginnt ihr Regler bei 1.
@@ -98,7 +103,7 @@ export function TimelineControls({
           />
         )
       })}
-      {matches === null ? (
+      {matches === null && note ? (
         <p className="text-[11px] leading-snug text-[var(--text-muted)]">
           {t('timeline.shared', 'Gilt für alle Szenarien gemeinsam.')}
         </p>
@@ -238,7 +243,7 @@ export function TimeAxisControls({ value, onChange, matches = null }: ModelProps
   if (!zeigt(matches, 'model:timeAxis')) return null
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <SegmentedWithHint
         label={t('model.timeAxis', 'Zeitachse')}
         value={value.timeAxis}

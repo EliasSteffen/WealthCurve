@@ -25,7 +25,7 @@ export function ThemeToggle({
       role="radiogroup"
       aria-label={t('theme.label', 'Farbschema')}
       onKeyDown={onKeyDown}
-      className="flex gap-0.5 rounded-lg border border-[var(--hairline)] p-0.5"
+      className="flex gap-0.5 rounded-md bg-[var(--surface-2)] p-0.5 ring-1 ring-inset ring-[var(--hairline)]"
     >
       {OPTIONS.map(({ value, label, Icon }) => (
         <button
@@ -38,13 +38,13 @@ export function ThemeToggle({
           title={t(`theme.${value}`, label)}
           onClick={() => onChange(value)}
           className={cn(
-            'rounded-md p-1.5 transition-colors',
+            'rounded p-1 transition-colors',
             theme === value
-              ? 'bg-[var(--accent-fill)] text-[var(--on-accent)]'
-              : 'text-[var(--text-secondary)] hover:bg-[var(--grid)]',
+              ? 'bg-[color-mix(in_srgb,var(--accent-fill)_10%,transparent)] text-[var(--accent-text)]'
+              : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
           )}
         >
-          <Icon size={14} aria-hidden />
+          <Icon size={13} aria-hidden />
         </button>
       ))}
     </div>

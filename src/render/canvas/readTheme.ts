@@ -21,11 +21,11 @@ export function readRenderTheme(root?: HTMLElement): RenderTheme {
   const lies = (name: string, fallback: string) =>
     resolveCssColor(`var(${name}, ${fallback})`, root)
   return {
-    surface: lies('--surface-1', '#fcfcfb'),
-    text: lies('--text-primary', '#0b0b0b'),
-    textMuted: lies('--text-muted', '#73716b'),
-    grid: lies('--grid', '#e1e0d9'),
-    axis: lies('--axis', '#c3c2b7'),
+    surface: lies('--surface-1', '#ffffff'),
+    text: lies('--text-primary', '#131722'),
+    textMuted: lies('--text-muted', '#6a6d78'),
+    grid: lies('--grid', '#e0e3eb'),
+    axis: lies('--axis', '#c3c6ce'),
   }
 }
 

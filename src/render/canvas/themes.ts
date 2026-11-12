@@ -17,18 +17,18 @@ export type ThemeName = 'light' | 'dark'
 
 export const RENDER_THEMES: Record<ThemeName, RenderTheme> = {
   light: {
-    surface: '#fcfcfb',
-    text: '#0b0b0b',
-    textMuted: '#73716b',
-    grid: '#e1e0d9',
-    axis: '#c3c2b7',
+    surface: '#ffffff',
+    text: '#131722',
+    textMuted: '#6a6d78',
+    grid: '#e0e3eb',
+    axis: '#c3c6ce',
   },
   dark: {
-    surface: '#1a1a19',
-    text: '#ffffff',
-    textMuted: '#898781',
-    grid: '#2c2c2a',
-    axis: '#383835',
+    surface: '#131722',
+    text: '#d1d4dc',
+    textMuted: '#868993',
+    grid: '#1f2431',
+    axis: '#363a45',
   },
 }
 

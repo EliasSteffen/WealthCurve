@@ -1,31 +1,40 @@
 @import "tailwindcss";
 
 /*
- * Farbpalette: validiert mit dem dataviz-Validator in beiden Modi.
- * Light  (Flaeche #fcfcfb): schlechtestes Nachbarpaar CVD dE 9.1, Normalsicht dE 19.6
- * Dark   (Flaeche #1a1a19): CVD dE 8.4, Normalsicht dE 19.3, alle Kontraste >= 3:1
+ * Ein Farbsystem für die ganze App - ein Handelsterminal in Hell und Dunkel.
  *
- * Die Serien-Slots sind FEST pro Serien-ID vergeben (siehe domain/series/).
- * Niemals nach Reihenfolge zuweisen - sonst faerbt sich der Chart beim
- * Ein-/Ausschalten um und "Zinseszins ist blau" geht verloren.
+ * Flächen und Schrift folgen dem Terminal (#131722 dunkel, Weiß hell). Die acht
+ * Serienfarben sind unverändert die mit dem dataviz-Validator geprüften
+ * (Light: schlechtestes Nachbarpaar CVD dE 9.1, Dark: 8.4) und FEST pro
+ * Serien-ID vergeben (siehe domain/series/) - niemals nach Reihenfolge, sonst
+ * färbt sich der Chart beim Ein-/Ausschalten um.
+ *
+ * --up/--down tragen Gewinn und Verlust, --accent-text die aktive Auswahl als
+ * Schrift. Jeder Schrift-Token erreicht 4.5:1 auf Karte und Seite
+ * (test/a11y/contrast.test.ts).
  */
 :root {
   color-scheme: light;
 
-  --surface-1: #fcfcfb;
-  --surface-page: #f9f9f7;
-  --text-primary: #0b0b0b;
-  --text-secondary: #52514e;
-  /* #898781 hatte nur 3.5:1 auf der Karte; #73716b erreicht >= 4.5:1 auf Karte und Seite. */
-  --text-muted: #73716b;
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
-  --hairline: rgb(11 11 11 / 0.1);
+  --surface-1: #ffffff;
+  --surface-page: #f0f3fa;
+  /* Eingabefelder und Hover in Listen - eine Stufe über der Fläche. */
+  --surface-2: #f5f6fa;
+  --text-primary: #131722;
+  --text-secondary: #434651;
+  --text-muted: #6a6d78;
+  --grid: #e0e3eb;
+  --axis: #c3c6ce;
+  --hairline: rgb(19 23 34 / 0.12);
 
-  /* Gefuellte Akzentflaechen (Auswahl, Primaerknopf). --chart-1 bleibt der Palette
-     vorbehalten; mit weissem Text hat es nur 4.4:1 (hell) bzw. 3.6:1 (dunkel). */
-  --accent-fill: #2468bd;
+  /* Gefüllte Akzentflächen (Auswahl, Primärknopf). --chart-1 bleibt der Palette vorbehalten. */
+  --accent-fill: #2962ff;
   --on-accent: #ffffff;
+  /* Akzent als Schrift - #2962ff selbst erreicht auf der Seite keine 4.5:1. */
+  --accent-text: #1e53e5;
+
+  --up: #00796b;
+  --down: #c62f3b;
 
   --chart-1: #2a78d6; /* blau    - Zinseszins */
   --chart-2: #eb6834; /* orange  - Ohne Rendite */
@@ -38,22 +47,27 @@
 }
 
 /* Dark-Werte unter BEIDEN Scopes: die Media Query deckt die OS-Einstellung ab,
-   der data-theme-Scope den Toggle - der in beide Richtungen gewinnen muss. */
+   der data-theme-Scope den Umschalter - der in beide Richtungen gewinnen muss. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --surface-1: #1a1a19;
-    --surface-page: #0d0d0d;
-    --text-primary: #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted: #898781;
-    --grid: #2c2c2a;
-    --axis: #383835;
-    --hairline: rgb(255 255 255 / 0.1);
+    --surface-1: #131722;
+    --surface-page: #0c0e15;
+    --surface-2: #1a1e2b;
+    --text-primary: #d1d4dc;
+    --text-secondary: #b2b5be;
+    --text-muted: #868993;
+    --grid: #1f2431;
+    --axis: #363a45;
+    --hairline: rgb(255 255 255 / 0.08);
 
-    --accent-fill: #2468bd;
+    --accent-fill: #2962ff;
     --on-accent: #ffffff;
+    --accent-text: #5b8cff;
+
+    --up: #22ab94;
+    --down: #f7525f;
 
     --chart-1: #3987e5;
     --chart-2: #d95926;
@@ -69,88 +83,9 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --surface-1: #1a1a19;
-  --surface-page: #0d0d0d;
-  --text-primary: #ffffff;
-  --text-secondary: #c3c2b7;
-  --text-muted: #898781;
-  --grid: #2c2c2a;
-  --axis: #383835;
-  --hairline: rgb(255 255 255 / 0.1);
-
-  --accent-fill: #2468bd;
-  --on-accent: #ffffff;
-
-  --chart-1: #3987e5;
-  --chart-2: #d95926;
-  --chart-3: #199e70;
-  --chart-4: #c98500;
-  --chart-5: #d55181;
-  --chart-6: #008300;
-  --chart-7: #9085e9;
-  --chart-8: #e66767;
-}
-
-/*
- * Pro-Modus: Flächen und Schrift im Stil eines Handelsterminals.
- *
- * Nur Flächen, Text und Linien wechseln - die acht Serienfarben bleiben, damit
- * "Zinseszins ist blau" auch hier gilt. Dazu kommen --up/--down für Gewinn und
- * Verlust; beide erreichen als Text 4.5:1 auf Karte und Seite (siehe
- * test/a11y/contrast.test.ts).
- *
- * Spezifität: [data-pro] hebt den hellen Pro-Block über die Dark-Blöcke oben
- * (gleiche Spezifität, später definiert), die dunklen Pro-Blöcke tragen ein
- * Attribut mehr und gewinnen in beiden Richtungen.
- */
-:root[data-pro] {
-  color-scheme: light;
-
-  --surface-1: #ffffff;
-  --surface-page: #f0f3fa;
-  --text-primary: #131722;
-  --text-secondary: #434651;
-  --text-muted: #6a6d78;
-  --grid: #e0e3eb;
-  --axis: #c3c6ce;
-  --hairline: rgb(19 23 34 / 0.12);
-
-  --accent-fill: #2962ff;
-  --on-accent: #ffffff;
-  /* Akzent als Schrift (aktive Auswahl) - #2962ff selbst erreicht auf der Seite keine 4.5:1. */
-  --accent-text: #1e53e5;
-
-  --up: #00796b;
-  --down: #c62f3b;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root[data-pro]:not([data-theme="light"]) {
-    color-scheme: dark;
-
-    --surface-1: #131722;
-    --surface-page: #0c0e15;
-    --text-primary: #d1d4dc;
-    --text-secondary: #b2b5be;
-    --text-muted: #868993;
-    --grid: #1f2431;
-    --axis: #363a45;
-    --hairline: rgb(255 255 255 / 0.08);
-
-    --accent-fill: #2962ff;
-    --on-accent: #ffffff;
-    --accent-text: #5b8cff;
-
-    --up: #22ab94;
-    --down: #f7525f;
-  }
-}
-
-:root[data-pro][data-theme="dark"] {
-  color-scheme: dark;
-
   --surface-1: #131722;
   --surface-page: #0c0e15;
+  --surface-2: #1a1e2b;
   --text-primary: #d1d4dc;
   --text-secondary: #b2b5be;
   --text-muted: #868993;
@@ -164,33 +99,37 @@
 
   --up: #22ab94;
   --down: #f7525f;
-}
 
-/* Schmale Rollbalken in den dichten Pro-Spalten - die breiten des Systems
-   fräßen von 300 px Seitenspalte ein Zehntel. */
-.pro-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: var(--axis) transparent;
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #008300;
+  --chart-7: #9085e9;
+  --chart-8: #e66767;
 }
 
 @theme inline {
   --color-surface: var(--surface-1);
+  --color-surface-2: var(--surface-2);
   --color-page: var(--surface-page);
   --color-ink: var(--text-primary);
   --color-ink-secondary: var(--text-secondary);
   --color-ink-muted: var(--text-muted);
   --color-grid: var(--grid);
   --color-axis: var(--axis);
+  --color-accent: var(--accent-fill);
+  --color-accent-ink: var(--accent-text);
+  --color-up: var(--up);
+  --color-down: var(--down);
 }
 
 /*
- * App-Shell: die Seite ist genau fensterhoch und scrollt selbst nie.
- * Gescrollt wird ausschließlich innerhalb der Bereiche, die es brauchen
- * (Seitenspalte und Inhaltsspalte) - dadurch bleiben Kopfzeile und Diagramm
- * stehen, statt aus dem Bild zu wandern.
- *
- * 100dvh statt 100vh: auf Mobilgeräten wächst und schrumpft die
- * Browserleiste, und nur dvh folgt dieser Änderung.
+ * App-Shell: die Seite ist genau fensterhoch und scrollt selbst nie. Gescrollt
+ * wird innerhalb der Bereiche, die es brauchen - Kopfzeile und Chart bleiben
+ * stehen, statt aus dem Bild zu wandern. 100dvh folgt der wachsenden und
+ * schrumpfenden Browserleiste auf dem Handy.
  */
 html {
   height: 100%;
@@ -203,7 +142,9 @@ body {
   overscroll-behavior: none;
   background: var(--surface-page);
   color: var(--text-primary);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Zahlen stehen im Terminal untereinander - überall gleich breite Ziffern. */
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -211,187 +152,159 @@ body {
   height: 100%;
 }
 
+:focus-visible {
+  outline: 2px solid var(--accent-fill);
+  outline-offset: 1px;
+}
+
+/* Schmale Rollbalken in den dichten Spalten - breite fräßen von 320 px ein Zehntel. */
+.thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--axis) transparent;
+}
+
 /*
- * Bottom-Sheet auf Basis des nativen <dialog>.
- * showModal() liefert Fokus-Falle, ESC und Scroll-Sperre; hier kommt nur die
- * Darstellung dazu. @starting-style animiert das Einblenden ohne JavaScript.
+ * Popover (Menüs, Befehlspalette) auf Basis des nativen <dialog>: Fokus-Falle,
+ * Escape und oberste Ebene gibt es vom Browser. Hier nur die Darstellung.
  */
-.settings-sheet {
-  margin: 0 0 0 auto;
-  max-height: 88dvh;
-  width: 100%;
-  max-width: 100%;
+.palette {
+  margin: 12vh auto auto;
+  width: min(36rem, calc(100vw - 2rem));
+  max-height: min(32rem, 76dvh);
   padding: 0;
-  border: none;
-  border-radius: 16px 16px 0 0;
-  background: var(--surface-page);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--surface-1);
   color: var(--text-primary);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.35);
   display: flex;
   flex-direction: column;
-  position: fixed;
-  inset: auto 0 0 0;
   opacity: 1;
   translate: 0 0;
   transition:
-    opacity 180ms ease,
-    translate 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    overlay 220ms allow-discrete,
-    display 220ms allow-discrete;
+    opacity 120ms ease,
+    translate 140ms ease,
+    overlay 140ms allow-discrete,
+    display 140ms allow-discrete;
 }
 
-/*
- * `display: none` gehört zwingend dazu.
- *
- * Ein <dialog> ohne [open] ist per UA-Stylesheet display:none. Die Regel oben
- * setzt display:flex bedingungslos und hebt das auf - der geschlossene Dialog
- * bliebe sonst als unsichtbare, aber klickfängige Fläche über der Seite liegen
- * und verschluckte jeden Klick darunter. `transition: display allow-discrete`
- * schiebt das Ausblenden ans Ende der Animation, die Ein- und Ausblendung
- * bleibt also erhalten.
- */
-.settings-sheet:not([open]) {
+/* Ohne display:none läge der geschlossene Dialog als unsichtbare, klickfängige Fläche über der Seite. */
+.palette:not([open]) {
   display: none;
   opacity: 0;
-  translate: 0 100%;
+  translate: 0 -6px;
 }
 
 @starting-style {
-  .settings-sheet[open] {
+  .palette[open] {
     opacity: 0;
-    translate: 0 100%;
+    translate: 0 -6px;
   }
 }
 
-.settings-sheet::backdrop {
+.palette::backdrop {
   background: rgb(0 0 0 / 0.45);
-  opacity: 1;
-  transition:
-    opacity 180ms ease,
-    overlay 180ms allow-discrete,
-    display 180ms allow-discrete;
-}
-
-.settings-sheet:not([open])::backdrop {
-  opacity: 0;
-}
-
-@starting-style {
-  .settings-sheet[open]::backdrop {
-    opacity: 0;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .settings-sheet,
-  .settings-sheet::backdrop {
+  .palette {
     transition-duration: 1ms;
   }
 }
 
-/* Großer, zentrierter Dialog - Einstellungen wie Video, mit derselben
-   Ein-Ausblendung wie das Sheet. */
-.app-dialog {
-  /* Ohne margin:auto landet der Dialog in der oberen linken Ecke, sobald
-     display:flex gesetzt ist. */
-  margin: auto;
-  /* Feste Größe statt nur max-*: ohne width schrumpft der Dialog auf
-     Inhaltsbreite, und die Vorschau wird unbrauchbar klein. */
-  width: min(64rem, 94vw);
-  height: min(46rem, 92dvh);
-  max-width: 94vw;
-  max-height: 92dvh;
-  padding: 0;
-  border: 1px solid var(--hairline);
-  border-radius: 16px;
-  background: var(--surface-page);
-  color: var(--text-primary);
-  display: flex;
-  flex-direction: column;
-  opacity: 1;
-  scale: 1;
-  transition:
-    opacity 160ms ease,
-    scale 160ms ease,
-    overlay 160ms allow-discrete,
-    display 160ms allow-discrete;
-}
-
-/* Siehe .settings-sheet: ohne display:none lag dieser Dialog geschlossen als
-   993x636-Fläche über der Seitenspalte und machte die Szenario-Knöpfe
-   unklickbar. */
-.app-dialog:not([open]) {
-  display: none;
-  opacity: 0;
-  scale: 0.97;
-}
-
-@starting-style {
-  .app-dialog[open] {
-    opacity: 0;
-    scale: 0.97;
-  }
-}
-
-.app-dialog::backdrop {
-  background: rgb(0 0 0 / 0.5);
-}
-
 /*
- * Regler mit brauchbarer Trefferfläche.
- *
- * Ein `<input type=range>` ist genau so hoch wie seine Spur - bei 6 px hieß das:
- * der sichtbare Griff war größer als die Fläche, die auf Klicks reagiert, und
- * wer knapp daneben zielte, traf nichts. Die Spur bleibt optisch dünn, das
- * Element selbst wird 24 px hoch (WCAG 2.2 SC 2.5.8 verlangt 24 als Minimum).
+ * Regler mit brauchbarer Trefferfläche: das Element ist 20 px hoch, die Spur
+ * optisch 3 px. Wer knapp daneben zielt, trifft trotzdem.
  */
 .slider {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 24px;
+  height: 20px;
   background: transparent;
   cursor: pointer;
+  /* Füllstand links vom Griff - gesetzt über --fill (0-100 %) im Inline-Style. */
+  --track: var(--grid);
 }
 
 .slider:focus-visible {
-  outline: 2px solid var(--chart-1);
+  outline: 2px solid var(--accent-fill);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
 .slider::-webkit-slider-runnable-track {
-  height: 6px;
+  height: 3px;
   border-radius: 9999px;
-  background: var(--grid);
+  background: linear-gradient(
+    to right,
+    var(--accent-fill) 0 var(--fill, 0%),
+    var(--track) var(--fill, 0%) 100%
+  );
 }
 
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
-  /* Auf der 6-px-Spur zentrieren: (6 - 16) / 2 */
+  width: 13px;
+  height: 13px;
+  /* Auf der 3-px-Spur zentrieren: (3 - 13) / 2 */
   margin-top: -5px;
-  border: none;
+  border: 2px solid var(--accent-fill);
   border-radius: 9999px;
-  background: var(--chart-1);
+  background: var(--surface-1);
+  transition: scale 100ms ease;
+}
+
+.slider:hover::-webkit-slider-thumb {
+  scale: 1.15;
 }
 
 .slider::-moz-range-track {
-  height: 6px;
+  height: 3px;
   border-radius: 9999px;
-  background: var(--grid);
+  background: var(--track);
+}
+
+.slider::-moz-range-progress {
+  height: 3px;
+  border-radius: 9999px;
+  background: var(--accent-fill);
 }
 
 .slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border: none;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--accent-fill);
   border-radius: 9999px;
-  background: var(--chart-1);
+  background: var(--surface-1);
 }
 
 .slider:disabled {
   cursor: not-allowed;
   opacity: 0.4;
+}
+
+/* Ziel eines Sprungs (Befehlspalette, Querverweis) - kurz aufleuchten lassen. */
+.reveal-flash {
+  animation: reveal-flash 1.4s ease-out;
+  border-radius: 6px;
+}
+
+@keyframes reveal-flash {
+  0%,
+  30% {
+    background: color-mix(in srgb, var(--accent-fill) 16%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-fill) 16%, transparent);
+  }
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-flash {
+    animation-duration: 1ms;
+  }
 }

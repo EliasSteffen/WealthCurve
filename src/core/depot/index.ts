@@ -11,6 +11,7 @@ export type { ParseIssue, ParseResult } from './parse.ts'
 export {
   WINDOW_YEARS,
   computeDepotStats,
+  depotHistory,
   fxSymbol,
   isWindowStats,
   normalizeCurrency,

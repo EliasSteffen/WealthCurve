@@ -16,7 +16,7 @@ import { Stat } from '../ui/Stat'
 import { pct, ratio, shareLabel, type Dimension } from './depotFormat'
 
 const KNOPF =
-  'rounded-lg border border-[var(--hairline)] px-3 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--surface-page)] disabled:opacity-40'
+  'rounded-md border border-[var(--hairline)] px-3 py-1.5 text-[13px] text-[var(--text-primary)] hover:bg-[var(--surface-page)] disabled:opacity-40'
 const TH = 'px-2 py-1 text-right text-xs font-medium text-[var(--text-muted)] first:pl-0 first:text-left'
 const TD = 'border-t border-[var(--hairline)] px-2 py-1.5 text-right tabular-nums first:pl-0 first:text-left'
 const KEIN_LAND = NON_EQUITY_KEYS
@@ -32,7 +32,7 @@ function Tabelle({
 }) {
   return (
     <div className="relative overflow-x-auto">
-      <table className="w-full text-sm text-[var(--text-primary)]">
+      <table className="w-full text-[13px] text-[var(--text-primary)]">
         <caption className="mb-2 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
           {caption}
         </caption>
@@ -129,7 +129,7 @@ export function OverviewView({
       )}
 
       {nur !== 'tabellen' && loading && !haupt ? (
-        <p className="text-sm text-[var(--text-muted)]">{t('depot.loading', 'Lade Kurse und Fondsbestände …')}</p>
+        <p className="text-[13px] text-[var(--text-muted)]">{t('depot.loading', 'Lade Kurse und Fondsbestände …')}</p>
       ) : null}
 
       {nur === 'kacheln' ? null : (
@@ -218,7 +218,7 @@ function Balken({
       <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">{title}</h3>
       <ul className="space-y-1.5">
         {items.map((item) => (
-          <li key={item.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 text-sm">
+          <li key={item.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 text-[13px]">
             <span className="truncate text-[var(--text-primary)]">
               {item.key.startsWith('__other:')
                 ? t('depot.key.other', 'Übrige ({count})', { count: item.key.split(':')[1] })
@@ -249,7 +249,7 @@ export function BreakdownView({
 }) {
   const t = useT()
   if (loading && look.companies.length === 0) {
-    return <p className="text-sm text-[var(--text-muted)]">{t('depot.loading', 'Lade Kurse und Fondsbestände …')}</p>
+    return <p className="text-[13px] text-[var(--text-muted)]">{t('depot.loading', 'Lade Kurse und Fondsbestände …')}</p>
   }
   return (
     <div className="space-y-6">
@@ -450,7 +450,7 @@ export function RisksView({
   const t = useT()
   if (flags.length === 0) {
     return (
-      <p className="text-sm text-[var(--text-secondary)]">
+      <p className="text-[13px] text-[var(--text-secondary)]">
         {t('depot.flags.none', 'Keine der geprüften Auffälligkeiten liegt über ihrem Grenzwert.')}
       </p>
     )
@@ -463,15 +463,20 @@ export function RisksView({
           const Icon = f.level === 'warn' ? AlertTriangle : Info
           return (
             <li key={`${f.id}-${i}`} className="flex gap-3">
-              <Icon size={16} aria-hidden className="mt-0.5 shrink-0 text-[var(--text-secondary)]" />
+              <Icon
+                size={14}
+                aria-hidden
+                className="mt-0.5 shrink-0"
+                style={{ color: f.level === 'warn' ? 'var(--chart-4)' : 'var(--text-muted)' }}
+              />
               <div className="min-w-0 space-y-0.5">
-                <p className="text-sm font-medium text-[var(--text-primary)]">
+                <p className="text-[13px] font-medium text-[var(--text-primary)]">
                   <span className="sr-only">
                     {f.level === 'warn' ? t('depot.flags.warn', 'Warnung: ') : t('depot.flags.info', 'Hinweis: ')}
                   </span>
                   {title}
                 </p>
-                <p className="text-sm text-[var(--text-secondary)]">{text}</p>
+                <p className="text-xs leading-relaxed text-[var(--text-secondary)]">{text}</p>
                 {lever ? <p className="text-xs text-[var(--text-muted)]">{lever}</p> : null}
               </div>
             </li>
@@ -520,7 +525,7 @@ function ProzentFeld({
         onKeyDown={(e) => {
           if (e.key === 'Enter') uebernehmen()
         }}
-        className="w-20 rounded-md border border-[var(--hairline)] bg-[var(--surface-1)] px-2 py-1 text-right text-sm tabular-nums text-[var(--text-primary)] focus:border-[var(--chart-1)] focus:outline-none"
+        className="w-20 rounded-md border border-[var(--hairline)] bg-[var(--surface-1)] px-2 py-1 text-right text-[13px] tabular-nums text-[var(--text-primary)] focus:border-[var(--accent-fill)] focus:outline-none"
       />
       <span aria-hidden className="text-[var(--text-muted)]">
         %

@@ -298,22 +298,22 @@ export function VideoWorkspace() {
   const hatUntertitel = ergebnis ? toSrt(ergebnis.spec, ergebnis.facts).length > 0 : false
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+    <div className="flex min-h-0 flex-1 flex-col gap-px bg-[var(--grid)] lg:flex-row">
         {/* Die Vorschau bekommt den ganzen freien Platz - man muss beurteilen
             können, was aufgenommen wird. */}
-        <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center rounded-lg bg-[var(--surface-1)] p-3">
+        <div className="flex min-h-[55vh] min-w-0 flex-1 items-center justify-center bg-[var(--surface-page)] p-4 lg:min-h-0 lg:p-6">
           {/* Canvas rendert in voller Auflösung und wird nur per CSS verkleinert -
               das aufgenommene Bild bleibt dadurch scharf. */}
           <canvas
             ref={canvasRef}
             width={format.width}
             height={format.height}
-            className="h-auto max-h-full w-auto max-w-full rounded border border-[var(--hairline)]"
+            className="h-auto max-h-full w-auto max-w-full rounded-md border border-[var(--hairline)] shadow-[0_16px_48px_rgb(0_0_0/0.25)]"
             style={{ aspectRatio: `${format.width} / ${format.height}` }}
           />
         </div>
 
-        <div className="w-full shrink-0 space-y-4 overflow-y-auto overscroll-contain lg:w-72">
+        <div className="thin-scroll w-full shrink-0 space-y-4 overflow-y-auto overscroll-contain bg-[var(--surface-1)] p-4 lg:w-80">
           {/* Während Aufnahme/Umwandlung gesperrt: Format, fps, Szenen und Ton
               würden sonst mitten im Lauf Canvas und Spezifikation ändern. */}
           <fieldset disabled={besetzt} className="m-0 min-w-0 space-y-4 border-0 p-0">
@@ -611,7 +611,7 @@ function SzenenEditor({
       <div className="text-xs font-medium text-[var(--text-secondary)]">Szenen</div>
 
       {scenes.map((scene, index) => (
-        <div key={scene.kind} className="rounded-lg border border-[var(--hairline)] p-2.5">
+        <div key={scene.kind} className="rounded-md border border-[var(--hairline)] bg-[var(--surface-2)] p-2.5">
           <div className="mb-1.5 flex items-center justify-between gap-2">
             <span className="text-[11px] font-semibold text-[var(--text-primary)]">
               {SZENEN_TITEL[scene.kind]}
@@ -625,7 +625,7 @@ function SzenenEditor({
                 value={scene.seconds}
                 onChange={(e) => aendern(index, { seconds: Math.max(0, e.target.valueAsNumber || 0) })}
                 aria-label={`Dauer ${SZENEN_TITEL[scene.kind]} in Sekunden`}
-                className="w-14 rounded border border-[var(--hairline)] bg-transparent px-1 py-0.5 text-right tabular-nums text-[var(--text-primary)] focus:border-[var(--chart-1)] focus:outline-none"
+                className="w-14 rounded border border-[var(--hairline)] bg-transparent px-1 py-0.5 text-right tabular-nums text-[var(--text-primary)] focus:border-[var(--accent-fill)] focus:outline-none"
               />
               s
             </label>
@@ -636,7 +636,7 @@ function SzenenEditor({
             onChange={(e) => aendern(index, { text: e.target.value })}
             aria-label={`Text ${SZENEN_TITEL[scene.kind]}`}
             disabled={scene.seconds === 0}
-            className="w-full resize-none rounded border border-[var(--hairline)] bg-transparent px-1.5 py-1 text-[11px] leading-snug text-[var(--text-primary)] focus:border-[var(--chart-1)] focus:outline-none disabled:opacity-40"
+            className="w-full resize-none rounded border border-[var(--hairline)] bg-transparent px-1.5 py-1 text-[11px] leading-snug text-[var(--text-primary)] focus:border-[var(--accent-fill)] focus:outline-none disabled:opacity-40"
           />
         </div>
       ))}

@@ -5,9 +5,9 @@ import { cn } from '../../lib/cn'
 import { formatEur } from '../../lib/format'
 import { useLocale, useT } from '../../react/localeContext'
 import { useSeriesLabel } from '../../react/useSeriesLabel'
-import { signedEur } from './numbers'
+import { signedEur } from '../../lib/numbers'
 
-interface ProTableProps {
+interface YearTableProps {
   readonly projection: Projection
   readonly anchor: TimeAnchor
   readonly focusKey: string | null
@@ -21,7 +21,7 @@ interface ProTableProps {
  * Datum und Achsenbeschriftung stehen nebeneinander, dazu die Veränderung der
  * Hauptkurve. Die Rentenzeile ist markiert, damit man die Phasengrenze auch hier findet.
  */
-export function ProTable({ projection, anchor, focusKey, yearHeading }: ProTableProps) {
+export function YearTable({ projection, anchor, focusKey, yearHeading }: YearTableProps) {
   const t = useT()
   const { locale } = useLocale()
   const labelOf = useSeriesLabel()

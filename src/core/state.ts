@@ -35,8 +35,10 @@ export interface Scenario {
 
 export type EncodingPreference = 'auto' | string
 
-/** Die zwei Bereiche der Anwendung: der Sparplan mit Vermögenskurve und das eigene Depot. */
-export type AppPage = 'sparplan' | 'depot'
+/** Die Bereiche der Anwendung: der Sparplan mit Vermögenskurve, das eigene Depot und das Video. */
+export type AppPage = 'sparplan' | 'depot' | 'video'
+
+export const APP_PAGES: readonly AppPage[] = ['sparplan', 'depot', 'video']
 
 export interface AppState {
   readonly scenarios: readonly Scenario[]
@@ -82,13 +84,6 @@ export interface AppState {
   readonly depot: DepotState
   /** Welcher Bereich offen ist - bleibt über ein Neuladen erhalten, nicht im Teilen-Link. */
   readonly page: AppPage
-  /**
-   * Pro-Modus: Terminal-Ansicht mit TradingView-Charts statt der ruhigen Kurve.
-   *
-   * Eine Vorliebe der Person am Bildschirm, kein Teil des Plans - bleibt über ein
-   * Neuladen erhalten, wandert aber nicht in den Teilen-Link.
-   */
-  readonly proMode: boolean
 }
 
 let counter = 0
@@ -138,7 +133,6 @@ export function createInitialState(): AppState {
     markets: [],
     depot: EMPTY_DEPOT,
     page: 'sparplan',
-    proMode: false,
   }
 }
 
@@ -182,7 +176,6 @@ export type Action =
   | { type: 'depot/setWhatIfWeight'; id: string; weight: number }
   | { type: 'depot/updateHolding'; id: string; patch: Partial<Omit<DepotHolding, 'id'>> }
   | { type: 'page/set'; page: AppPage }
-  | { type: 'pro/set'; enabled: boolean }
   | { type: 'sidebar/setCollapsed'; collapsed: boolean }
   | { type: 'settings/toggleCard'; id: SettingsCardId }
   | { type: 'settings/setView'; view: SettingsView }
@@ -259,7 +252,6 @@ export const actions = {
     patch,
   }),
   setPage: (page: AppPage): Action => ({ type: 'page/set', page }),
-  setProMode: (enabled: boolean): Action => ({ type: 'pro/set', enabled }),
   setSidebarCollapsed: (collapsed: boolean): Action => ({
     type: 'sidebar/setCollapsed',
     collapsed,
@@ -473,13 +465,10 @@ export function reducer(state: AppState, action: Action): AppState {
     }
 
     case 'page/set':
-      return state.page === action.page ? state : { ...state, page: action.page }
-
-    case 'pro/set':
-      // Nur ein echtes Boolean: aus fremdem JSON darf kein "ja" als Wahrheit durchrutschen.
-      return typeof action.enabled !== 'boolean' || state.proMode === action.enabled
+      // Nur bekannte Bereiche - ein erfundener ließe die Oberfläche ohne Inhalt.
+      return state.page === action.page || !APP_PAGES.includes(action.page)
         ? state
-        : { ...state, proMode: action.enabled }
+        : { ...state, page: action.page }
 
     case 'depot/setWhatIfWeight': {
       const { holdings, whatIf } = state.depot
@@ -649,8 +638,7 @@ export function deserialize(raw: string): AppState | null {
         : base.settingsView,
       markets: Array.isArray(parsed.markets) ? sanitizeMarkets(parsed.markets) : base.markets,
       depot: sanitizeDepot(parsed.depot),
-      page: parsed.page === 'depot' ? 'depot' : 'sparplan',
-      proMode: parsed.proMode === true,
+      page: APP_PAGES.includes(parsed.page as AppPage) ? (parsed.page as AppPage) : 'sparplan',
     }
   } catch {
     return null

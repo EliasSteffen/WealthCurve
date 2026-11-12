@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DepotPage } from '@/components/depot/DepotPage'
@@ -78,7 +78,8 @@ describe('Ziele & Vorschläge', () => {
     ])
     expect(await screen.findByText(/Geschätzt, weil der Anbieter keinen Bestand veröffentlicht/)).toBeInTheDocument()
     expect(screen.queryByText(/Ohne Durchschau/)).toBeNull()
-    // Der Hebel steht im Namen, aber nicht im Depot - die Seite bietet die Korrektur an.
+    // Der Hebel steht im Namen, aber nicht im Depot - unter „Daten & Quellen“ steht die Korrektur.
+    fireEvent.click(screen.getByRole('tab', { name: 'Daten & Quellen' }))
     expect(screen.getByRole('button', { name: 'Typ und Hebel übernehmen' })).toBeInTheDocument()
   })
 
@@ -88,7 +89,8 @@ describe('Ziele & Vorschläge', () => {
       holding({ id: 'A', name: 'iShares Core S&P 500', weight: 0.6 }),
       holding({ id: 'B', name: 'Vanguard FTSE Developed Europe UCITS ETF', weight: 0.4 }),
     ])
-    const abschnitt = screen.getByRole('heading', { name: 'Ziele & Vorschläge' }).closest('section')!
+    await user.click(screen.getByRole('tab', { name: 'Ziele & Vorschläge' }))
+    const abschnitt = screen.getByRole('tabpanel')
     await user.click(within(abschnitt).getByRole('button', { name: /70\/30/ }))
 
     expect(await within(abschnitt).findByText('So kommst du hin – ohne zu verkaufen')).toBeInTheDocument()

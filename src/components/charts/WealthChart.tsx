@@ -30,7 +30,7 @@ import { cn } from '../../lib/cn'
 import { formatEur, formatPercent } from '../../lib/format'
 import { useLocale } from '../../react/localeContext'
 import { CHART_FONT, useChartPalette, withAlpha } from './chartTheme'
-import { shortEur, signedShortEur } from './numbers'
+import { shortEur, signedShortEur } from '../../lib/numbers'
 import { PhaseBand } from './phaseBand'
 import type { ChartHandle, ScaleMode } from './types'
 
@@ -41,11 +41,13 @@ const LEGENDE_MAX = 8
 
 const eurFormat = { type: 'custom', formatter: (p: number) => shortEur(p), minMove: 1 } as const
 
-interface ProChartProps {
+interface WealthChartProps {
   readonly projection: Projection
   readonly anchor: TimeAnchor
   /** Die Linie mit Fläche, Marken und Balken darunter. */
   readonly focusKey: string | null
+  /** Klick auf eine Linie in der Legende macht sie zur Hauptkurve. */
+  readonly onFocusLine?: (key: string) => void
   readonly scaleMode: ScaleMode
   readonly showDelta: boolean
   /** Sichtbare Jahre ab Start; null zeigt alles. */
@@ -53,6 +55,8 @@ interface ProChartProps {
   readonly watermark: string
   readonly axisMode: TimeAxisMode
   readonly labelOf: (line: ProjectionLine) => string
+  /** Was Farbe und Strich bedeuten - unter der Legende, leer bleibt die Zeile weg. */
+  readonly hint?: string
   /** Texte, damit der Chart selbst keine Übersetzung kennen muss. */
   readonly text: {
     readonly saving: string
@@ -63,6 +67,7 @@ interface ProChartProps {
     readonly year: (n: string) => string
     readonly age: (n: string) => string
     readonly more: (n: number) => string
+    readonly focus: string
   }
   readonly ref?: Ref<ChartHandle>
 }
@@ -75,19 +80,21 @@ interface ProChartProps {
  * Komponente; Reglerschritte tauschen nur die Daten, damit Zoom und Scroll
  * stehen bleiben, während man dreht.
  */
-export function ProChart({
+export function WealthChart({
   projection,
   anchor,
   focusKey,
+  onFocusLine,
   scaleMode,
   showDelta,
   rangeYears,
   watermark,
   axisMode,
   labelOf,
+  hint,
   text,
   ref,
-}: ProChartProps) {
+}: WealthChartProps) {
   const { locale } = useLocale()
   const palette = useChartPalette()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -454,8 +461,15 @@ export function ProChart({
               // Auf dem Handy nur die Hauptkurve - sonst verdeckt die Legende den halben Chart.
               <li
                 key={line.key}
-                className={cn('min-w-0 items-center gap-1.5', line.key === focusKey || lines.length === 1 ? 'flex' : 'hidden sm:flex')}
+                className={cn('min-w-0', line.key === focusKey || lines.length === 1 ? 'flex' : 'hidden sm:flex')}
               >
+                <button
+                  type="button"
+                  onClick={() => onFocusLine?.(line.key)}
+                  aria-pressed={line.key === focusKey}
+                  title={text.focus}
+                  className="pointer-events-auto -mx-1 flex min-w-0 items-center gap-1.5 rounded px-1 text-left hover:bg-[var(--grid)]"
+                >
                 <span
                   aria-hidden
                   className="h-0.5 w-3 shrink-0 rounded-full"
@@ -476,6 +490,7 @@ export function ProChart({
                     {prozent !== null ? ` (${delta >= 0 ? '+' : '−'}${formatPercent(Math.abs(prozent))})` : ''}
                   </span>
                 ) : null}
+                </button>
               </li>
             )
           })}
@@ -483,6 +498,7 @@ export function ProChart({
             <li className="hidden text-[var(--text-muted)] sm:block">{text.more(lines.length - LEGENDE_MAX)}</li>
           ) : null}
         </ul>
+        {hint ? <p className="hidden text-[10px] text-[var(--text-muted)] sm:block">{hint}</p> : null}
       </div>
     </div>
   )

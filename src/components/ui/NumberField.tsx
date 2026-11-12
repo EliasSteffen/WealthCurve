@@ -39,7 +39,7 @@ export function NumberField({ label, value, min, max, placeholder, onChange }: N
 
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-[var(--text-secondary)]">
+      <label htmlFor={id} className="mb-1 block text-xs text-[var(--text-secondary)]">
         {label}
       </label>
       <input
@@ -60,9 +60,9 @@ export function NumberField({ label, value, min, max, placeholder, onChange }: N
           if (e.key === 'Enter') e.currentTarget.blur()
         }}
         className={cn(
-          'w-full rounded-lg border border-[var(--hairline)] bg-[var(--surface-1)] px-2.5 py-2',
-          'text-sm tabular-nums text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
-          'focus:border-[var(--chart-1)] focus:outline-none',
+          'h-8 w-full rounded-md border border-transparent bg-[var(--surface-2)] px-2',
+          'text-[13px] font-medium text-[var(--text-primary)] placeholder:font-normal placeholder:text-[var(--text-muted)]',
+          'hover:border-[var(--hairline)] focus:border-[var(--accent-fill)] focus:outline-none',
         )}
       />
     </div>

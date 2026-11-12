@@ -24,14 +24,14 @@ export function SelectField({ label, value, options, onChange }: SelectFieldProp
 
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-xs font-medium text-[var(--text-secondary)]">
+      <label htmlFor={id} className="mb-1 block text-xs text-[var(--text-secondary)]">
         {label}
       </label>
       <select
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-[var(--hairline)] bg-[var(--surface-1)] px-2.5 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--chart-1)] focus:outline-none"
+        className="h-8 w-full rounded-md border border-[var(--hairline)] bg-[var(--surface-2)] px-2 text-xs text-[var(--text-primary)] focus:border-[var(--accent-fill)] focus:outline-none"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
