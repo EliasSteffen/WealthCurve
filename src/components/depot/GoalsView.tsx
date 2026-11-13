@@ -25,9 +25,9 @@ import { GoalMap } from './GoalMap'
 import { GrenzFeld } from './GrenzFeld'
 
 const KNOPF =
-  'rounded-lg border border-[var(--hairline)] px-3 py-1.5 text-sm text-[var(--text-primary)] hover:bg-[var(--grid)] disabled:opacity-40'
+  'rounded-md border border-[var(--hairline)] px-3 py-1.5 text-[13px] text-[var(--text-primary)] hover:bg-[var(--grid)] disabled:opacity-40'
 const EINGABE =
-  'rounded-md border border-[var(--hairline)] bg-[var(--surface-1)] px-2 py-1 text-sm text-[var(--text-primary)] focus:border-[var(--chart-1)] focus:outline-none'
+  'rounded-md border border-[var(--hairline)] bg-[var(--surface-1)] px-2 py-1 text-[13px] text-[var(--text-primary)] focus:border-[var(--accent-fill)] focus:outline-none'
 
 function dimLabel(dim: GoalDim, t: Translate): string {
   switch (dim) {
@@ -222,7 +222,7 @@ function ZielZeile({
   return (
     <li className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 border-t border-[var(--hairline)] py-3 first:border-t-0 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)_auto]">
       <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-[var(--text-primary)]">
+        <p className="truncate text-[13px] font-medium text-[var(--text-primary)]">
           {name}
           {regel ? <span className="font-normal text-[var(--text-muted)]"> · {regel}</span> : null}
         </p>
@@ -375,9 +375,9 @@ function Vorlagen({ onApply }: { readonly onApply: (id: GoalPresetId) => void })
             <button
               type="button"
               onClick={() => onApply(id)}
-              className="h-full w-full rounded-lg border border-[var(--hairline)] px-3 py-2 text-left hover:border-[var(--chart-1)] hover:bg-[var(--surface-page)]"
+              className="h-full w-full rounded-md border border-[var(--hairline)] px-3 py-2 text-left hover:border-[var(--chart-1)] hover:bg-[var(--surface-page)]"
             >
-              <span className="block text-sm font-medium text-[var(--text-primary)]">{title}</span>
+              <span className="block text-[13px] font-medium text-[var(--text-primary)]">{title}</span>
               <span className="block text-xs text-[var(--text-secondary)]">{text}</span>
             </button>
           </li>
@@ -454,7 +454,7 @@ export function GoalsView({
   if (goals.length === 0) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-[var(--text-secondary)]">
+        <p className="text-[13px] text-[var(--text-secondary)]">
           {t(
             'depot.goals.intro',
             'Leg fest, wie dein Depot aufgeteilt sein soll – etwa mehr Schwellenländer oder kein Land über 50 %. Dann siehst du, was fehlt und welcher Zukauf am meisten bringt.',
@@ -462,7 +462,7 @@ export function GoalsView({
         </p>
         <Vorlagen onApply={(id) => setGoals(applyPreset(goals, id))} />
         {karte}
-        <details className="text-sm">
+        <details className="text-[13px]">
           <summary className="cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
             {t('depot.goals.custom', 'Eigenes Ziel festlegen')}
           </summary>
@@ -491,7 +491,7 @@ export function GoalsView({
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-sm font-medium text-[var(--text-primary)]">
+        <p className="text-[13px] font-medium text-[var(--text-primary)]">
           {loading
             ? t('depot.loading', 'Lade Kurse und Fondsbestände …')
             : offen.length === 0 && mitDaten.length > 0
@@ -505,8 +505,8 @@ export function GoalsView({
       </div>
 
       {offen.length > 0 && !loading ? (
-        <div className="rounded-lg border border-[var(--hairline)] bg-[var(--surface-page)] p-3 sm:p-4">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+        <div className="rounded-md border border-[var(--hairline)] bg-[var(--surface-page)] p-3 sm:p-4">
+          <h3 className="text-[13px] font-semibold text-[var(--text-primary)]">
             {t('depot.goals.suggestTitle', 'So kommst du hin – ohne zu verkaufen')}
           </h3>
           {bester ? (
@@ -514,7 +514,7 @@ export function GoalsView({
               {vorschlaege.map((s, i) => {
                 const { title, example } = blockText(s.block, s.index, t)
                 return (
-                  <li key={s.block} className={cn('text-sm', i > 0 && 'text-[var(--text-secondary)]')}>
+                  <li key={s.block} className={cn('text-[13px]', i > 0 && 'text-[var(--text-secondary)]')}>
                     <span className={cn(i === 0 && 'font-medium text-[var(--text-primary)]')}>{title}</span>
                     {example ? <span className="text-[var(--text-muted)]"> ({example})</span> : null}
                     <span>
@@ -537,7 +537,7 @@ export function GoalsView({
               })}
             </ol>
           ) : (
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+            <p className="mt-2 text-[13px] text-[var(--text-secondary)]">
               {t(
                 'depot.goals.noSuggestion',
                 'Kein einzelner breiter Baustein bringt dich näher ans Ziel. Probiere im Was-wäre-wenn andere Anteile oder passe die Ziele an.',
@@ -560,7 +560,7 @@ export function GoalsView({
             </p>
           ) : null}
           {advice.plan ? (
-            <p className="mt-3 text-sm text-[var(--text-secondary)]">
+            <p className="mt-3 text-[13px] text-[var(--text-secondary)]">
               <span className="font-medium text-[var(--text-primary)]">{t('depot.goals.planTitle', 'Kombiniert:')}</span>{' '}
               {advice.plan.steps
                 .map((s) => `${pct(s.amount)} ${blockText(s.block, s.index, t).title}`)
@@ -616,7 +616,7 @@ export function GoalsView({
         )
       })}
 
-      <details className="text-sm">
+      <details className="text-[13px]">
         <summary className="cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
           {t('depot.goals.more', 'Ziel hinzufügen oder Vorlage übernehmen')}
         </summary>

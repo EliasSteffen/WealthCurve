@@ -1,4 +1,4 @@
-import { currentFormatterLocale, formatEur, formatEurCompact, formatPercent } from '../../lib/format'
+import { currentFormatterLocale, formatEur, formatEurCompact, formatPercent } from './format'
 
 /*
  * Zahlen im Terminal: kurz, aber nie ungenau dort, wo es nichts kostet.

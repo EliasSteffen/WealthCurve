@@ -1,17 +1,20 @@
 import '@testing-library/jest-dom/vitest'
 import { vi } from 'vitest'
-import React from 'react'
+
+// Die Charts zeichnen auf Canvas, das jsdom nicht hat - siehe test/lwcMock.ts.
+vi.mock('lightweight-charts', async () => (await import('./lwcMock')).lightweightChartsMock)
 
 /*
- * Recharts' ResponsiveContainer misst seinen Parent - in jsdom ist der 0x0,
- * also rendert der Chart nichts und jede Assertion scheitert ohne erkennbaren
- * Grund. Ein fix dimensionierter Container macht Chart-Tests überhaupt möglich.
+ * jsdom kennt showModal und close nicht überall. Ohne sie bliebe jeder native
+ * Dialog (Befehlspalette, Rückfragen) stumm geschlossen.
  */
-vi.mock('recharts', async () => {
-  const actual = await vi.importActual<typeof import('recharts')>('recharts')
-  return {
-    ...actual,
-    ResponsiveContainer: ({ children }: { children: React.ReactNode }) =>
-      React.createElement('div', { style: { width: 800, height: 400 } }, children),
+// Nur unter jsdom - Server-Tests laufen in reinem Node ohne DOM.
+if (typeof HTMLDialogElement !== 'undefined') {
+  HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) {
+    this.setAttribute('open', '')
   }
-})
+  HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) {
+    this.removeAttribute('open')
+    this.dispatchEvent(new Event('close'))
+  }
+}

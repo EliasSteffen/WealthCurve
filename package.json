@@ -33,8 +33,6 @@
     "lucide-react": "^1.43.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-is": "^19.2.8",
-    "recharts": "^3.10.1",
     "tailwind-merge": "^3.6.0",
     "yahoo-finance2": "^4.0.2",
     "zod": "^4.5.4"
@@ -48,7 +46,6 @@
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
-    "@types/react-is": "^19.2.0",
     "@types/topojson-client": "^3.1.5",
     "@vitejs/plugin-react": "^6.1.0",
     "d3-geo": "^3.1.2",
@@ -62,8 +59,5 @@
     "vite": "^8.2.2",
     "vitest": "^5.0.0",
     "world-atlas": "^2.0.2"
-  },
-  "overrides": {
-    "react-is": "^19.2.8"
   }
 }

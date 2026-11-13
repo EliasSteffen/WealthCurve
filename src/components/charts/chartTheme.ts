@@ -6,8 +6,8 @@ import { resolveCssColor } from '../../render/canvas/readTheme'
  *
  * `lightweight-charts` zeichnet auf Canvas und kennt keine CSS-Variablen - jede
  * Farbe muss vorher aufgelöst sein. Und sie muss neu aufgelöst werden, sobald
- * sich das Thema ändert: Umschalter (data-theme), Pro-Modus (data-pro) oder die
- * Einstellung des Betriebssystems.
+ * sich das Thema ändert: Umschalter (data-theme) oder die Einstellung des
+ * Betriebssystems.
  */
 export interface ChartPalette {
   /** Dunkle Fläche - entscheidet etwa, wie hell die Achsenmarken hinterlegt werden. */
@@ -52,7 +52,7 @@ function isDark(color: string): boolean {
 
 function subscribe(onChange: () => void): () => void {
   const observer = new MutationObserver(onChange)
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-pro'] })
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
   const media = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null
   media?.addEventListener?.('change', onChange)
   return () => {
@@ -65,7 +65,7 @@ function subscribe(onChange: () => void): () => void {
 function themeKey(): string {
   const root = document.documentElement
   const dunkel = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches
-  return `${root.getAttribute('data-theme') ?? 'system'}|${root.hasAttribute('data-pro')}|${dunkel}`
+  return `${root.getAttribute('data-theme') ?? 'system'}|${dunkel}`
 }
 
 export function useChartPalette(): ChartPalette {

@@ -142,7 +142,7 @@ export function GoalMap({
         <div className="mx-auto min-w-[34rem] max-w-[52rem]">
           <Suspense
             fallback={
-              <div className="aspect-[2/1] w-full animate-pulse rounded-lg bg-[var(--grid)]" aria-hidden />
+              <div className="aspect-[2/1] w-full animate-pulse rounded-md bg-[var(--grid)]" aria-hidden />
             }
           >
             <WorldMapSvg
@@ -181,7 +181,7 @@ export function GoalMap({
         </span>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-[var(--hairline)] p-3">
+      <div className="flex flex-wrap items-end gap-3 rounded-md border border-[var(--hairline)] p-3">
         <label className="text-xs text-[var(--text-secondary)]" htmlFor={`${id}-region`}>
           <span className="mb-1 block">
             {ebene === 'continent' ? t('depot.map.pickContinent', 'Kontinent') : t('depot.map.pickCountry', 'Land')}
@@ -190,7 +190,7 @@ export function GoalMap({
             id={`${id}-region`}
             value={aktiv ?? ''}
             onChange={(e) => setGewaehlt(e.target.value || null)}
-            className="max-w-[14rem] rounded-md border border-[var(--hairline)] bg-[var(--surface-1)] px-2 py-1 text-sm text-[var(--text-primary)] focus:border-[var(--chart-1)] focus:outline-none"
+            className="max-w-[14rem] rounded-md border border-[var(--hairline)] bg-[var(--surface-1)] px-2 py-1 text-[13px] text-[var(--text-primary)] focus:border-[var(--accent-fill)] focus:outline-none"
           >
             <option value="">{t('depot.map.pick', 'Auf der Karte wählen …')}</option>
             {optionen.map((o) => (
@@ -202,7 +202,7 @@ export function GoalMap({
         </label>
         {aktiv ? (
           <>
-            <p className="min-w-[8rem] flex-1 pb-1 text-sm text-[var(--text-primary)]">
+            <p className="min-w-[8rem] flex-1 pb-1 text-[13px] text-[var(--text-primary)]">
               <span className="font-medium">{aktivName}</span>
               <span className="text-[var(--text-secondary)]">
                 {' · '}

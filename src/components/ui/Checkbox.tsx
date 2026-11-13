@@ -21,13 +21,13 @@ interface CheckboxProps {
 export function Checkbox({ checked, onChange, label, description, colorVar }: CheckboxProps) {
   const id = useId()
   return (
-    <label htmlFor={id} className="flex cursor-pointer select-none items-start gap-2.5 py-1.5">
+    <label htmlFor={id} className="flex cursor-pointer select-none items-start gap-2 py-1">
       <input
         id={id}
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 size-4 shrink-0 cursor-pointer accent-[var(--chart-1)]"
+        className="mt-px size-3.5 shrink-0 cursor-pointer accent-[var(--accent-fill)]"
       />
       <span>
         <span className="flex items-center gap-2">
@@ -41,7 +41,7 @@ export function Checkbox({ checked, onChange, label, description, colorVar }: Ch
               style={{ background: colorVar }}
             />
           ) : null}
-          <span className="text-sm font-medium text-[var(--text-primary)]">{label}</span>
+          <span className="text-xs font-medium text-[var(--text-primary)]">{label}</span>
         </span>
         {description ? (
           <span className="mt-0.5 block text-[11px] leading-snug text-[var(--text-muted)]">
