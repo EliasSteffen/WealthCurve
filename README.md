@@ -49,13 +49,19 @@ Wege in einem echten Node-Prozess vor.
 
 ### Aus einem anderen Projekt
 
-Das Paket heißt `wealthcurve` und hat zwei Einstiege, beide als TypeScript-Quelle
-ohne Build:
+Das Paket heißt `wealthcurve` und wird direkt von GitHub installiert:
 
-| Import | Datei | Inhalt |
+```sh
+npm install github:EliasSteffen/WealthCurve
+```
+
+Es hat drei Einstiege:
+
+| Import | Quelle | Inhalt |
 |---|---|---|
 | `wealthcurve` | `src/core/index.ts` | Rechnung, Zustand, Registries, Kursreihen (`marketFromPrices`, `parseMarketFile`) |
 | `wealthcurve/quotes` | `server/quotes.ts` | `fetchQuotes(symbol)` – Kurse von Yahoo, bereinigt um Splits und Dividenden |
+| `wealthcurve/profile` | `server/profile.ts` | `fetchProfiles(symbole)` – Land, Branche, Währung und Börsenwert von Aktien, für die Depot-Durchschau |
 
 ```ts
 import { buildProjection, DEFAULT_MODEL, DEFAULT_PARAMS } from 'wealthcurve'
@@ -73,15 +79,13 @@ const p = buildProjection({
 })
 ```
 
-Reines Node ab 23.6 führt das direkt aus – es entfernt die Typen selbst. Dafür
-trägt jeder relative Import in `src/core` die Endung `.ts`; `node-import.test.ts`
-prüft das und lädt beide Einstiege in einem eigenen Node-Prozess.
-
-Node entfernt Typen allerdings nicht innerhalb von `node_modules`. Ein
-`npm install github:…` scheitert deshalb beim Start; eingebunden wird das Projekt
-als Verweis auf eine Arbeitskopie (`"wealthcurve": "file:../WealthCurve"`,
-Workspace oder Git-Submodul). npm legt dann einen Symlink an, Node folgt ihm aus
-`node_modules` heraus, und alles läuft.
+Node entfernt Typen nicht innerhalb von `node_modules`, deshalb zeigen die
+Einstiege auf gebautes JavaScript mit Typen in `lib/`. Bei der Installation von
+GitHub baut npm es selbst: `prepare` ruft `npm run build:lib` auf
+(tsconfig.lib.json), ins Paket kommt nur `lib/`. Jeder relative Import in
+`src/core` trägt die Endung `.ts`, der Build schreibt sie in `.js` um;
+`node-import.test.ts` baut und lädt beide Einstiege in einem eigenen
+Node-Prozess.
 
 ## Eine neue Serie hinzufügen
 

@@ -8,8 +8,8 @@
 
     /* Bundler mode - vite.config.ts und scripts/ werden von esbuild bzw. tsx
        geladen, nicht von Node direkt. src/core und server/quotes.ts tragen ihre
-       Endungen trotzdem, weil andere Projekte sie mit reinem Node laden (siehe
-       node-import.test.ts); im übrigen Code bleiben sie weg. */
+       Endungen trotzdem, weil tsconfig.lib.json sie für andere Projekte nach
+       `lib/` baut (siehe node-import.test.ts); im übrigen Code bleiben sie weg. */
     "module": "esnext",
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
