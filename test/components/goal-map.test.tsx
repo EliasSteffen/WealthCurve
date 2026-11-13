@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DepotPage } from '@/components/depot/DepotPage'
@@ -56,7 +56,7 @@ function zeige() {
       ],
     },
   }
-  return render(
+  const ergebnis = render(
     <LocaleProvider>
       <StoreProvider initialState={state}>
         <DepotPage />
@@ -64,6 +64,9 @@ function zeige() {
       </StoreProvider>
     </LocaleProvider>,
   )
+  // Die Ziele stehen in ihrem eigenen Reiter der Analyse.
+  fireEvent.click(screen.getByRole('tab', { name: 'Ziele & Vorschläge' }))
+  return ergebnis
 }
 
 describe('Ziele auf der Karte', () => {

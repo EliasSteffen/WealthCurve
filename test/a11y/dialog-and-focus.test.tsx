@@ -1,161 +1,181 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { Dashboard } from '@/components/Dashboard'
-import { ScenarioList } from '@/components/ScenarioList'
-import { SettingsDialog } from '@/components/layout/SettingsDialog'
 import { actions, createInitialState, reducer, type AppState } from '@/core/state'
 import { LocaleProvider } from '@/react/LocaleProvider'
 import { StoreProvider } from '@/react/StoreProvider'
-import { useSelector } from '@/react/useSelector'
 
-beforeAll(() => {
+beforeEach(() => {
+  localStorage.clear()
   localStorage.setItem('zinseszins.locale', 'de')
-  // jsdom kennt showModal/close nicht überall.
-  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
-    this.setAttribute('open', '')
-  }
-  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
-    this.removeAttribute('open')
-    this.dispatchEvent(new Event('close'))
-  }
 })
 
-function mit(state: AppState, children: React.ReactNode) {
+function mit(state: AppState) {
   return (
     <LocaleProvider>
-      <StoreProvider initialState={state}>{children}</StoreProvider>
+      <StoreProvider initialState={state}>
+        <Dashboard />
+      </StoreProvider>
     </LocaleProvider>
   )
 }
 
-describe('Einstellungsdialog: Reiter', () => {
-  it('folgt dem Tabs-Muster mit Panel, aria-controls und Pfeiltasten', async () => {
-    const user = userEvent.setup()
-    render(mit(createInitialState(), <SettingsDialog theme="light" onThemeChange={() => {}} />))
-    await user.click(screen.getByRole('button', { name: 'Einstellungen' }))
-
-    const tabs = await screen.findAllByRole('tab')
-    expect(tabs.map((x) => x.textContent)).toEqual(['Allgemein', 'Video'])
-    expect(tabs.map((x) => x.getAttribute('tabindex'))).toEqual(['0', '-1'])
-
-    const panel = screen.getByRole('tabpanel')
-    for (const tab of tabs) expect(tab.getAttribute('aria-controls')).toBe(panel.id)
-    expect(panel).toHaveAttribute('aria-labelledby', tabs[0]!.id)
-    expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
-    // Der lazy geladene Inhalt erscheint im Panel.
-    expect(await screen.findByRole('radiogroup', { name: 'Sprache' })).toBeInTheDocument()
-
-    tabs[0]!.focus()
-    await user.keyboard('{ArrowRight}')
-    expect(tabs[1]).toHaveFocus()
-    expect(tabs[1]).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', tabs[1]!.id)
-    await user.keyboard('{ArrowRight}')
-    expect(tabs[0]).toHaveFocus()
-    expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
-    await user.keyboard('{ArrowLeft}')
-    expect(tabs[1]).toHaveFocus()
-    await user.keyboard('{Home}')
-    expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
-    await user.keyboard('{End}')
-    expect(tabs[1]).toHaveAttribute('aria-selected', 'true')
-  })
-})
-
-describe('Backdrop-Klick', () => {
-  function cases(name: string, ui: React.ReactElement, openName: string) {
-    it(`${name}: schließt nur bei pointerdown UND click auf dem Backdrop`, async () => {
-      const user = userEvent.setup()
-      const { container } = render(ui)
-      await user.click(screen.getByRole('button', { name: openName }))
-      const dialog = container.querySelector('dialog') as HTMLDialogElement
-      await waitFor(() => expect(dialog).toHaveAttribute('open'))
-      const inner = dialog.querySelector('h2, [role="tablist"]') as HTMLElement
-
-      // Text markieren: Drücken im Inhalt, Loslassen auf dem Backdrop.
-      fireEvent.pointerDown(inner)
-      fireEvent.click(dialog)
-      expect(dialog).toHaveAttribute('open')
-
-      // Drücken auf dem Backdrop, Loslassen im Inhalt (click landet auf dem Dialog).
-      fireEvent.pointerDown(dialog)
-      fireEvent.click(inner)
-      expect(dialog).toHaveAttribute('open')
-
-      // Beides auf dem Backdrop.
-      fireEvent.pointerDown(dialog)
-      fireEvent.click(dialog)
-      await waitFor(() => expect(dialog).not.toHaveAttribute('open'))
-    })
-  }
-  cases(
-    'SettingsDialog',
-    mit(createInitialState(), <SettingsDialog theme="light" onThemeChange={() => {}} />),
-    'Einstellungen',
-  )
-})
-
-describe('Fokus nach Aktionen', () => {
-  function Liste() {
-    const s = useSelector((x) => x)
-    return <ScenarioList scenarios={s.scenarios} activeScenarioId={s.activeScenarioId} />
-  }
-  const drei = () => {
-    let s = createInitialState()
-    s = reducer(s, actions.addScenario('Zwei'))
-    s = reducer(s, actions.addScenario('Drei'))
-    return s
-  }
-
-  it('Löschen setzt den Fokus auf das nächste Szenario, am Ende auf das vorherige', async () => {
-    const user = userEvent.setup()
-    render(mit(drei(), <Liste />))
-    const names = () => screen.getAllByRole('textbox').map((x) => (x as HTMLInputElement).value)
-    expect(names()).toHaveLength(3)
-
-    await user.click(screen.getAllByRole('button', { name: 'Löschen' })[1]!)
-    expect(names()).toEqual([expect.any(String), 'Drei'])
-    expect(screen.getByRole('textbox', { name: 'Name von Drei' })).toHaveFocus()
-
-    await user.click(screen.getAllByRole('button', { name: 'Löschen' })[1]!)
-    expect(names()).toHaveLength(1)
-    expect(screen.getAllByRole('textbox')[0]).toHaveFocus()
-    expect(document.body).not.toHaveFocus()
-  })
-
-})
+const drei = () => {
+  let s = createInitialState()
+  s = reducer(s, actions.addScenario('Zwei'))
+  s = reducer(s, actions.addScenario('Drei'))
+  return reducer(s, actions.selectScenario(s.scenarios[1].id))
+}
 
 describe('Bereichs-Navigation', () => {
   it('markiert den offenen Bereich und wechselt ohne Neuladen', async () => {
     const user = userEvent.setup()
-    render(mit(createInitialState(), <Dashboard />))
+    render(mit(createInitialState()))
     const nav = screen.getByRole('navigation', { name: 'Bereiche' })
-    const sparplan = screen.getByRole('button', { name: 'Sparplan' })
-    const depot = screen.getByRole('button', { name: 'Mein Depot' })
-    expect(nav).toContainElement(sparplan)
-    expect(sparplan).toHaveAttribute('aria-current', 'page')
+    const plan = within(nav).getByRole('button', { name: /Sparplan/ })
+    const depot = within(nav).getByRole('button', { name: /Depot/ })
+    expect(plan).toHaveAttribute('aria-current', 'page')
     expect(depot).not.toHaveAttribute('aria-current')
-    // Das Video gehört zur Vermögenskurve.
-    expect(screen.getByRole('button', { name: 'Video' })).toBeInTheDocument()
 
     await user.click(depot)
     expect(depot).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('heading', { name: 'Dein Depot durchleuchten' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Datei auswählen' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Video' })).toBeNull()
-    // Genau ein Weg zu den Einstellungen, nicht drei.
-    expect(screen.getAllByRole('button', { name: 'Einstellungen' })).toHaveLength(1)
+
+    // Das Video ist ein eigener Bereich, kein Dialog mehr.
+    await user.click(within(nav).getByRole('button', { name: /Video/ }))
+    expect(within(nav).getByRole('button', { name: /Video/ })).toHaveAttribute('aria-current', 'page')
   })
 
-  it('zeigt im Sparplan zuerst den Plan, die Extras zugeklappt', () => {
-    const { container } = render(mit(createInitialState(), <Dashboard />))
-    expect(screen.getByRole('heading', { name: 'Dein Plan' })).toBeInTheDocument()
+  it('zeigt im Plan alle Eingaben offen - nichts versteckt sich hinter einem Pfeil', () => {
+    const { container } = render(mit(createInitialState()))
     expect(screen.getByRole('slider', { name: 'Monatliche Sparrate' })).toBeInTheDocument()
-    const abschnitte = [...container.querySelectorAll('details')]
-    expect(abschnitte.length).toBeGreaterThanOrEqual(4)
-    expect(abschnitte.every((d) => !d.open)).toBe(true)
+    expect(container.querySelectorAll('details')).toHaveLength(0)
+    for (const name of ['Sparplan', 'Laufzeit', 'Auszahlung', 'Annahmen', 'Kurven', 'Echte Kursverläufe', 'Zeitachse']) {
+      expect(screen.getByRole('region', { name })).toBeInTheDocument()
+    }
     // Ohne Entnahmephase ab Werk.
     expect(screen.queryByText('Rentenbeginn')).toBeNull()
+  })
+})
+
+describe('Menü', () => {
+  it('öffnet mit Pfeil runter, wandert mit Pfeilen und gibt den Fokus beim Schließen zurück', async () => {
+    const user = userEvent.setup()
+    render(mit(createInitialState()))
+    const knopf = screen.getByRole('button', { name: 'Weitere Aktionen' })
+    knopf.focus()
+    await user.keyboard('{ArrowDown}')
+    const menu = screen.getByRole('menu', { name: 'Weitere Aktionen' })
+    const eintraege = within(menu).getAllByRole('menuitem')
+    expect(eintraege[0]).toHaveFocus()
+    await user.keyboard('{ArrowUp}')
+    expect(eintraege.at(-1)).toHaveFocus()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(knopf).toHaveFocus()
+    expect(knopf).toHaveAttribute('aria-expanded', 'false')
+  })
+})
+
+describe('Rückfrage beim Zurücksetzen', () => {
+  async function oeffnen() {
+    const user = userEvent.setup()
+    const ansicht = render(mit(reducer(createInitialState(), actions.addScenario('Extra'))))
+    await user.click(screen.getByRole('button', { name: 'Weitere Aktionen' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Zurücksetzen …' }))
+    const dialog = screen.getByRole('dialog', { name: 'Alles zurücksetzen?' }) as HTMLDialogElement
+    return { user, dialog, ansicht }
+  }
+
+  it('fragt nach und setzt erst nach Bestätigung zurück', async () => {
+    const { user, dialog } = await oeffnen()
+    expect(dialog).toHaveAttribute('open')
+    await user.click(within(dialog).getByRole('button', { name: 'Abbrechen' }))
+    expect(dialog).not.toHaveAttribute('open')
+    expect(screen.getByRole('tab', { name: /^Extra/ })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Weitere Aktionen' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Zurücksetzen …' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Ja, zurücksetzen' }))
+    expect(screen.queryByRole('tab', { name: /^Extra/ })).toBeNull()
+  })
+
+  it('schließt nur bei pointerdown UND click auf dem Backdrop', async () => {
+    const { dialog } = await oeffnen()
+    const inner = dialog.querySelector('h2') as HTMLElement
+
+    // Text markieren: Drücken im Inhalt, Loslassen auf dem Backdrop.
+    fireEvent.pointerDown(inner)
+    fireEvent.click(dialog)
+    expect(dialog).toHaveAttribute('open')
+
+    // Drücken auf dem Backdrop, Loslassen im Inhalt.
+    fireEvent.pointerDown(dialog)
+    fireEvent.click(inner)
+    expect(dialog).toHaveAttribute('open')
+
+    // Beides auf dem Backdrop.
+    fireEvent.pointerDown(dialog)
+    fireEvent.click(dialog)
+    await waitFor(() => expect(dialog).not.toHaveAttribute('open'))
+  })
+})
+
+describe('Szenario-Reiter', () => {
+  it('folgt dem Tabs-Muster: genau ein Reiter im Tab-Fokus', () => {
+    render(mit(drei()))
+    const reiter = within(screen.getByRole('tablist', { name: 'Szenarien' })).getAllByRole('tab')
+    expect(reiter).toHaveLength(3)
+    expect(reiter.map((r) => r.getAttribute('tabindex'))).toEqual(['-1', '0', '-1'])
+  })
+
+  it('Löschen setzt den Fokus auf das nächste Szenario, am Ende auf das vorherige', async () => {
+    const user = userEvent.setup()
+    render(mit(drei()))
+    await user.click(screen.getByRole('button', { name: 'Aktionen für „Zwei“' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Löschen' }))
+    await waitFor(() => expect(screen.getByRole('tab', { name: /^Drei/ })).toHaveFocus())
+
+    await user.click(screen.getByRole('button', { name: 'Aktionen für „Drei“' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Löschen' }))
+    await waitFor(() => expect(screen.getAllByRole('tab', { name: /Basis/ })[0]).toHaveFocus())
+    expect(document.body).not.toHaveFocus()
+  })
+})
+
+describe('Befehlspalette', () => {
+  it('öffnet mit Strg+K, filtert, wandert mit Pfeilen und springt zur Einstellung', async () => {
+    const user = userEvent.setup()
+    render(mit(createInitialState()))
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
+    const eingabe = await screen.findByRole('combobox', { name: 'Suchen und Befehle' })
+    expect(eingabe).toHaveFocus()
+
+    await user.type(eingabe, 'sparrate')
+    const optionen = screen.getAllByRole('option')
+    expect(optionen[0]).toHaveTextContent('Monatliche Sparrate')
+    expect(eingabe).toHaveAttribute('aria-activedescendant', optionen[0].id)
+    await user.keyboard('{ArrowDown}')
+    expect(eingabe).toHaveAttribute('aria-activedescendant', optionen[1].id)
+    await user.keyboard('{ArrowUp}{Enter}')
+
+    // Der Sprung setzt den Fokus ins Feld der Einstellung.
+    await waitFor(() => expect(screen.getByRole('textbox', { name: /Monatliche Sparrate/ })).toHaveFocus())
+    expect(document.querySelector('dialog.palette')).not.toHaveAttribute('open')
+  })
+
+  it('findet auf Englisch auch mit deutschem Begriff und wechselt den Bereich', async () => {
+    localStorage.setItem('zinseszins.locale', 'en')
+    const user = userEvent.setup()
+    render(mit(createInitialState()))
+    await user.click(screen.getByRole('button', { name: 'Search and commands' }))
+    const eingabe = await screen.findByRole('combobox', { name: 'Search and commands' })
+    await user.type(eingabe, 'Zinsmodus')
+    expect(screen.getAllByRole('option')[0]).toHaveTextContent('Compounding')
+
+    await user.clear(eingabe)
+    await user.type(eingabe, 'portfolio{Enter}')
+    expect(screen.getByRole('button', { name: 'My portfolio' })).toHaveAttribute('aria-current', 'page')
   })
 })

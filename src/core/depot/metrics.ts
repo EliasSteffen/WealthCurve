@@ -218,6 +218,52 @@ export function computeDepotStats(
   return { windows, holdings: holdingStats, holdingsYears, ter, exposure, missing }
 }
 
+/** Unter einem Jahr Verlauf zeigt ein Chart nur Rauschen. */
+const MIN_VERLAUF = 12
+
+/**
+ * Der Verlauf der heutigen Mischung als eine Kursreihe - für den Depot-Chart.
+ *
+ * Dieselbe Rechnung wie die Kennzahlen: Euro, monatlich auf die heutigen
+ * Anteile zurückgesetzt. Die Spanne ist die längste, in der jede Position
+ * Kurse hat, endend am letzten gemeinsamen Monat - früher fehlte ein Teil des
+ * Depots, und die Kurve zeigte etwas anderes als das, was man hält.
+ *
+ * null, wenn einer Position die Kurse fehlen oder weniger als ein Jahr bleibt.
+ */
+export function depotHistory(
+  holdings: readonly DepotHolding[],
+  series: ReadonlyMap<string, MarketSeries>,
+  fx: ReadonlyMap<string, MarketSeries>,
+  name = 'Depot',
+): MarketSeries | null {
+  const total = holdings.reduce((s, h) => s + Math.max(0, h.weight), 0)
+  if (holdings.length === 0 || total <= 0) return null
+  const w = holdings.map((h) => Math.max(0, h.weight) / total)
+  const maps: Map<number, number>[] = []
+  for (const h of holdings) {
+    const s = h.symbol ? series.get(h.symbol) : undefined
+    const m = s ? inEuro(s, fx) : null
+    if (!m || m.size === 0) return null
+    maps.push(m)
+  }
+  const end = Math.min(...maps.map((m) => Math.max(...m.keys())))
+  let start = end
+  while (maps.every((m) => m.has(start - 1))) start -= 1
+  if (!maps.every((m) => m.has(end)) || end - start + 1 < MIN_VERLAUF) return null
+
+  const months = Array.from({ length: end - start + 1 }, (_, k) => start + k)
+  return {
+    symbol: name,
+    name,
+    currency: 'EUR',
+    // Der Monat VOR der ersten Rendite: dort steht der Index noch auf 100.
+    start: `${monthLabel(start - 1)}-01`,
+    monthlyReturns: months.map((month) => maps.reduce((sum, m, i) => sum + w[i] * (m.get(month) as number), 0)),
+    months: months.map(monthLabel),
+  }
+}
+
 /** Positionen mit anderen Anteilen - für den Was-wäre-wenn-Vergleich. */
 export function withWeights(
   holdings: readonly DepotHolding[],

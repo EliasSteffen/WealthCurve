@@ -272,3 +272,20 @@ describe('Farbe eines Szenarios', () => {
     expect(reducer(um, actions.setScenarioColor(um.scenarios[1].id, alt)).scenarios[1].colorSlot).toBe(alt)
   })
 })
+
+describe('Bereiche', () => {
+  it('wechselt zwischen Plan, Depot und Video', () => {
+    let state = createInitialState()
+    expect(state.page).toBe('sparplan')
+    state = reducer(state, actions.setPage('video'))
+    expect(state.page).toBe('video')
+    expect(deserialize(serialize(state))!.page).toBe('video')
+  })
+
+  it('weist einen unbekannten Bereich ab, beim Schalten wie beim Einlesen', () => {
+    const state = createInitialState()
+    expect(reducer(state, actions.setPage('terminal' as never))).toBe(state)
+    const json = JSON.parse(serialize(state)) as Record<string, unknown>
+    expect(deserialize(JSON.stringify({ ...json, page: 'terminal' }))!.page).toBe('sparplan')
+  })
+})

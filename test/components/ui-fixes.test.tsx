@@ -3,10 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { useState, type ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MarketPanel } from '@/components/MarketPanel'
-import { SummaryStats } from '@/components/SummaryStats'
+import { Dashboard } from '@/components/Dashboard'
 import { WithdrawalPhaseToggle, TimelineControls } from '@/components/ModelSettings'
 import { SliderField } from '@/components/ui/SliderField'
-import { selectProjection } from '@/core/derive'
 import { PARAMETERS } from '@/core/domain/parameters'
 import type { MarketSeries, ModelSettings } from '@/core/domain/types'
 import { actions, createInitialState, type AppState } from '@/core/state'
@@ -175,28 +174,25 @@ describe('MarketPanel', () => {
     expect(new Set(ids).size).toBe(2)
   })
 
-  it('verweist ohne Startjahr auf den Abschnitt „Zeitachse" und klappt ihn auf', async () => {
+  it('springt ohne Startjahr zur Zeitachse in den Eingaben', async () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
     const state: AppState = { ...createInitialState(), markets: [markt('AAA')] }
     const user = userEvent.setup()
-    const { container } = render(
+    render(
       mitSprache(
         'de',
         state,
         <>
           <MarketPanel />
-          <details id="plan-zeitachse">
-            <summary>Zeitachse</summary>
-          </details>
+          <section data-setting="model:timeAxis">
+            <input aria-label="Startjahr" />
+          </section>
         </>,
       ),
     )
-    const abschnitt = container.querySelector('#plan-zeitachse') as HTMLDetailsElement
-    expect(abschnitt.open).toBe(false)
     expect(screen.getByText(/unter „Zeitachse" eintragen/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Abschnitt „Zeitachse" öffnen/ }))
-    expect(abschnitt.open).toBe(true)
-    expect(screen.getByText('Zeitachse', { selector: 'summary' })).toHaveFocus()
+    expect(screen.getByRole('textbox', { name: 'Startjahr' })).toHaveFocus()
   })
 })
 
@@ -243,20 +239,7 @@ describe('Entnahmephase', () => {
   })
 })
 
-describe('SummaryStats', () => {
-  function Stats() {
-    const projection = useSelector(selectProjection)
-    const active = useSelector((s) => s.activeScenarioId)
-    const model = useSelector((s) => s.model)
-    return (
-      <SummaryStats
-        summaries={projection.summaries}
-        activeScenarioId={active}
-        hasWithdrawalPhase={model.withdrawalYears > 0}
-      />
-    )
-  }
-
+describe('Kennzahlen im Plan', () => {
   it('weist auf ein ausgeblendetes aktives Szenario hin und blendet es wieder ein', async () => {
     const s = createInitialState()
     const zweites = { ...s.scenarios[0], id: 'zwei', label: 'Zwei', visible: true }
@@ -266,13 +249,13 @@ describe('SummaryStats', () => {
       activeScenarioId: s.scenarios[0].id,
     }
     const user = userEvent.setup()
-    render(mitSprache('de', state, <Stats />))
-    expect(screen.getByText(/„Eins" ist ausgeblendet/)).toBeInTheDocument()
+    render(mitSprache('de', state, <Dashboard />))
+    expect(screen.getByText(/„Eins“ ist ausgeblendet/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Einblenden' }))
     expect(screen.queryByText(/ist ausgeblendet/)).toBeNull()
   })
 
-  it('nennt das Aufbrauchjahr in der Beschriftung der Achse', () => {
+  it('nennt das Aufbrauchjahr im Vergleich in der Beschriftung der Achse', async () => {
     const s = createInitialState()
     const state: AppState = {
       ...s,
@@ -291,7 +274,9 @@ describe('SummaryStats', () => {
         },
       ],
     }
-    render(mitSprache('de', state, <Stats />))
+    const user = userEvent.setup()
+    render(mitSprache('de', state, <Dashboard />))
+    await user.click(screen.getByRole('tab', { name: 'Vergleich' }))
     const aus = screen.getByText(/^bis \d{4}$/)
     expect(Number(aus.textContent?.slice(4))).toBeGreaterThanOrEqual(2000)
     expect(screen.queryByText(/^bis Jahr/)).toBeNull()

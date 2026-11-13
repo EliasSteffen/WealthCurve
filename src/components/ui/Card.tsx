@@ -20,8 +20,8 @@ export function Card({ children, className, padded = true }: CardProps) {
   return (
     <section
       className={cn(
-        'rounded-xl border border-[var(--hairline)] bg-[var(--surface-1)]',
-        padded && 'p-4 sm:p-5',
+        'rounded-md border border-[var(--hairline)] bg-[var(--surface-1)]',
+        padded && 'p-4',
         className,
       )}
     >

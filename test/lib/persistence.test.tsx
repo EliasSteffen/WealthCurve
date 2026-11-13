@@ -106,6 +106,7 @@ describe('Teilen-Link', () => {
     const s = {
       ...reducer(createInitialState(), actions.addScenario('Größe 🚀')),
       sidebarCollapsed: true,
+      page: 'video' as const,
     }
     const encoded = encodeShare(s)
     expect(encoded).toMatch(/^[A-Za-z0-9_-]+$/)
@@ -113,6 +114,8 @@ describe('Teilen-Link', () => {
     expect(back?.scenarios.map((x) => x.label)).toContain('Größe 🚀')
     expect(back?.scenarios.map((x) => x.params)).toEqual(s.scenarios.map((x) => x.params))
     expect(back?.sidebarCollapsed).toBe(false)
+    // Der Empfänger landet beim Plan, nicht beim Bereich des Absenders.
+    expect(back?.page).toBe('sparplan')
     expect(back?.markets).toEqual([])
   })
 
@@ -152,14 +155,17 @@ describe('Zurücksetzen', () => {
         </StoreProvider>
       </LocaleProvider>,
     )
-    await user.click(screen.getByRole('button', { name: 'Einstellungen' }))
-    await user.click(await screen.findByRole('tab', { name: 'Allgemein' }))
-    await user.click(await screen.findByRole('button', { name: 'Zurücksetzen' }))
-    expect(screen.getByText('Wirklich zurücksetzen?')).toBeInTheDocument()
+    const oeffnen = async () => {
+      await user.click(screen.getByRole('button', { name: 'Weitere Aktionen' }))
+      await user.click(screen.getByRole('menuitem', { name: 'Zurücksetzen …' }))
+    }
+    await oeffnen()
+    expect(screen.getByText('Alles zurücksetzen?')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Abbrechen' }))
-    expect(screen.queryByText('Wirklich zurücksetzen?')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Zurücksetzen' }))
+    expect(screen.queryByText('Alles zurücksetzen?')).not.toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /^Extra/ })).toBeInTheDocument()
+    await oeffnen()
     await user.click(screen.getByRole('button', { name: 'Ja, zurücksetzen' }))
-    expect(screen.getByRole('button', { name: 'Zurücksetzen' })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /^Extra/ })).toBeNull()
   })
 })

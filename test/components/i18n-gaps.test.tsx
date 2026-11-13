@@ -1,20 +1,16 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { ChartLegend } from '@/components/chart/ChartLegend'
-import { ChartTooltip } from '@/components/chart/ChartTooltip'
 import { Dashboard } from '@/components/Dashboard'
 import { DepotPage } from '@/components/depot/DepotPage'
-import { SparplanPage } from '@/components/sparplan/SparplanPage'
 import { SeriesPanel } from '@/components/SeriesPanel'
-import { buildProjection } from '@/core/projection'
-import { createInitialState, type AppState } from '@/core/state'
+import { actions, createInitialState, reducer, type AppState } from '@/core/state'
 import { LocaleProvider } from '@/react/LocaleProvider'
 import { StoreProvider } from '@/react/StoreProvider'
 import { setFormatterLocale } from '@/lib/format'
 
 function zeige(ui: React.ReactNode, over: Partial<AppState> = {}) {
-  const state: AppState = { ...createInitialState(), settingsView: 'alles', ...over }
+  const state: AppState = { ...createInitialState(), ...over }
   return render(
     <LocaleProvider>
       <StoreProvider initialState={state}>{ui}</StoreProvider>
@@ -34,23 +30,27 @@ describe('Englische Oberfläche', () => {
       zeige(<Dashboard />)
       expect(screen.getByRole('navigation', { name: 'Sections' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Savings plan' })).toHaveAttribute('aria-current', 'page')
+      expect(screen.getByRole('button', { name: 'Video' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'More actions' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'My portfolio' })).toBeInTheDocument()
     })
 
     it.each(['Initial capital', 'Monthly contribution', 'Return p. a.'])(
       'zeigt den Regler „%s“ ohne Suchen',
       (begriff) => {
-        zeige(<SparplanPage />)
+        zeige(<Dashboard />)
         expect(screen.getByRole('slider', { name: begriff })).toBeInTheDocument()
       },
     )
 
-    it('beschriftet Plan und Abschnitte englisch', () => {
-      zeige(<SparplanPage />)
-      expect(screen.getByRole('heading', { name: 'Your plan' })).toBeInTheDocument()
-      for (const titel of ['Payout', 'Assumptions', 'Curves & style', 'Real price histories', 'Time axis']) {
-        expect(screen.getAllByText(titel).length).toBeGreaterThan(0)
+    it('beschriftet Kopf, Eingaben und Abschnitte englisch', () => {
+      zeige(<Dashboard />)
+      expect(screen.getByText('Final value · 30 years')).toBeInTheDocument()
+      const eingaben = screen.getByRole('region', { name: 'Inputs' })
+      for (const titel of ['Savings plan', 'Duration', 'Payout', 'Assumptions', 'Curves', 'Real price histories', 'Time axis']) {
+        expect(within(eingaben).getByRole('region', { name: titel })).toBeInTheDocument()
       }
+      expect(screen.getByRole('tab', { name: 'Yearly values' })).toBeInTheDocument()
       expect(screen.queryByText('Auszahlung')).toBeNull()
     })
   })
@@ -58,7 +58,7 @@ describe('Englische Oberfläche', () => {
   describe('Optionshinweise', () => {
     it('zeigt den Hinweis der gewählten Option sichtbar, nicht nur als title', async () => {
       const user = userEvent.setup()
-      zeige(<SparplanPage />)
+      zeige(<Dashboard />)
       expect(
         screen.getByText('Twelve monthly steps add up to exactly the annual rate (ETF convention).'),
       ).toBeInTheDocument()
@@ -73,7 +73,7 @@ describe('Englische Oberfläche', () => {
 
     it('zeigt auf Deutsch den deutschen Hinweis', () => {
       localStorage.setItem('zinseszins.locale', 'de')
-      zeige(<SparplanPage />)
+      zeige(<Dashboard />)
       expect(screen.getByText(/Zwölf Monatsschritte ergeben exakt den Jahreszins/)).toBeInTheDocument()
     })
   })
@@ -81,38 +81,31 @@ describe('Englische Oberfläche', () => {
   describe('Szenarien', () => {
     it('benennt neue Szenarien und Kopien englisch', async () => {
       const user = userEvent.setup()
-      zeige(<SparplanPage />)
+      zeige(<Dashboard />)
       await user.click(screen.getByRole('button', { name: 'Add scenario' }))
-      expect(screen.getByDisplayValue('Scenario 2')).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /^Scenario 2/ })).toBeInTheDocument()
 
-      await user.click(screen.getAllByRole('button', { name: 'Duplicate' })[0])
-      expect(screen.getByDisplayValue('Basis (copy)')).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Actions for “Basis”' }))
+      await user.click(screen.getByRole('menuitem', { name: 'Duplicate' }))
+      expect(screen.getByRole('tab', { name: /^Basis \(copy\)/ })).toBeInTheDocument()
     })
 
     it('behält auf Deutsch die deutschen Standardnamen', async () => {
       localStorage.setItem('zinseszins.locale', 'de')
       const user = userEvent.setup()
-      zeige(<SparplanPage />)
+      zeige(<Dashboard />)
       await user.click(screen.getByRole('button', { name: 'Szenario hinzufügen' }))
-      expect(screen.getByDisplayValue('Szenario 2')).toBeInTheDocument()
-      await user.click(screen.getAllByRole('button', { name: 'Duplizieren' })[0])
-      expect(screen.getByDisplayValue('Basis (Kopie)')).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: /^Szenario 2/ })).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Aktionen für „Basis“' }))
+      await user.click(screen.getByRole('menuitem', { name: 'Duplizieren' }))
+      expect(screen.getByRole('tab', { name: /^Basis \(Kopie\)/ })).toBeInTheDocument()
     })
   })
 
-  describe('Legende, Kapazität, Tooltip', () => {
-    it('übersetzt den Kodierungshinweis aus der ID', () => {
-      zeige(
-        <ChartLegend
-          series={[]}
-          rows={[]}
-          encodingId="colorByScenario"
-          encodingDescription="Farbe = Szenario · Strich = Serie"
-          seriesCount={2}
-          showEncodingHint
-        />,
-      )
-      expect(screen.getByText('Colour = scenario · dash = series')).toBeInTheDocument()
+  describe('Legende und Kapazität', () => {
+    it('übersetzt den Kodierungshinweis aus der ID', async () => {
+      zeige(<Dashboard />, reducer(createInitialState(), actions.addScenario('Two')))
+      expect(await screen.findByText('Colour = scenario · dash = series')).toBeInTheDocument()
     })
 
     it('übersetzt die Warnung bei zu vielen Linien', () => {
@@ -123,22 +116,9 @@ describe('Englische Oberfläche', () => {
       expect(screen.getByText(/14 lines are hard to tell apart/)).toBeInTheDocument()
     })
 
-    it('stellt dem Tooltip-Index ein übersetztes „Year“ voran', () => {
-      const projection = buildProjection({
-        scenarios: createInitialState().scenarios,
-        model: createInitialState().model,
-        seriesIds: ['compound'],
-      })
-      const line = projection.lines[0]
-      zeige(
-        <ChartTooltip
-          active
-          label={3}
-          payload={[{ dataKey: line.key, value: 1000 }]}
-          series={projection.lines}
-        />,
-      )
-      expect(screen.getByText('Year 3')).toBeInTheDocument()
+    it('stellt dem Jahr in der Chart-Legende ein übersetztes „Year“ voran', async () => {
+      zeige(<Dashboard />)
+      expect(await screen.findByText('Year 30')).toBeInTheDocument()
     })
   })
 

@@ -3,7 +3,7 @@ import { defineChartStyle } from './types.ts'
 /**
  * Handgezeichnet: Linien und Gitter wackeln leicht, Beschriftung in
  * Handschrift. Der Versatz wird deterministisch berechnet (siehe
- * src/render/sketchCurve.ts), damit die Kurve beim Reglerziehen ruhig bleibt.
+ * src/render/wobble.ts), damit die Kurve im Video nicht flimmert.
  */
 export const sketch = defineChartStyle({
   id: 'sketch',

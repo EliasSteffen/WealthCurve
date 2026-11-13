@@ -409,25 +409,55 @@ Eintrag für eine MCP-Konfiguration:
 
 ## Aufbau der Oberfläche
 
-Zwei Bereiche in der Kopfzeile (`src/components/Dashboard.tsx`), gespeichert als
-`page` im Zustand, nicht im Teilen-Link:
+Eine Oberfläche im Stil eines Handelsterminals, in Hell und Dunkel. Oben eine Kopfzeile
+(`src/components/shell/TopBar.tsx`) mit drei Bereichen – gespeichert als `page` im Zustand,
+nicht im Teilen-Link –, der Suche, „Link teilen“, Sprache, Farbschema und einem Menü für
+CSV-Export und Zurücksetzen. Einen Einstellungsdialog gibt es nicht mehr: was die App betrifft,
+steht in der Kopfzeile, woran man rechnet, auf der Seite.
 
-- **Sparplan** (`src/components/sparplan/SparplanPage.tsx`) – links „Dein Plan“ mit
-  Rendite (samt Schnellwahl 3/5/7 % und „Wie mein Depot“), Startkapital, Sparrate und
-  Laufzeit; darunter zugeklappte Abschnitte für Auszahlung, Annahmen, Kurven &
-  Darstellung, echte Kursverläufe und Zeitachse. Rechts Ergebnis, Kurve und
-  Jahrestabelle; auf dem Handy steht das Ergebnis oben. Eine Entnahmephase ist ab
-  Werk aus (nur im App-Startzustand – `DEFAULT_MODEL` der Kern-API bleibt).
-- **Mein Depot** (`src/components/depot/DepotPage.tsx`) – leer eine Ablagefläche
-  (Datei, eingefügte Tabelle oder Beispiel), danach Kennzahlen, die wichtigsten
-  Auffälligkeiten, Durchschau, Verlauf, Was-wäre-wenn und „Daten & Quellen“ mit
-  bearbeitbarem Kurssymbol, Typ, Hebel, TER und Durchschau-Quelle je Position.
+- **Sparplan** (`src/components/plan/PlanPage.tsx`) – oben die Szenarien als Reiter
+  (Klick wählt, Doppelklick benennt um, das Menü am Reiter dupliziert, färbt, blendet aus,
+  löscht) und darunter das gewählte wie ein Kurs: Endwert, Ertrag, Eingezahlt,
+  Rentenbeginn, Kaufkraft heute. In der Mitte der Chart, darunter die Reiter **Jahreswerte**,
+  **Vergleich** (alle Szenarien nebeneinander, bester Wert je Zeile markiert) und
+  **Wertpapiere** (Kennzahlen jedes geladenen Papiers). Rechts alle **Eingaben** –
+  immer offen, in Abschnitten, deren Kopf sagt, ob ein Wert nur für das Szenario oder für alle
+  gilt. Jedes Feld ist tippbar, mit ↑/↓ schrittweise (mit Umschalt ×10) und per Regler
+  änderbar. Auf dem Handy folgen Chart, Eingaben und Tabellen untereinander.
+- **Mein Depot** (`src/components/depot/DepotPage.tsx`) – leer eine Ablagefläche (Datei,
+  eingefügte Tabelle oder Beispiel), danach oben die Kennzahlen, darunter der **Verlauf der
+  heutigen Mischung** als Kerzenchart (`depotHistory` im Kern) und die Analyse in Reitern:
+  Was drinsteckt, Ziele & Vorschläge, Was-wäre-wenn, Verlauf und Positionen, Daten & Quellen.
+  Die Auffälligkeiten stehen daneben, statt hinter einem Reiter zu verschwinden.
   „Im Sparplan weiterrechnen“ legt ein Szenario mit der historischen Rendite an.
+- **Video** (`src/components/shell/VideoPage.tsx`) – das Reel als eigener Bereich: Vorschau über
+  die ganze Fläche, Einstellungen in einer Spalte.
 
-Das Zahnrad (`SettingsDialog`) trägt nur noch, was die ganze App betrifft: Sprache,
-Farbschema, Teilen, Zurücksetzen und – im Sparplan – das Video. Gezeigt werden nur
-Regler, die gerade etwas bewirken: Parameter, die keine aktive Serie und keine
-gewählte Entnahmeregel liest, verschwinden samt Hinweis.
+**Befehlspalette:** ⌘K bzw. Strg+K (oder die Suche in der Kopfzeile) findet jede Einstellung,
+jeden Bereich, jedes Szenario und Aktionen wie „Szenario hinzufügen“ oder „CSV herunterladen“ –
+in der Oberflächensprache, deutsche Begriffe gelten immer mit. Eine Einstellung wählen springt
+an ihr Feld und setzt den Fokus hinein (`src/lib/reveal.ts`). Grundlage ist der Suchindex aus
+`src/core/settings/`.
+
+### Charts
+
+Gezeichnet wird mit TradingViews [`lightweight-charts`](https://github.com/tradingview/lightweight-charts)
+(`src/components/charts/`), als eigener Chunk nachgeladen:
+
+- **Vermögenschart** mit Kalenderachse (ohne Startjahr ab heute), linearer oder
+  logarithmischer Skala, Zeiträumen 10/20/30 Jahre, Fadenkreuz-Legende mit Veränderung zum
+  Vorjahr, Entnahmephase als Fläche samt Marke auf der Zeitachse (ein eigenes Primitive,
+  `phaseBand.ts`), Kapital bei Rentenbeginn als Preislinie und Balken der jährlichen Veränderung
+  darunter. Ein Klick auf eine Kurve in der Legende macht sie zur Hauptkurve.
+- **Kerzenchart** je geladenem Wertpapier und für das Depot: Monatskerzen von Schluss zu
+  Schluss (die Reihen kennen keine Tageshochs, deshalb ohne Dochte), Monatsrendite und Abstand
+  zum Hoch in eigenen Flächen, im Wertpapier der Einstieg des Plans als Marke.
+- Chart als PNG, Vollbild, Zoom zurücksetzen.
+
+Was dort steht, rechnet `src/core/analytics.ts` – Kursindex, Rendite p. a., Schwankung, größter
+Rückgang mit Erholung, Verdopplungszeit, Kaufkraft – ohne Chart-Bibliothek wie der restliche
+Kern (`no-react.test.ts` verbietet auch `lightweight-charts`). Das TradingView-Logo im Chart und
+der Link in der Statuszeile sind die Namensnennung, die die Lizenz verlangt.
 
 ### Speichern, Teilen, Zurücksetzen
 
@@ -439,31 +469,28 @@ Beim Einlesen wird nichts ungeprüft übernommen. Alles läuft durch `deserializ
 `sanitizeModel`, die Szenarien durch eine eigene Bereinigung (eindeutige IDs, freie Farb-Slots).
 Fremde oder kaputte Daten werden geklemmt oder verworfen, nie in die Rechnung durchgereicht.
 
-„Link teilen“ (Einstellungen → Allgemein) kopiert einen Link mit `#s=` und allen Szenarien und
+„Link teilen“ in der Kopfzeile kopiert einen Link mit `#s=` und allen Szenarien und
 Einstellungen, ohne Oberflächenzustand. Kursdaten fehlen im Link und müssen nach dem Öffnen neu
 geladen werden – sie würden die URL sprengen. Wer den Link öffnet, bekommt diesen Stand; er hat
 Vorrang vor dem gespeicherten. Danach wird der Hash entfernt, damit ein Neuladen spätere
 Änderungen nicht überschreibt.
 
-„Zurücksetzen“ steht daneben und fragt erst nach. Ein versehentlicher Klick löscht sonst alles.
+„Zurücksetzen …“ steht im Menü der Kopfzeile und fragt erst nach. Ein versehentlicher Klick
+löscht sonst alles.
 
 ## Darstellungsstile
 
-Wie das Diagramm aussieht, bestimmt ein Stil aus `src/core/chart-style/` — Standard, Gezeichnet,
-Minimal, Kräftig, Präsentation. Ein neuer Stil ist eine Datei plus eine Registry-Zeile.
+Wie die Kurve im **Video** aussieht, bestimmt ein Stil aus `src/core/chart-style/` — Klar,
+Gezeichnet, Minimal, Kräftig, Präsentation. Ein neuer Stil ist eine Datei plus eine
+Registry-Zeile. Ein Stil ist reine Daten, die der Canvas-Renderer liest.
 
-Ein Stil ist **reine Daten**, keine Recharts-Props. Das ist kein Zufall: derselbe Stil wird auch vom
-Canvas-Renderer für das Video gelesen. Wäre er an Recharts gebunden, müsste jeder Look zweimal
-gebaut und zweimal gepflegt werden.
-
-Der gezeichnete Stil kommt ohne rough.js aus — Recharts' `type`-Prop akzeptiert eine eigene
-d3-Curve-Factory (`src/render/sketchCurve.ts`). Wichtig dabei: der Versatz wird deterministisch aus
-den Koordinaten berechnet (`src/render/wobble.ts`). Mit `Math.random()` bekäme dieselbe Kurve bei
-jedem Render einen neuen Ausschlag und würde beim Ziehen eines Reglers sichtbar flimmern.
+Der gezeichnete Stil kommt ohne rough.js aus: der Versatz wird deterministisch aus den
+Koordinaten berechnet (`src/render/wobble.ts`). Mit `Math.random()` bekäme dieselbe Kurve in
+jedem Bild einen neuen Ausschlag und würde sichtbar flimmern.
 
 ## Video-Export
 
-Der Knopf „Video" in der Kopfzeile erzeugt ein Reel: die Kurve wächst über die Jahre, die Zahlen
+Der Bereich „Video“ erzeugt ein Reel: die Kurve wächst über die Jahre, die Zahlen
 zählen mit, am Ende bleibt das Ergebnis stehen. Formate 9:16, 1:1 und 16:9.
 
 ```
@@ -472,12 +499,12 @@ src/render/canvas/      zeichnet ein Einzelbild auf ein Canvas
 src/lib/recordCanvas.ts nimmt das Canvas über MediaRecorder auf
 ```
 
-Warum ein zweiter Renderer: Recharts zeichnet DOM/SVG, `MediaRecorder` braucht ein Canvas. Beide
-lesen denselben `ChartStyle` und dieselbe `Projection`, sodass Video und App nicht auseinanderlaufen
-können.
+Warum ein eigener Renderer: `MediaRecorder` braucht ein Canvas mit voller Kontrolle über jedes
+Bild. Er liest dieselbe `Projection` wie die Charts der App, sodass Video und App nicht
+auseinanderlaufen können.
 
 Das Reel ist in drei Abschnitte gegliedert — **Aufhänger → Aufbau → Pointe** —,
-deren Text und Dauer im Dialog einstellbar sind. Nur der Aufbau bewegt die Kurve;
+deren Text und Dauer in der Spalte neben der Vorschau einstellbar sind. Nur der Aufbau bewegt die Kurve;
 davor steht sie bei null, danach am Ende, damit die Aussage lesbar bleibt. Im Text
 stehen Platzhalter wie `{{rate}}` oder `{{zinsertrag}}` zur Verfügung. Eine Dauer
 von 0 überspringt einen Abschnitt — damit entsteht ein reines Aufbau-Video, ohne
@@ -531,7 +558,7 @@ Online-Rechner — für einen Vergleich mit denen ist das der richtige Modus.
 ## Architektur
 
 ```
-src/core/          reine Logik - kein React, kein DOM, kein Recharts
+src/core/          reine Logik - kein React, kein DOM, keine Chart-Bibliothek
   domain/
     math.ts        simulate() über Phasen, toMonthlyRate()
     parameters.ts  PARAMETERS + TIMELINE_FIELDS -> ParamId, sanitizeParam
@@ -543,32 +570,35 @@ src/core/          reine Logik - kein React, kein DOM, kein Recharts
   csv.ts           Jahrestabelle als CSV (Semikolon, Dezimalkomma)
   market.ts        Kursreihen aus Preisen - derselbe Weg für Abruf und Datei
   timeAxis.ts      Beschriftung der Zeitachse (Jahre, Kalender, Alter)
-  settings/        Suchindex, aus den Registries abgeleitet
+  settings/        Suchindex, aus den Registries abgeleitet - Grundlage der Befehlspalette
+  analytics.ts     Kalenderachse, Kursindex, Kurs- und Szenario-Kennzahlen
   state.ts         AppState, Aktionen, Reducer, Serialisierung
   store.ts         beobachtbarer Store (~40 Zeilen, ohne Bibliothek)
   derive.ts        memoisierte Selektoren
   index.ts         öffentliche API
   animation/       Zeitachse fürs Video - kein Canvas, kein DOM
   chart-style/     Darstellungsstile als reine Daten
-src/render/        Pixel: Canvas-Renderer und die Skizzen-Curve
+src/render/        Pixel: Canvas-Renderer fürs Video
 src/react/         Bindung an den Store über useSyncExternalStore
 src/lib/           Formatter und Zahlenparser je Sprache, Persistenz und Teilen-Link,
                   Aufnahme und MP4-Transcoding, CSV-Download, Pfeiltasten- und
                   Backdrop-Helfer, Tonspur, Klassennamen (cn)
-src/components/    UI; nur chart/ kennt Recharts
-  sparplan/        Sparplan-Seite mit Plan-Formular und Ergebnis
+src/components/    UI; nur charts/ kennt lightweight-charts
+  shell/           Kopfzeile, Befehlspalette, Rückfragen, Video-Bereich
+  plan/            Sparplan: Szenario-Reiter, Eingaben, Tabellen
+  charts/          TradingView-Charts: Vermögen, Kerzen, Phasengrenze, Farben aus CSS
   depot/           Depot-Seite: Import, Kennzahlen, Durchschau, Bestands-Editor
-  layout/          Einstellungsdialog (Sprache, Farbschema, Teilen, Video)
-  video/           Export-Dialog mit Vorschau
+  video/           Reel mit Vorschau
+  ui/              Panels, Werkzeugleiste, Menü, Regler, Felder
 test/              alle Tests, spiegelt src/ - Importe über den Alias @/
 ```
 
-Das Plan-Formular steht auf dem Desktop als eigene, mitlaufende Spalte neben dem
-Ergebnis; darunter folgt es dem Ergebnis in derselben Spalte. Die Zusatz-Abschnitte
-sind native `<details>` – Tastatur, Screenreader und „Auf Seite suchen“ kommen vom
-Browser statt aus einer Bibliothek, wie beim `<dialog>` der Einstellungen.
+Auf großen Schirmen füllt der Plan das Fenster genau: Kopfzeile, Chart und Statuszeile stehen,
+gescrollt wird nur in den Spalten. Menüs, Befehlspalette und Rückfragen sind native
+`<dialog>`- bzw. ARIA-Muster – Fokus-Falle, Escape und Pfeiltasten ohne Bibliothek.
 
-Farben liegen als CSS-Variablen (`--chart-1` … `--chart-8`) in `src/index.css`, je einmal für Hell
-und Dunkel. Die Palette ist auf Farbfehlsichtigkeit geprüft (schlechtestes Nachbarpaar ΔE 9.1 hell /
+Farben liegen als CSS-Variablen in `src/index.css`, je einmal für Hell und Dunkel: Flächen und
+Schrift des Terminals, `--up`/`--down` für Gewinn und Verlust (alle Schrift-Tokens ≥ 4.5:1, geprüft
+in `test/a11y/contrast.test.ts`) und die Serienfarben `--chart-1` … `--chart-8`. Die Palette ist auf Farbfehlsichtigkeit geprüft (schlechtestes Nachbarpaar ΔE 9.1 hell /
 8.4 dunkel). Der Farb-Slot gehört fest zur Serien-ID — nie an die Reihenfolge koppeln, sonst färbt
 sich der Chart beim Ein- und Ausschalten um.

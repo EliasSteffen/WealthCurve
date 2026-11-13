@@ -54,6 +54,13 @@ describe('Kontrast (WCAG AA, 4.5:1)', () => {
     it(`Text auf gefüllter Akzentfläche erreicht 4.5:1 (${name})`, () => {
       expect(contrast(t['on-accent']!, t['accent-fill']!)).toBeGreaterThanOrEqual(4.5)
     })
+
+    for (const token of ['text-primary', 'text-secondary', 'up', 'down', 'accent-text']) {
+      it(`--${token} erreicht 4.5:1 auf Karte und Seite (${name})`, () => {
+        expect(contrast(t[token]!, t['surface-1']!)).toBeGreaterThanOrEqual(4.5)
+        expect(contrast(t[token]!, t['surface-page']!)).toBeGreaterThanOrEqual(4.5)
+      })
+    }
   }
 
   it('--text-muted bleibt erkennbar gedämpft (schwächer als Sekundärtext)', () => {

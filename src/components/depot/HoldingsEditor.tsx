@@ -23,7 +23,7 @@ import type { DepotData } from './useDepotData'
 const TH = 'px-2 py-1 text-left text-xs font-medium text-[var(--text-muted)] first:pl-0'
 const TD = 'border-t border-[var(--hairline)] px-2 py-2 align-top text-left font-normal first:pl-0'
 const EINGABE =
-  'rounded-md border border-[var(--hairline)] bg-[var(--surface-1)] px-2 py-1 text-sm text-[var(--text-primary)] focus:border-[var(--chart-1)] focus:outline-none'
+  'rounded-md border border-[var(--hairline)] bg-[var(--surface-1)] px-2 py-1 text-[13px] text-[var(--text-primary)] focus:border-[var(--accent-fill)] focus:outline-none'
 
 /** Ein Amundi-Fonds mit veröffentlichtem Bestand, der für andere Indexfonds stehen kann. */
 const WELT = WORLD_PROXY
@@ -232,7 +232,7 @@ export function HoldingsEditor({
   return (
     <div className="space-y-3">
       {korrekturen.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--hairline)] p-3 text-sm">
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-[var(--hairline)] p-3 text-[13px]">
           <p className="min-w-0 flex-1 text-[var(--text-secondary)]">
             {t(
               'depot.fix.text',
@@ -242,7 +242,7 @@ export function HoldingsEditor({
           </p>
           <button
             type="button"
-            className="rounded-lg bg-[var(--accent-fill)] px-3 py-1.5 text-sm font-medium text-[var(--on-accent)] hover:opacity-90"
+            className="rounded-md bg-[var(--accent-fill)] px-3 py-1.5 text-[13px] font-medium text-[var(--on-accent)] hover:opacity-90"
             onClick={() => {
               for (const k of korrekturen) dispatch(actions.updateDepotHolding(k.id, k.patch))
             }}
@@ -252,7 +252,7 @@ export function HoldingsEditor({
         </div>
       ) : null}
     <div className="relative overflow-x-auto">
-      <table className="w-full text-sm text-[var(--text-primary)]">
+      <table className="w-full text-[13px] text-[var(--text-primary)]">
         <thead>
           <tr>
             <th scope="col" className={TH}>{t('depot.col.position', 'Position')}</th>

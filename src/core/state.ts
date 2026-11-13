@@ -35,8 +35,10 @@ export interface Scenario {
 
 export type EncodingPreference = 'auto' | string
 
-/** Die zwei Bereiche der Anwendung: der Sparplan mit Vermögenskurve und das eigene Depot. */
-export type AppPage = 'sparplan' | 'depot'
+/** Die Bereiche der Anwendung: der Sparplan mit Vermögenskurve, das eigene Depot und das Video. */
+export type AppPage = 'sparplan' | 'depot' | 'video'
+
+export const APP_PAGES: readonly AppPage[] = ['sparplan', 'depot', 'video']
 
 export interface AppState {
   readonly scenarios: readonly Scenario[]
@@ -463,7 +465,10 @@ export function reducer(state: AppState, action: Action): AppState {
     }
 
     case 'page/set':
-      return state.page === action.page ? state : { ...state, page: action.page }
+      // Nur bekannte Bereiche - ein erfundener ließe die Oberfläche ohne Inhalt.
+      return state.page === action.page || !APP_PAGES.includes(action.page)
+        ? state
+        : { ...state, page: action.page }
 
     case 'depot/setWhatIfWeight': {
       const { holdings, whatIf } = state.depot
@@ -633,7 +638,7 @@ export function deserialize(raw: string): AppState | null {
         : base.settingsView,
       markets: Array.isArray(parsed.markets) ? sanitizeMarkets(parsed.markets) : base.markets,
       depot: sanitizeDepot(parsed.depot),
-      page: parsed.page === 'depot' ? 'depot' : 'sparplan',
+      page: APP_PAGES.includes(parsed.page as AppPage) ? (parsed.page as AppPage) : 'sparplan',
     }
   } catch {
     return null

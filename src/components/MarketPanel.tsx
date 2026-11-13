@@ -5,6 +5,7 @@ import { parseMarketFile } from '../core/market'
 import { MAX_MARKETS, actions } from '../core/state'
 import { marketMonthOffset } from '../core/timeAxis'
 import { cn } from '../lib/cn'
+import { revealSetting } from '../lib/reveal'
 import { useT } from '../react/localeContext'
 import { useStore } from '../react/storeContext'
 import { useDispatch, useSelector } from '../react/useSelector'
@@ -98,13 +99,9 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
     dispatch(actions.setSeriesEnabled('marketReturn', true))
   }
 
-  // Der Abschnitt „Zeitachse" im Plan-Formular (ID in SparplanPage) - aufklappen und hinscrollen.
+  // Zum Startjahr in den Eingaben springen (Abschnitt „Zeitachse", ID im InputsPanel).
   const zeitOeffnen = () => {
-    const abschnitt = document.getElementById('plan-zeitachse')
-    if (!(abschnitt instanceof HTMLDetailsElement)) return
-    abschnitt.open = true
-    abschnitt.scrollIntoView?.({ block: 'start', behavior: 'smooth' })
-    abschnitt.querySelector('summary')?.focus()
+    revealSetting('model:timeAxis')
   }
 
   const laden = async (wert: string) => {
@@ -179,7 +176,7 @@ export function MarketPanel({ matches = null }: MarketPanelProps) {
                   if (e.key === 'Enter') void laden(symbol)
                 }}
                 placeholder={t('market.placeholder', 'z. B. AAPL')}
-                className="min-w-0 flex-1 rounded-lg border border-[var(--hairline)] bg-[var(--surface-1)] px-2.5 py-2 text-sm uppercase text-[var(--text-primary)] placeholder:normal-case placeholder:text-[var(--text-muted)] focus:border-[var(--chart-1)] focus:outline-none"
+                className="min-w-0 flex-1 rounded-lg border border-[var(--hairline)] bg-[var(--surface-1)] px-2.5 py-2 text-sm uppercase text-[var(--text-primary)] placeholder:normal-case placeholder:text-[var(--text-muted)] focus:border-[var(--accent-fill)] focus:outline-none"
               />
               <button
                 type="button"

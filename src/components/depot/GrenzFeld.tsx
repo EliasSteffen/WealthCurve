@@ -3,7 +3,7 @@ import { cn } from '../../lib/cn'
 import { currentFormatterLocale } from '../../lib/format'
 
 const EINGABE =
-  'rounded-md border border-[var(--hairline)] bg-[var(--surface-1)] px-2 py-1 text-sm text-[var(--text-primary)] focus:border-[var(--chart-1)] focus:outline-none'
+  'rounded-md border border-[var(--hairline)] bg-[var(--surface-1)] px-2 py-1 text-[13px] text-[var(--text-primary)] focus:border-[var(--accent-fill)] focus:outline-none'
 
 /** Prozentfeld, das leer sein darf: leer = keine Grenze. */
 export function GrenzFeld({
